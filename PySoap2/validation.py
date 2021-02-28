@@ -1,7 +1,7 @@
 """ Utilities to help validating
 """
 
-from PySoap.exceptions import NotBuiltError
+from PySoap2.exceptions import NotBuiltError
 
 
 def check_layer(layer):
