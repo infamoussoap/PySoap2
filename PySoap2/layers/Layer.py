@@ -123,5 +123,9 @@ class Layer(abc.ABC):
             ----------
             args : tuple of :obj:Layer
 
+            Returns
+            -------
+            :obj:Layer
+                Return self, for easier use of interface
         """
         pass

@@ -388,3 +388,4 @@ class Conv_2D(Layer):
 
     def __call__(self, layer):
         self.parent = (layer,)
+        return self

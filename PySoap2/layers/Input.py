@@ -117,3 +117,4 @@ class Input(Layer):
     def __call__(self):
         """ Input class can have no parent """
         self.parent = None
+        return self
