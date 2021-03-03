@@ -309,29 +309,27 @@ class BatchNorm(Layer):
 
             Returns
             -------
-            (...) np.array, (...) np.array
-                The first np.array is dS/d(beta)
-                The second np.array is dS/d(gamma)
+            dict of str - np.array
         """
         check_layer(self)
 
         z_hat = (prev_z - np.mean(prev_z, axis=0)) / np.sqrt(np.std(prev_z, axis=0) ** 2 + self.epsilon)
-        return np.sum(delta, axis=0), np.sum(delta * z_hat, axis=0)
 
-    def update_parameters_(self, beta_updates, gamma_updates):
+        parameter_gradients = {'beta': np.sum(delta, axis=0), 'gamma': np.sum(delta * z_hat, axis=0)}
+        return parameter_gradients
+
+    def update_parameters_(self, parameter_updates):
         """ Perform an update to the weights by descending down the gradient
 
             Parameters
             ----------
-            beta_updates : np.array (of dimension k)
-                Should be dS/d(beta), as scheduled by the optimizer
-            gamma_updates : np.array (of dimension k)
-                Should be dS/d(gamma), as scheduled by the optimizer
+            parameter_updates : dict of str - np.array
+                The step size for the parameters, as scheduled by the optimizer
         """
         check_layer(self)
 
-        self.beta -= beta_updates
-        self.gamma -= gamma_updates
+        self.beta -= parameter_updates['beta']
+        self.gamma -= parameter_updates['gamma']
 
     def get_weights(self):
         check_layer(self)

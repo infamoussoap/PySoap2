@@ -154,27 +154,22 @@ class Dense(Layer):
         """
         check_layer(self)
 
-        # weight_updates = np.array([d[:, None] * z[None, :] for (d, z) in zip(delta, prev_z)])
-        # weight_updates = np.sum(delta[:, :, None] * prev_z[:, None, :], axis = 0)
-        weight_grad = delta.T @ prev_z
-        delta_grad = np.sum(delta, axis=0)
+        parameter_gradients = {'weight': delta.T @ prev_z, 'bias': np.sum(delta, axis=0)}
 
-        return delta_grad, weight_grad
+        return parameter_gradients
 
-    def update_parameters_(self, bias_updates, weight_updates):
+    def update_parameters_(self, parameter_updates):
         """ Perform an update to the weights by descending down the gradient
 
             Parameters
             ----------
-            bias_updates : (k, ) np.array
-                The gradients for the bias units
-            weight_updates : (k, j) np.array
-                The gradients for the weight matrix
+            parameter_updates : dict of str - np.array
+                The step size for the parameters as scheduled by the optimizer
         """
         check_layer(self)
 
-        self.W -= weight_updates
-        self.b -= bias_updates
+        self.W -= parameter_updates['weight']
+        self.b -= parameter_updates['bias']
 
     def get_weights(self):
         check_layer(self)

@@ -89,9 +89,11 @@ class Input(Layer):
         """ Since this layer has no parameters, there is no implementation needed
         """
         check_layer(self)
-        return None, None
 
-    def update_parameters_(self, *args, **kwargs):
+        parameter_gradients = {}
+        return parameter_gradients
+
+    def update_parameters_(self, parameter_updates):
         """ Since this layer has no parameters, there is no implementation needed
         """
         check_layer(self)

@@ -111,16 +111,18 @@ class Flatten(Layer):
 
             Returns
             -------
-            (None, None)
+            dict
 
             Notes
             -----
             Since nothing in this layer is trainiable, the gradients is simply None
         """
         check_layer(self)
-        return None, None
 
-    def update_parameters_(self, *args, **kwargs):
+        parameter_gradients = {}
+        return parameter_gradients
+
+    def update_parameters_(self, parameter_gradients):
         """ Perform an update to the weights by descending down the gradient
 
             Notes

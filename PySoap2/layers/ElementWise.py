@@ -152,28 +152,22 @@ class ElementWise(Layer):
         """
         check_layer(self)
 
-        # weight_updates = np.add.reduce(delta * prev_z, axis = 0)
-        # bias_updates = np.add.reduce(delta, axis = 0)
-        # weight_updates = np.sum(delta * prev_z, axis = 0)
-        weight_grad = np.einsum('i...,i...', delta, prev_z)
-        bias_grad = np.sum(delta, axis=0)
+        parameter_gradients = {'weight': np.einsum('i...,i...', delta, prev_z), 'bias': np.sum(delta, axis=0)}
 
-        return bias_grad, weight_grad
+        return parameter_gradients
 
-    def update_parameters_(self, bias_updates, weight_updates):
+    def update_parameters_(self, parameter_updates):
         """ Perform an update to the weights by descending down the gradient
 
             Parameters
             ----------
-            bias_updates : np.array (of dimension k)
-                The gradients for the bias units
-            weight_updates : np.array (of dimension k)
-                The gradients for the weight matrix
+            parameter_updates : dict of str - np.array
+                The step size for the parameters as scheduled by the optimizer
         """
         check_layer(self)
 
-        self.W -= weight_updates
-        self.b -= bias_updates
+        self.W -= parameter_updates['weight']
+        self.b -= parameter_updates['bias']
 
     def get_weights(self):
         check_layer(self)

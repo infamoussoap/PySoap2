@@ -350,26 +350,23 @@ class Conv_2D(Layer):
 
         # This code is self-explanatory when you look at the math
         windowed = self.im2window(prev_z, self.filter_spatial_shape, self.stride)
-        # temp = delta[:, :, :, None, None, None, :] * windowed[..., None]
-        # W_grad = np.sum(temp, axis = (0, 1, 2))
-        w_grad = np.einsum("abcijk,abcl->ijkl", windowed, delta, optimize="greedy")
-        b_grad = np.sum(delta, axis=(0, 1, 2))
-        return b_grad, w_grad
 
-    def update_parameters_(self, bias_updates, filter_updates):
+        parameter_gradients = {'filter': np.einsum("abcijk,abcl->ijkl", windowed, delta, optimize="greedy"),
+                               'bias': np.sum(delta, axis=(0, 1, 2))}
+        return parameter_gradients
+
+    def update_parameters_(self, parameter_updates):
         """ Update the filter and bias by descending down the gradient
 
             Parameters
             ----------
-            bias_updates : (f, ) np.array
-                Gradient of the bais
-            filter_updates : (:, :, :, f) np.array
-                Gradient of the filter
+            parameter_updates : dict of str - np.array
+                The step size for the parameters as scheduled by the optimizer
         """
         check_layer(self)
 
-        self.filter -= filter_updates
-        self.b -= bias_updates
+        self.filter -= parameter_updates['filter']
+        self.b -= parameter_updates['bias']
 
     def get_weights(self):
         check_layer(self)

@@ -26,11 +26,14 @@ class SplitChild(Layer):
             The name of the activation function. Note that since this layer doesn't do anything,
             this attribute is set to linear
 
+        branch_path : str
+            This is either 'left' or 'right' and denotes whether the node is a left child or right child
+
         built : bool
             Has the model been built
     """
 
-    def __init__(self, mask, splitparent):
+    def __init__(self, mask, splitparent, branch_path):
         """ Initialise the layer by passing the mask and the parent Split Node
 
             Parameters
@@ -39,6 +42,8 @@ class SplitChild(Layer):
                 The mask for this instance
             splitparent: :obj:`Split`
                 The parent of this instance
+            branch_path : str
+                Either 'left' or 'right' and denotes whether the node is a left child or right child
         """
         self.mask = mask.astype(bool)
         self.parent = splitparent
@@ -47,6 +52,8 @@ class SplitChild(Layer):
 
         self.input_shape = None
         self.output_shape = None
+
+        self.branch_path = branch_path
 
         self.built = False
 
@@ -135,9 +142,11 @@ class SplitChild(Layer):
             -------
             None, None
         """
-        return None, None
 
-    def update_parameters_(self, bias_updates, weight_updates):
+        parameter_gradients = {}
+        return parameter_gradients
+
+    def update_parameters_(self, parameter_updates):
         """ This layer has no trainiable parameters so nothing will be performed
 
             Notes
@@ -147,8 +156,7 @@ class SplitChild(Layer):
 
             Parameters
             ----------
-            bias_updates : None
-            weight_updates : None
+            parameter_updates : dict of str - np.array
         """
         pass
 
@@ -358,7 +366,7 @@ class Split(Layer):
             -------
             :obj:SplitChild
         """
-        return SplitChild(self.mask, self)
+        return SplitChild(self.mask, self, 'left')
 
     @property
     def right(self):
@@ -369,4 +377,4 @@ class Split(Layer):
             -------
             :obj:SplitChild
         """
-        return SplitChild(~self.mask, self)
+        return SplitChild(~self.mask, self, 'right')

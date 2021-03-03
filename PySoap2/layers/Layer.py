@@ -62,7 +62,7 @@ class Layer(abc.ABC):
 
     @abc.abstractmethod
     def get_weight_grad_(self, delta, prev_z):
-        """ Returns the gradient for the bias and weight gradients, in that order.
+        """ Returns the gradient for the parameters of the layer, in the form of a dictionary
 
             Raises
             ------
@@ -72,7 +72,7 @@ class Layer(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def update_parameters_(self, bias_updates, weight_updates):
+    def update_parameters_(self, parameter_updates):
         """ Once all the gradients have been calculated, this method will be called
             so the current layer can update it's weights and biases
 

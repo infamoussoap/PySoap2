@@ -322,35 +322,28 @@ class SoftChop(Layer):
 
         kwargs = {'x': prev_z, 'a1': self.a1, 'a2': self.a2, 'epsilon1': self.epsilon1, 'epsilon2': self.epsilon2}
 
-        a1_grad = np.einsum('i...,i...', delta, MultiSoftChop.da1(**kwargs))
-        a2_grad = np.einsum('i...,i...', delta, MultiSoftChop.da2(**kwargs))
+        parameter_gradients = {'a1': np.einsum('i...,i...', delta, MultiSoftChop.da1(**kwargs)),
+                               'a2': np.einsum('i...,i...', delta, MultiSoftChop.da2(**kwargs)),
+                               'epsilon1': np.einsum('i...,i...', delta, MultiSoftChop.de1(**kwargs)),
+                               'epsilon2': np.einsum('i...,i...', delta, MultiSoftChop.de2(**kwargs))}
 
-        epsilon1_grad = np.einsum('i...,i...', delta, MultiSoftChop.de1(**kwargs))
-        epsilon2_grad = np.einsum('i...,i...', delta, MultiSoftChop.de2(**kwargs))
+        return parameter_gradients
 
-        return np.array([a1_grad, a2_grad]), np.array([epsilon1_grad, epsilon2_grad])
-
-    def update_parameters_(self, a_updates, epsilon_updates):
+    def update_parameters_(self, parameter_updates):
         """ Update the softchop hyper-parameters by descending down the gradient
 
             Parameters
             ----------
-            a_updates : (2, ...)
-                The gradient for the `a` hyper-parameters. Note that the arrays start with
-                dimension 2 - the 0th entry corresponds to the `a1` gradients while the 1st
-                entry corresponds to the `a2` gradients
-            epsilon_updates : (2, ...)
-                The gradient for the `epsilon` hyper-parameters. Similarly to the `a`
-                hyper-parameters, this also starts with dimension 2 - the 0th entry for the
-                `epsilon1` gradients and the 1st entry for the `epsilon2` gradients
+            parameter_updates : dict of str - np.array
+                The step size for the parameters as scheduled by the optimizer
         """
         check_layer(self)
 
-        self.a1 -= a_updates[0]
-        self.a2 -= a_updates[1]
+        self.a1 -= parameter_updates['a1']
+        self.a2 -= parameter_updates['a2']
 
-        self.epsilon1 -= epsilon_updates[0]
-        self.epsilon2 -= epsilon_updates[1]
+        self.epsilon1 -= parameter_updates['epsilon1']
+        self.epsilon2 -= parameter_updates['epsilon2']
 
         self.clip_parameters()
 
