@@ -297,7 +297,7 @@ class BatchNorm(Layer):
         dz_ = BatchNormGrads.dz(prev_z, new_delta, self.gamma, self.epsilon)
         return dz_ * prev_z
 
-    def get_weight_grad_(self, delta, prev_z):
+    def get_parameter_gradients_(self, delta, prev_z):
         """ Returns the gradients with respect to beta and gamma
 
             Parameters

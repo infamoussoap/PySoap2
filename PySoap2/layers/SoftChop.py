@@ -292,7 +292,7 @@ class SoftChop(Layer):
 
         return new_delta * g_prime * self.activation_function_(prev_z, grad=True)
 
-    def get_weight_grad_(self, delta, prev_z):
+    def get_parameter_gradients_(self, delta, prev_z):
         """ Returns the associated partial S/partial W^k, that is
             the gradient with respect to the weight matrix in the kth layer
 

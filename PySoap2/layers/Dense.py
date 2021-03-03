@@ -135,7 +135,7 @@ class Dense(Layer):
         check_layer(self)
         return g_prime*(new_delta @ self.W)
 
-    def get_weight_grad_(self, delta, prev_z):
+    def get_parameter_gradients_(self, delta, prev_z):
         """ Returns the associated partial S/partial W^k, that is
             the gradient with respect to the weight matrix in the kth layer
 

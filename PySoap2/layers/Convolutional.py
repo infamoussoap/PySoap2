@@ -329,7 +329,7 @@ class Conv_2D(Layer):
         delta = np.einsum("ijkl,abcjkl,iabc->iabc", new_delta, eye_conv, g_prime, optimize='greedy')
         return delta
 
-    def get_weight_grad_(self, delta, prev_z):
+    def get_parameter_gradients_(self, delta, prev_z):
         """ Get the gradients for the filter matrix and bias units
 
             Parameters

@@ -61,7 +61,7 @@ class Layer(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_weight_grad_(self, delta, prev_z):
+    def get_parameter_gradients_(self, delta, prev_z):
         """ Returns the gradient for the parameters of the layer, in the form of a dictionary
 
             Raises

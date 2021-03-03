@@ -85,7 +85,7 @@ class Input(Layer):
         check_layer(self)
         return None
 
-    def get_weight_grad_(self, delta, prev_z):
+    def get_parameter_gradients_(self, delta, prev_z):
         """ Since this layer has no parameters, there is no implementation needed
         """
         check_layer(self)

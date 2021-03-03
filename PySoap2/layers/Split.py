@@ -122,7 +122,7 @@ class SplitChild(Layer):
         check_layer(self)
         return new_delta
 
-    def get_weight_grad_(self, new_delta, prev_z):
+    def get_parameter_gradients_(self, new_delta, prev_z):
         """ This method returns the gradients of the parameters for this layer. But
             since this layer has no trainable parameters, it has no gradients
 
@@ -300,7 +300,7 @@ class Split(Layer):
 
         return out_delta
 
-    def get_weight_grad_(self, new_delta, prev_z):
+    def get_parameter_gradients_(self, new_delta, prev_z):
         """ This method returns the gradients of the parameters for this layer. But
             since this layer has no trainable parameters, it has no gradients
 

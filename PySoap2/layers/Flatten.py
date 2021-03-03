@@ -105,7 +105,7 @@ class Flatten(Layer):
         check_layer(self)
         return new_delta.reshape(len(new_delta), *self.input_shape)
 
-    def get_weight_grad_(self, *args, **kwargs):
+    def get_parameter_gradients_(self, *args, **kwargs):
         """ Returns the associated partial S/partial W^k, that is
             the gradient with respect to the weight matrix in the kth layer
 
