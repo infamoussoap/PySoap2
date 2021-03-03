@@ -58,17 +58,17 @@ class ElementWise(Layer):
 
         self.built = False
 
-    def build(self, previous_output_shape):
+    def build(self, input_shape):
         """ Initialises the weight and bias units
 
             Parameters
             ----------
-            previous_output_shape : tuple of int
+            input_shape : tuple of int
                 The output shape of the previous layer.
         """
 
-        self.input_shape = previous_output_shape
-        self.output_shape = previous_output_shape
+        self.input_shape = input_shape
+        self.output_shape = input_shape
 
         self.W = np.random.rand(*self.input_shape) - 0.5
         self.b = np.random.rand(*self.input_shape) - 0.5

@@ -224,24 +224,24 @@ class Conv_2D(Layer):
 
         self.built = False
 
-    def build(self, previous_output_shape):
+    def build(self, input_shape):
         """ Initialise the filters and bias units, and compute the output shape
 
             Parameters
             ----------
-            previous_output_shape : 3 tuple of int
+            input_shape : 3 tuple of int
                 The dimensions of the output of the previous layer, equivalently the dimensions
                 of the input of this layer
         """
-        self.input_shape = previous_output_shape
-        self.single_filter_shape = (*self.filter_spatial_shape, previous_output_shape[2])
+        self.input_shape = input_shape
+        self.single_filter_shape = (*self.filter_spatial_shape, input_shape[2])
 
         self.filter_shape = (*self.single_filter_shape, self.filter_num)
 
         # These 2 lines follow the formula in the youtube lecture
         # Giving us the output shape of this layer
-        n = int((previous_output_shape[0] - self.filter_spatial_shape[0]) / self.stride + 1)
-        m = int((previous_output_shape[1] - self.filter_spatial_shape[1]) / self.stride + 1)
+        n = int((input_shape[0] - self.filter_spatial_shape[0]) / self.stride + 1)
+        m = int((input_shape[1] - self.filter_spatial_shape[1]) / self.stride + 1)
 
         self.output_spatial_shape = (n, m)
         self.output_shape = (*self.output_spatial_shape, self.filter_num)

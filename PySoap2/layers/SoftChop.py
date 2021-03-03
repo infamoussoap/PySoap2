@@ -184,16 +184,16 @@ class SoftChop(Layer):
         self.epsilon1 = None
         self.epsilon2 = None
 
-    def build(self, previous_output_shape):
+    def build(self, input_shape):
         """ Initialise the Softchop Hyper-parameters
 
             Parameters
             ----------
-            previous_output_shape : k tuple
+            input_shape : k tuple
                 The output shape of the previous layer
         """
-        self.input_shape = previous_output_shape
-        self.output_shape = previous_output_shape
+        self.input_shape = input_shape
+        self.output_shape = input_shape
 
         self.a1 = np.random.rand(*self.input_shape) * 2
         self.a2 = np.random.rand(*self.input_shape) * 2

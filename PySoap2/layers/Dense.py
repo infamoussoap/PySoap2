@@ -57,22 +57,22 @@ class Dense(Layer):
 
         self.built = False
 
-    def build(self, previous_output_shape):
+    def build(self, input_shape):
         """ Initialises the weight and bias units
 
             Parameters
             ----------
-            previous_output_shape : 1 tuple of int
+            input_shape : 1 tuple of int
                 The output shape of the previous layer. This will dictate the size of the weight matrix
         """
         self.output_shape = (self.hidden_nodes, )
-        self.input_shape = previous_output_shape
+        self.input_shape = input_shape
 
         # Initialise the the weight with Glorot-Uniform, a uniform distribution over [-limit, limit],
         # where limit = sqrt(6 / (fan_in + fan_out)) (fan_in is the number of input units in the weight
         # tensor and fan_out is the number of output units).
         limit = np.sqrt(6 / (np.prod(self.input_shape) + np.prod(self.output_shape)))
-        self.W = np.random.uniform(low=-limit, high=limit, size=(*self.output_shape, *previous_output_shape))
+        self.W = np.random.uniform(low=-limit, high=limit, size=(*self.output_shape, *input_shape))
         self.b = np.zeros(self.output_shape)
 
         self.built = True

@@ -50,15 +50,15 @@ class SplitChild(Layer):
 
         self.built = False
 
-    def build(self, previous_output_shape):
+    def build(self, input_shape):
         """ Build the layer by determining the input and output shape
 
             Parameters
             ----------
-            previous_output_shape : tuple of int
+            input_shape : tuple of int
                 The shape of the input for this layer
         """
-        self.input_shape = previous_output_shape
+        self.input_shape = input_shape
         self.output_shape = (np.sum(self.mask),)
 
         self.built = True
