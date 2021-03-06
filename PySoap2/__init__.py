@@ -14,3 +14,5 @@ from PySoap2 import exceptions
 
 # Validation Checks
 from PySoap2 import validation
+
+from PySoap2 import models
