@@ -186,14 +186,10 @@ class SoftChop(NetworkNode, Layer):
         self.epsilon1 = None
         self.epsilon2 = None
 
-    def build(self, input_shape):
-        """ Initialise the Softchop Hyper-parameters
+    def build(self):
+        """ Initialise the Softchop Hyper-parameters """
+        input_shape = self.parents[0].output_shape
 
-            Parameters
-            ----------
-            input_shape : k tuple
-                The output shape of the previous layer
-        """
         self.input_shape = input_shape
         self.output_shape = input_shape
 

@@ -57,14 +57,10 @@ class SplitChild(NetworkNode, Layer):
 
         self.built = False
 
-    def build(self, input_shape):
-        """ Build the layer by determining the input and output shape
+    def build(self):
+        """ Build the layer by determining the input and output shape """
+        input_shape = self.parents[0].output_shape
 
-            Parameters
-            ----------
-            input_shape : tuple of int
-                The shape of the input for this layer
-        """
         self.input_shape = input_shape
         self.output_shape = (np.sum(self.mask),)
 
@@ -231,19 +227,15 @@ class Split(NetworkNode, Layer):
 
         self.built = False
 
-    def build(self, input_shape):
+    def build(self):
         """ Initilise the layer
 
             Notes
             -----
             The output_shape is the same as the input_shape because the input must
             be based onto the children for it to be split
-
-            Parameters
-            ----------
-            input_shape : tuple of int
-                The shape of the input
         """
+        input_shape = self.parents[0].output_shape
 
         self.input_shape = input_shape
         self.output_shape = input_shape

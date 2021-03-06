@@ -55,19 +55,12 @@ class Dense(NetworkNode, Layer):
         self.W = None
         self.b = None
 
-        self.basis = None
-        self.coeffs = None
-
         self.built = False
 
-    def build(self, input_shape):
-        """ Initialises the weight and bias units
+    def build(self):
+        """ Initialises the weight and bias units """
+        input_shape = self.parents[0].output_shape
 
-            Parameters
-            ----------
-            input_shape : 1 tuple of int
-                The output shape of the previous layer. This will dictate the size of the weight matrix
-        """
         self.output_shape = (self.hidden_nodes, )
         self.input_shape = input_shape
 

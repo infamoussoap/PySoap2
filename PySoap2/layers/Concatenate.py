@@ -12,7 +12,7 @@ class Concatenate(NetworkNode, Layer):
 
         self.built = False
 
-    def build(self, input_shape):
+    def build(self):
         pass
 
     def predict(self, z, output_only=True):

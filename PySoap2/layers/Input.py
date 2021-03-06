@@ -38,7 +38,7 @@ class Input(NetworkNode, Layer):
 
         self.built = False
 
-    def build(self, *args, **kwargs):
+    def build(self):
         """ Initialises the layer
 
             Notes

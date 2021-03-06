@@ -1,5 +1,7 @@
-class Model:
+from PySoap2.optimizers import Optimizer, get_optimizer
 
+
+class Model:
     @staticmethod
     def _is_valid_model(start_layer, end_layer):
         """ Checks to see if there is a valid that connects the input layer to the output layer """
@@ -16,3 +18,16 @@ class Model:
 
         self.input_layer = input_layer
         self.output_layer = output_layer
+
+    def build(self, loss_function, optimizer, metrics=None):
+        if isinstance(optimizer, Optimizer):
+            self.optimizer = optimizer
+        elif isinstance(optimizer, str):
+            self.optimizer = get_optimizer(optimizer)
+        else:
+            raise ValueError("optimizer must be an instance of Optimizer or str")
+
+        self.loss_function = loss_function
+        self.metric_function = metrics
+
+        new_input_shape = None

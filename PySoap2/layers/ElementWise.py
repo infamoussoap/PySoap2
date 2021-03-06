@@ -61,14 +61,9 @@ class ElementWise(NetworkNode, Layer):
 
         self.built = False
 
-    def build(self, input_shape):
-        """ Initialises the weight and bias units
-
-            Parameters
-            ----------
-            input_shape : tuple of int
-                The output shape of the previous layer.
-        """
+    def build(self):
+        """ Initialises the weight and bias units """
+        input_shape = self.parents[0].output_shape
 
         self.input_shape = input_shape
         self.output_shape = input_shape

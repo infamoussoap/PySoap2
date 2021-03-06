@@ -36,14 +36,9 @@ class Flatten(NetworkNode, Layer):
         self.input_shape = None
         self.output_shape = None
 
-    def build(self, input_shape):
-        """ Built/initialised the layer
-
-            Parameters
-            ----------
-            input_shape : tuple
-                The shape of the input into this layer.
-        """
+    def build(self):
+        """ Built/initialised the layer """
+        input_shape = self.parents[0].output_shape
 
         self.input_shape = input_shape
         self.output_shape = (np.prod(input_shape),)

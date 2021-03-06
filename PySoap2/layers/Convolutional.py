@@ -226,15 +226,10 @@ class Conv_2D(NetworkNode, Layer):
 
         self.built = False
 
-    def build(self, input_shape):
-        """ Initialise the filters and bias units, and compute the output shape
+    def build(self):
+        """ Initialise the filters and bias units, and compute the output shape """
+        input_shape = self.parents[0].output_shape
 
-            Parameters
-            ----------
-            input_shape : 3 tuple of int
-                The dimensions of the output of the previous layer, equivalently the dimensions
-                of the input of this layer
-        """
         self.input_shape = input_shape
         self.single_filter_shape = (*self.filter_spatial_shape, input_shape[2])
 

@@ -213,16 +213,10 @@ class BatchNorm(NetworkNode, Layer):
         self.gamma = None
         self.beta = None
 
-    def build(self, input_shape):
-        """ Initialise Attributes `gamma` and `beta`
-
-            Parameters
-            ----------
-            input_shape : k tuple
-                The shape of the input of this layer
-        """
-        self.input_shape = input_shape
-        self.output_shape = input_shape
+    def build(self):
+        """ Initialise Attributes `gamma` and `beta` """
+        self.input_shape = self.parents[0].output_shape  # It is assumed there is only one parent for this class
+        self.output_shape = self.input_shape
 
         self.gamma = np.ones(self.input_shape)
         self.beta = np.zeros(self.input_shape)
