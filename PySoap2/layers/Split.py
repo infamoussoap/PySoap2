@@ -349,10 +349,6 @@ class Split(NetworkNode, Layer):
     def activation_function_(self):
         return get_activation_function(self.activation_function)
 
-    def __call__(self, layer):
-        self.parent = (layer,)
-        return self
-
     @property
     def left(self):
         """ This returns the left child node in the Split layer, which will return
