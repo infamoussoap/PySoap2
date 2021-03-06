@@ -2,10 +2,11 @@ import numpy as np
 
 from PySoap2.validation import check_layer
 from PySoap2.layers import Layer
+from PySoap2.layers.NetworkNode import NetworkNode
 from PySoap2 import get_activation_function
 
 
-class SplitChild(Layer):
+class SplitChild(NetworkNode, Layer):
     """ This class is where the splitting is performed. The input (or parent to split node)
         is passed into Split which is then passed to SplitChild to perform the split
 
@@ -33,7 +34,7 @@ class SplitChild(Layer):
             Has the model been built
     """
 
-    def __init__(self, mask, splitparent, branch_path):
+    def __init__(self, mask):
         """ Initialise the layer by passing the mask and the parent Split Node
 
             Parameters
@@ -45,15 +46,14 @@ class SplitChild(Layer):
             branch_path : str
                 Either 'left' or 'right' and denotes whether the node is a left child or right child
         """
+        NetworkNode.__init__(self)
+
         self.mask = mask.astype(bool)
-        self.parent = splitparent
 
         self.activation_function = 'linear'
 
         self.input_shape = None
         self.output_shape = None
-
-        self.branch_path = branch_path
 
         self.built = False
 
@@ -176,14 +176,8 @@ class SplitChild(Layer):
     def activation_function_(self):
         return get_activation_function(self.activation_function)
 
-    def __call__(self, *args):
-        """ This method should only be called when adding a parent class. But
-            since the parent class is initialised on creation of the instance,
-            there is no reason why this method should be called."""
-        pass
 
-
-class Split(Layer):
+class Split(NetworkNode, Layer):
     """ Breaks up the input into two seperate outputs, such that when the outputs
         are combined, it will be equal to the original input. Note that because
         the break can be highly irregular, the outputs will be flatten arrays
@@ -226,6 +220,8 @@ class Split(Layer):
                 This is not assumed to be bool, and will be converted to bool types
                 on runtime.
         """
+        NetworkNode.__init__(self)
+
         self.mask = mask.astype(bool)
 
         self.activation_function = 'linear'
@@ -366,7 +362,10 @@ class Split(Layer):
             -------
             :obj:SplitChild
         """
-        return SplitChild(self.mask, self, 'left')
+        left_child = SplitChild(self.mask)
+        left_child(self)
+
+        return left_child
 
     @property
     def right(self):
@@ -377,4 +376,7 @@ class Split(Layer):
             -------
             :obj:SplitChild
         """
-        return SplitChild(~self.mask, self, 'right')
+        right_child = SplitChild(~self.mask)
+        right_child(self)
+
+        return right_child

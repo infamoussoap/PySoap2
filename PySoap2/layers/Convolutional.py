@@ -3,10 +3,11 @@ from numpy.lib.stride_tricks import as_strided
 
 from PySoap2 import get_activation_function
 from PySoap2.layers import Layer
+from PySoap2.layers.NetworkNode import NetworkNode
 from PySoap2.validation import check_layer
 
 
-class Conv_2D(Layer):
+class Conv_2D(NetworkNode, Layer):
     """ 2D Convolutional layer
 
         Attributes
@@ -205,6 +206,7 @@ class Conv_2D(Layer):
             activation_kwargs : dict of str - :obj:, optional
                 The keyword arguments for the activation function if it has hyper-parameters
         """
+        NetworkNode.__init__(self)
 
         self.filter_num = filter_num
         self.filter_spatial_shape = filter_spatial_shape
@@ -382,7 +384,3 @@ class Conv_2D(Layer):
 
     def __str__(self):
         return f'Conv 2D {self.filter_num} x {self.filter_spatial_shape}'
-
-    def __call__(self, layer):
-        self.parent = (layer,)
-        return self

@@ -18,3 +18,8 @@ from .BatchNorm import BatchNorm
 
 # Flatten Layer
 from .Flatten import Flatten
+
+# Network Tree
+from .NetworkNode import NetworkNode
+
+from .Split import Split

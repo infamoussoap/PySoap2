@@ -2,11 +2,11 @@ import numpy as np
 
 from PySoap2 import get_activation_function
 from PySoap2.layers import Layer
-
+from PySoap2.layers.NetworkNode import NetworkNode
 from PySoap2.validation import check_layer
 
 
-class Flatten(Layer):
+class Flatten(NetworkNode, Layer):
     """ Given a n-dimensional input, this layer will return the flatten representation
         of the input
 
@@ -28,6 +28,8 @@ class Flatten(Layer):
     """
 
     def __init__(self):
+        NetworkNode.__init__(self)
+
         self.built = False
         self.activation_function = 'linear'
 
@@ -146,7 +148,3 @@ class Flatten(Layer):
 
     def __str__(self):
         return f'Flatten'
-
-    def __call__(self, layer):
-        self.parent = (layer,)
-        return self

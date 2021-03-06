@@ -1,8 +1,9 @@
 from PySoap2.layers import Layer
+from PySoap2.layers.NetworkNode import NetworkNode
 from PySoap2.validation import check_layer
 
 
-class Input(Layer):
+class Input(NetworkNode, Layer):
     """ This class will determine the input dimensions of the dataset
 
         Notes
@@ -30,6 +31,8 @@ class Input(Layer):
             input_shape : tuple of int
                 The shape of a given data point
         """
+        NetworkNode.__init__(self)
+
         self.input_shape = (*input_shape, )
         self.output_shape = (*input_shape, )
 
@@ -115,8 +118,3 @@ class Input(Layer):
 
     def __str__(self):
         return f'Input: Input Shape  {(None, *self.input_shape)}'
-
-    def __call__(self):
-        """ Input class can have no parent """
-        self.parent = None
-        return self

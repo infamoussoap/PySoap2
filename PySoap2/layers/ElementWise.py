@@ -1,11 +1,12 @@
+import numpy as np
+
 from PySoap2 import get_activation_function
 from PySoap2.validation import check_layer
 from PySoap2.layers import Layer
+from PySoap2.layers.NetworkNode import NetworkNode
 
-import numpy as np
 
-
-class ElementWise(Layer):
+class ElementWise(NetworkNode, Layer):
     """ A ElementWise layer (previously named push forward) - Where forward propagation is defined as
         element wise multiplication of the weight with the input, and element wise addition of the bias
 
@@ -46,6 +47,8 @@ class ElementWise(Layer):
             activation_function : str
                 The name of the activation function of this layer
         """
+        NetworkNode.__init__(self)
+
         self.activation_function = activation_function
         self.activation_kwargs = {} if activation_kwargs is None else activation_kwargs
 
@@ -183,7 +186,3 @@ class ElementWise(Layer):
 
     def __str__(self):
         return f'Element Wise: Output Shape {(None, *self.output_shape)}'
-
-    def __call__(self, layer):
-        self.parent = (layer,)
-        return self

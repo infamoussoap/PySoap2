@@ -2,8 +2,9 @@ import numpy as np
 
 from functools import partial
 
-from PySoap2.validation import check_layer
 from PySoap2.layers import Layer
+from PySoap2.layers.NetworkNode import NetworkNode
+from PySoap2.validation import check_layer
 
 
 class MultiSoftChop:
@@ -147,7 +148,7 @@ class MultiSoftChop:
         return x * (x + a2) * (1 - sig1) * sig2 * sig2_minus / (epsilon2 ** 2)
 
 
-class SoftChop(Layer):
+class SoftChop(NetworkNode, Layer):
     """ A SoftChop layer where each input element has their own softchop function.
         Training on this layer happens on the individual hyer-parameters of the softchop
         function.
@@ -172,7 +173,8 @@ class SoftChop(Layer):
     """
 
     def __init__(self):
-        """ Initialise the class """
+        NetworkNode.__init__(self)
+
         self.built = False
         self.g_name = 'multi_softchop'
 

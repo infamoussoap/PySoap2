@@ -112,20 +112,3 @@ class Layer(abc.ABC):
         """ Returns the activation function of this layer
         """
         pass
-
-    @abc.abstractmethod
-    def __call__(self, *args):
-        """ __call__ method must be used in order to put the current instance of Layer into
-            the neural network tree. Doing so by giving the Layers which will be the input
-            for this layer, or equivalently, by giving its parent Layers.
-
-            Parameters
-            ----------
-            args : tuple of :obj:Layer
-
-            Returns
-            -------
-            :obj:Layer
-                Return self, for easier use of interface
-        """
-        pass
