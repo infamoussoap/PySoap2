@@ -15,9 +15,6 @@ class SplitChild(NetworkNode, Layer):
         mask : np.array
             Assumed to be a np.array with bool entries. Entries where the mask is true
             are the positions of the input that will be returned
-        parent : :obj:Split
-            While most layers assume parents is :obj:Layer, here we make a stronger
-            assumption that it is of type :obj:Split
 
         input_shape : tuple of int
             The input shape of this layer
@@ -26,9 +23,6 @@ class SplitChild(NetworkNode, Layer):
         activation_function : str
             The name of the activation function. Note that since this layer doesn't do anything,
             this attribute is set to linear
-
-        branch_path : str
-            This is either 'left' or 'right' and denotes whether the node is a left child or right child
 
         built : bool
             Has the model been built
@@ -41,10 +35,6 @@ class SplitChild(NetworkNode, Layer):
             ----------
             mask : np.array (of bool)
                 The mask for this instance
-            splitparent: :obj:`Split`
-                The parent of this instance
-            branch_path : str
-                Either 'left' or 'right' and denotes whether the node is a left child or right child
         """
         NetworkNode.__init__(self)
 
