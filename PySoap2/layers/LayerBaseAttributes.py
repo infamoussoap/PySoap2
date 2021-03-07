@@ -29,5 +29,10 @@ class LayerBaseAttributes:
     def memory_location(self):
         """ Return the location in memory, to be used as a unique identify for instances
             of LayerBaseAttributes
+
+            Notes
+            -----
+            I'm not sure if there is anything wrong with using memory as a unique identifier,
+            but another alternative, if needed, is to use an attribute bound to this class
         """
         return hex(id(self))
