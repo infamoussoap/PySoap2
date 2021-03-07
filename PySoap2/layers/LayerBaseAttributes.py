@@ -24,3 +24,10 @@ class LayerBaseAttributes:
     @property
     def activation_function_(self):
         return get_activation_function(self.activation_function)
+
+    @property
+    def memory_location(self):
+        """ Return the location in memory, to be used as a unique identify for instances
+            of LayerBaseAttributes
+        """
+        return hex(id(self))
