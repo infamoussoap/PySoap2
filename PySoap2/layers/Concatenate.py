@@ -139,7 +139,7 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
             ValueError
                 If the concatenation is not valid
         """
-        self.input_shape = tuple([parent.shape for parent in self.parents])
+        self.input_shape = tuple([parent.output_shape for parent in self.parents])
 
         if not self._is_concat_valid(list(self.input_shape), self.axis):
             raise ValueError('Every dimension, except for the concatenation axis, must be equal.')
