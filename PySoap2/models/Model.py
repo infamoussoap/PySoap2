@@ -25,6 +25,7 @@ class Model:
         self.metric_function = None
 
     def build(self, loss_function, optimizer, metrics=None):
+        """ Build the layers in the tree network, and save attributes of Model """
         if isinstance(optimizer, Optimizer):
             self.optimizer = optimizer
         elif isinstance(optimizer, str):
@@ -39,12 +40,45 @@ class Model:
 
     @staticmethod
     def _build_layer(layer):
+        """ Recursively build the layers from ground up, starting from the terminal node
+            moving towards the root node.
+
+            Parameters
+            ----------
+            layer : :obj:Layer
+
+            Notes
+            -----
+            By using a ground up approach only the parent nodes that need to be built are built.
+        """
         for parent in layer.parents:
             if not parent.built:
                 Model._build_layer(parent)
         layer.build()
 
     def predict(self, z, output_only=True):
+        """ Perform forward propagation of the whole network
+
+            Parameters
+            ----------
+            z : (N, *input_shape) np.array
+                The Input
+            output_only : bool
+                If true then only the model output will be returned
+                Otherwise the pre and post activations will be returned as a dictionary
+
+            Returns
+            -------
+            (N, *output_shape) np.array
+                This is returned in output_only=True
+
+            or
+
+            dict of str - (np.array, np.array)
+                This is returned in output_only=False
+                The str keys are the layers memory location, i.e. their unique identifier. The associated value
+                will be a tuple of the pre and post activations.
+        """
         cached_outputs = {self.input_layer.memory_location: self.input_layer.predict(z, output_only=output_only)}
 
         model_prediction = self._propagated_output_of_layer(self.output_layer, cached_outputs, output_only=output_only)
@@ -54,10 +88,28 @@ class Model:
 
     @staticmethod
     def _propagated_output_of_layer(layer, cached_outputs, output_only=True):
+        """ Returns the output of the given layer
+
+            Notes
+            -----
+            This is a recursive implementation that goes from the ground up, meaning it starts at the
+            terminal node and ends at the node that is in cached_outputs
+
+            Parameters
+            ----------
+            layer : :obj:Layer
+                The layer to return the output of
+            cached_outputs : dict of str - :obj:
+                Stores the outputs of the parent nodes. Note that when calling this layer
+                it is assumed that the the root node (or terminal nodes) is inside cached_outputs
+            output_only : bool
+                If true then cached_outputs is dict of str - np.array
+                If false then cached_outputs is dict of str - (np.array, np.array)
+        """
         unique_identifier = layer.memory_location
 
         if unique_identifier not in cached_outputs:
-            if len(layer.parents) == 0: 
+            if len(layer.parents) == 0:
                 raise ValueError(f'{layer} has no parent nodes')
 
             layer_arg = Model._get_layer_argument(layer, cached_outputs, output_only=output_only)
@@ -67,6 +119,19 @@ class Model:
 
     @staticmethod
     def _get_layer_argument(layer, cached_outputs, output_only=True):
+        """ Returns the arguments to be passed into layer to be predicted
+
+            Parameters
+            ----------
+            layer : :obj:Layer
+                The layer to return the output of
+            cached_outputs : dict of str - :obj:
+                Stores the outputs of the parent nodes. Note that when calling this layer
+                it is assumed that the the root node (or terminal nodes) is inside cached_outputs
+            output_only : bool
+                If true then cached_outputs is dict of str - np.array
+                If false then cached_outputs is dict of str - (np.array, np.array)
+        """
         outputs_of_parents = [Model._propagated_output_of_layer(parent, cached_outputs, output_only=output_only)
                               for parent in layer.parents]
 
