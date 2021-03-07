@@ -33,9 +33,13 @@ class Input(NetworkNode, LayerBaseAttributes, Layer):
                 The shape of a given data point
         """
         NetworkNode.__init__(self)
+        LayerBaseAttributes.__init__(self)
 
         self.input_shape = (*input_shape, )
         self.output_shape = (*input_shape, )
+
+        # This layer is assumed to be built from creation
+        self.built = True
 
     def build(self):
         """ Initialises the layer
@@ -46,7 +50,7 @@ class Input(NetworkNode, LayerBaseAttributes, Layer):
             This method is only written so as to make the `Layer` uniform in
             implementation
         """
-        self.built = True
+        pass
 
     def predict(self, z, *args, output_only=True, **kwargs):
         """ Returns the output of this layer
