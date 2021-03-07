@@ -19,6 +19,11 @@ class Model:
         self.input_layer = input_layer
         self.output_layer = output_layer
 
+        self.optimizer = None
+
+        self.loss_function = None
+        self.metric_function = None
+
     def build(self, loss_function, optimizer, metrics=None):
         if isinstance(optimizer, Optimizer):
             self.optimizer = optimizer
@@ -30,4 +35,20 @@ class Model:
         self.loss_function = loss_function
         self.metric_function = metrics
 
-        new_input_shape = None
+        self.build_layers_(self.input_layer, self.output_layer)
+
+    @staticmethod
+    def build_layers_(input_layer, output_layer):
+        """ Build layers using Breadth-First Search """
+        queue = [input_layer]
+
+        while len(queue) > 0:
+            node = queue.pop(0)
+            if node == output_layer:
+                return
+
+            for child in node.children:
+                if not child.built:
+                    child.build()
+                    queue.append(child)
+        return
