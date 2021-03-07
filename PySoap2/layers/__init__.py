@@ -23,3 +23,7 @@ from .Flatten import Flatten
 from .NetworkNode import NetworkNode
 
 from .Split import Split
+
+from .Concatenate import Concatenate
+
+from .LayerBaseAttributes import LayerBaseAttributes
