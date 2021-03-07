@@ -1,9 +1,10 @@
 from PySoap2.layers import Layer
 from PySoap2.layers.NetworkNode import NetworkNode
+from PySoap2.layers.LayerBaseAttributes import LayerBaseAttributes
 from PySoap2.validation import check_layer
 
 
-class Input(NetworkNode, Layer):
+class Input(NetworkNode, LayerBaseAttributes, Layer):
     """ This class will determine the input dimensions of the dataset
 
         Notes
@@ -35,8 +36,6 @@ class Input(NetworkNode, Layer):
 
         self.input_shape = (*input_shape, )
         self.output_shape = (*input_shape, )
-
-        self.built = False
 
     def build(self):
         """ Initialises the layer

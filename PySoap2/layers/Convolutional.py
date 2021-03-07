@@ -1,13 +1,13 @@
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
 
-from PySoap2 import get_activation_function
 from PySoap2.layers import Layer
 from PySoap2.layers.NetworkNode import NetworkNode
+from PySoap2.layers.LayerBaseAttributes import LayerBaseAttributes
 from PySoap2.validation import check_layer
 
 
-class Conv_2D(NetworkNode, Layer):
+class Conv_2D(NetworkNode, LayerBaseAttributes, Layer):
     """ 2D Convolutional layer
 
         Attributes
@@ -207,6 +207,7 @@ class Conv_2D(NetworkNode, Layer):
                 The keyword arguments for the activation function if it has hyper-parameters
         """
         NetworkNode.__init__(self)
+        LayerBaseAttributes.__init__(self)
 
         self.filter_num = filter_num
         self.filter_spatial_shape = filter_spatial_shape
@@ -216,15 +217,12 @@ class Conv_2D(NetworkNode, Layer):
         self.activation_function = activation_function
         self.activation_kwargs = {} if activation_kwargs is None else activation_kwargs
 
-        self.input_shape = None
         self.single_filter_shape = None
         self.filter_shape = None
         self.output_spatial_shape = None
-        self.output_shape = None
+
         self.filter = None
         self.b = None
-
-        self.built = False
 
     def build(self):
         """ Initialise the filters and bias units, and compute the output shape """
@@ -372,10 +370,6 @@ class Conv_2D(NetworkNode, Layer):
     def summary_(self):
         check_layer(self)
         return f'Conv 2D {self.filter_num} x {self.filter_spatial_shape}', f'Output Shape {(None, *self.output_shape)}'
-
-    @property
-    def activation_function_(self):
-        return get_activation_function(self.activation_function, **self.activation_kwargs)
 
     def __str__(self):
         return f'Conv 2D {self.filter_num} x {self.filter_spatial_shape}'

@@ -3,7 +3,7 @@ import numpy as np
 from PySoap2.validation import check_layer
 from PySoap2.layers import Layer
 from PySoap2.layers.NetworkNode import NetworkNode
-from PySoap2 import get_activation_function
+from PySoap2.layers.LayerBaseAttributes import LayerBaseAttributes
 
 
 class BatchNormGrads:
@@ -168,7 +168,7 @@ class BatchNormGrads:
         return dz_hat_ / np.sqrt(sigma**2 + epsilon) + dsigma2_*2*(z - mu)/m + dmu_/m
 
 
-class BatchNorm(NetworkNode, Layer):
+class BatchNorm(NetworkNode, LayerBaseAttributes, Layer):
     """ A BatchNorm layer where the inputs are normalised and then linearly scaled.
         Concretely, given an input z, this layer will return
             gamma * z_hat + beta
@@ -176,9 +176,6 @@ class BatchNorm(NetworkNode, Layer):
 
         Attributes
         ----------
-        activation_function : str
-            The name of the activation function
-
         input_shape : k tuple
             The shape of the input of this layer
         output_shape : k tuple
@@ -201,15 +198,9 @@ class BatchNorm(NetworkNode, Layer):
 
     def __init__(self):
         NetworkNode.__init__(self)
+        LayerBaseAttributes.__init__(self)
 
-        self.built = False
         self.epsilon = 1e-10
-
-        self.activation_function = 'linear'
-
-        self.input_shape = None
-        self.output_shape = None
-
         self.gamma = None
         self.beta = None
 
@@ -334,10 +325,6 @@ class BatchNorm(NetworkNode, Layer):
     def summary_(self):
         check_layer(self)
         return f'Batch Norm', f"Output Shape {(None, *self.output_shape)}"
-
-    @property
-    def activation_function_(self):
-        return get_activation_function(self.activation_function)
 
     def __str__(self):
         return f'Batch Norm; built = {self.built}'

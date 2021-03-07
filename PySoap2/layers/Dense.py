@@ -1,12 +1,12 @@
 import numpy as np
 
-from PySoap2 import get_activation_function
 from PySoap2.layers import Layer
 from PySoap2.layers.NetworkNode import NetworkNode
+from PySoap2.layers.LayerBaseAttributes import LayerBaseAttributes
 from PySoap2.validation import check_layer
 
 
-class Dense(NetworkNode, Layer):
+class Dense(NetworkNode, LayerBaseAttributes, Layer):
     """ A fully connected layer
 
         Attributes
@@ -44,18 +44,15 @@ class Dense(NetworkNode, Layer):
                 The keyword arguments for the activation function if it has hyper-parameters
         """
         NetworkNode.__init__(self)
+        LayerBaseAttributes.__init__(self)
 
         self.hidden_nodes = hidden_nodes
 
         self.activation_function = activation_function
         self.activation_kwargs = {} if activation_kwargs is None else activation_kwargs
 
-        self.output_shape = None
-        self.input_shape = None
         self.W = None
         self.b = None
-
-        self.built = False
 
     def build(self):
         """ Initialises the weight and bias units """
@@ -174,10 +171,6 @@ class Dense(NetworkNode, Layer):
     def summary_(self):
         check_layer(self)
         return f'Dense {(self.hidden_nodes,)}', f'Output Shape {(None, *self.output_shape)}'
-
-    @property
-    def activation_function_(self):
-        return get_activation_function(self.activation_function, **self.activation_kwargs)
 
     def __str__(self):
         return f'Dense: Output Shape {(None, *self.output_shape)}'

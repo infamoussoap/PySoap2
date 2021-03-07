@@ -1,12 +1,12 @@
 import numpy as np
 
-from PySoap2 import get_activation_function
 from PySoap2.layers import Layer
 from PySoap2.layers.NetworkNode import NetworkNode
+from PySoap2.layers.LayerBaseAttributes import LayerBaseAttributes
 from PySoap2.validation import check_layer
 
 
-class Flatten(NetworkNode, Layer):
+class Flatten(NetworkNode, LayerBaseAttributes, Layer):
     """ Given a n-dimensional input, this layer will return the flatten representation
         of the input
 
@@ -18,8 +18,6 @@ class Flatten(NetworkNode, Layer):
             The output shape
         built : bool
             Has the layer been initialised
-        activation_function : str
-            Since this is a pass-through layer, the activation function
 
         Notes
         -----
@@ -29,12 +27,7 @@ class Flatten(NetworkNode, Layer):
 
     def __init__(self):
         NetworkNode.__init__(self)
-
-        self.built = False
-        self.activation_function = 'linear'
-
-        self.input_shape = None
-        self.output_shape = None
+        LayerBaseAttributes.__init__(self)
 
     def build(self):
         """ Built/initialised the layer """
@@ -136,10 +129,6 @@ class Flatten(NetworkNode, Layer):
     def summary_(self):
         check_layer(self)
         return f'Flatten', f'Output Shape {(None, *self.output_shape)}'
-
-    @property
-    def activation_function_(self):
-        return get_activation_function(self.activation_function)
 
     def __str__(self):
         return f'Flatten'
