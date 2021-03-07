@@ -133,11 +133,11 @@ class SplitChild(NetworkNode, Layer):
         return parameter_gradients
 
     def update_parameters_(self, parameter_updates):
-        """ This layer has no trainiable parameters so nothing will be performed
+        """ This layer has no trainable parameters so nothing will be performed
 
             Notes
             -----
-            Because this layer has no traininable parameters, the arguments passed
+            Because this layer has no trainable parameters, the arguments passed
             into this method should be :obj:None, instead of np.array
 
             Parameters
@@ -147,7 +147,7 @@ class SplitChild(NetworkNode, Layer):
         pass
 
     def get_weights(self):
-        """ This layer has no trainiable parameters, so error will be raised
+        """ This layer has no trainable parameters, so error will be raised
 
             Raises
             ------
@@ -164,13 +164,13 @@ class SplitChild(NetworkNode, Layer):
 
 
 class Split(NetworkNode, Layer):
-    """ Breaks up the input into two seperate outputs, such that when the outputs
+    """ Breaks up the input into two separate outputs, such that when the outputs
         are combined, it will be equal to the original input. Note that because
         the break can be highly irregular, the outputs will be flatten arrays
 
         Notes
         -----
-        This Split layer effectivly does nothing. All it does is provide an interface
+        This Split layer effectively does nothing. All it does is provide an interface
         between the input (parent of the Split) to the split outputs
 
         Attributes
@@ -218,7 +218,7 @@ class Split(NetworkNode, Layer):
         self.built = False
 
     def build(self):
-        """ Initilise the layer
+        """ Initialise the layer
 
             Notes
             -----
@@ -301,11 +301,11 @@ class Split(NetworkNode, Layer):
         return None, None
 
     def update_parameters_(self, bias_updates, weight_updates):
-        """ This layer has no trainiable parameters so nothing will be performed
+        """ This layer has no trainable parameters so nothing will be performed
 
             Notes
             -----
-            Because this layer has no traininable parameters, the arguments passed
+            Because this layer has no trainable parameters, the arguments passed
             into this method should be :obj:None, instead of np.array
 
             Parameters
@@ -316,7 +316,7 @@ class Split(NetworkNode, Layer):
         pass
 
     def get_weights(self):
-        """ This layer has no trainiable parameters, so error will be raised
+        """ This layer has no trainable parameters, so error will be raised
 
             Raises
             ------
