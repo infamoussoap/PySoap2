@@ -1,12 +1,13 @@
+from PySoap2 import get_activation_function
+
+
 class LayerBaseAttributes:
     """ Define base attributes of Layer
 
         Attributes
         ----------
         input_shape : tuple
-            Empty Tuple
         output_shape : tuple
-            Empty Tuple
         activation_function : str
             Assumed to be linear activation
         built : bool
@@ -19,3 +20,7 @@ class LayerBaseAttributes:
         self.activation_function = 'linear'
 
         self.built = False
+
+    @property
+    def activation_function_(self):
+        return get_activation_function(self.activation_function)
