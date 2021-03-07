@@ -35,20 +35,11 @@ class Model:
         self.loss_function = loss_function
         self.metric_function = metrics
 
-        self.build_layers_(self.input_layer, self.output_layer)
+        self.build_layer_(self.output_layer)
 
     @staticmethod
-    def build_layers_(input_layer, output_layer):
-        """ Build layers using Breadth-First Search """
-        queue = [input_layer]
-
-        while len(queue) > 0:
-            node = queue.pop(0)
-            if node == output_layer:
-                return
-
-            for child in node.children:
-                if not child.built:
-                    child.build()
-                    queue.append(child)
-        return
+    def build_layer_(layer):
+        for parent in layer.parents:
+            if not parent.built:
+                Model.build_layer_(parent)
+        layer.build()
