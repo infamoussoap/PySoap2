@@ -1,29 +1,20 @@
-# Abstract Layer Class
+# Super Classes for inheritance
 from .Layer import Layer
+from .LayerBaseAttributes import LayerBaseAttributes
+from .NetworkNode import NetworkNode
 
-# Input Class
+
+# Trainable Layers
 from .Input import Input
-
-# Dense Layer Class
 from .Dense import Dense
-
-# Convolutional Classes
 from .Convolutional import Conv_2D
-
-# Push Forward Class
 from .ElementWise import ElementWise
-
-# BatchNorm Class
 from .BatchNorm import BatchNorm
+from .SoftChop import SoftChop
 
 # Flatten Layer
 from .Flatten import Flatten
 
-# Network Tree
-from .NetworkNode import NetworkNode
-
+# Split and Concatenate layers
 from .Split import Split
-
 from .Concatenate import Concatenate
-
-from .LayerBaseAttributes import LayerBaseAttributes
