@@ -151,6 +151,8 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
             new_mask = [np.ones(shape) if i == j else np.zeros(shape) for (j, shape) in enumerate(self.input_shape)]
             self.parents[i].mask = np.concatenate(new_mask, axis=self.axis).astype(bool)
 
+        self.built = True
+
     def predict(self, z, output_only=True):
         """ Forward propagation of this layer
 
