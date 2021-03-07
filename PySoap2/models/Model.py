@@ -112,13 +112,13 @@ class Model:
             if len(layer.parents) == 0:
                 raise ValueError(f'{layer} has no parent nodes')
 
-            layer_arg = Model._get_layer_argument(layer, cached_outputs, output_only=output_only)
+            layer_arg = Model._get_layer_predict_argument(layer, cached_outputs, output_only=output_only)
             cached_outputs[unique_identifier] = layer.predict(layer_arg, output_only=output_only)
 
         return cached_outputs[unique_identifier]
 
     @staticmethod
-    def _get_layer_argument(layer, cached_outputs, output_only=True):
+    def _get_layer_predict_argument(layer, cached_outputs, output_only=True):
         """ Returns the arguments to be passed into layer to be predicted
 
             Parameters
