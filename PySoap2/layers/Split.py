@@ -3,10 +3,10 @@ import numpy as np
 from PySoap2.validation import check_layer
 from PySoap2.layers import Layer
 from PySoap2.layers.NetworkNode import NetworkNode
-from PySoap2 import get_activation_function
+from PySoap2.layers.LayerBaseAttributes import LayerBaseAttributes
 
 
-class SplitChild(NetworkNode, Layer):
+class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
     """ This class is where the splitting is performed. The input (or parent to split node)
         is passed into Split which is then passed to SplitChild to perform the split
 
@@ -20,9 +20,6 @@ class SplitChild(NetworkNode, Layer):
             The input shape of this layer
         output_shape : (i, )
             A 1-tuple - The output is simple the number of positions
-        activation_function : str
-            The name of the activation function. Note that since this layer doesn't do anything,
-            this attribute is set to linear
 
         built : bool
             Has the model been built
@@ -37,15 +34,8 @@ class SplitChild(NetworkNode, Layer):
                 The mask for this instance
         """
         NetworkNode.__init__(self)
-
+        LayerBaseAttributes.__init__(self)
         self.mask = mask.astype(bool)
-
-        self.activation_function = 'linear'
-
-        self.input_shape = None
-        self.output_shape = None
-
-        self.built = False
 
     def build(self):
         """ Build the layer by determining the input and output shape """
@@ -126,11 +116,9 @@ class SplitChild(NetworkNode, Layer):
 
             Returns
             -------
-            None, None
+            {}
         """
-
-        parameter_gradients = {}
-        return parameter_gradients
+        return {}
 
     def update_parameters_(self, parameter_updates):
         """ This layer has no trainable parameters so nothing will be performed
@@ -153,17 +141,14 @@ class SplitChild(NetworkNode, Layer):
             ------
             AttributeError
         """
-        raise AttributeError("Split Layer has no weights/parameters.")
+        return None
 
     def summary_(self):
         check_layer(self)
         return 'SplitChild Layer', f'Output Shape {(None, *self.output_shape)}'
 
-    def activation_function_(self):
-        return get_activation_function(self.activation_function)
 
-
-class Split(NetworkNode, Layer):
+class Split(NetworkNode, LayerBaseAttributes, Layer):
     """ Breaks up the input into two separate outputs, such that when the outputs
         are combined, it will be equal to the original input. Note that because
         the break can be highly irregular, the outputs will be flatten arrays
@@ -184,9 +169,6 @@ class Split(NetworkNode, Layer):
             The input shape of this layer
         output_shape : (i, )
             A 1-tuple - The output is simple the number of positions
-        activation_function : str
-            The name of the activation function. Note that since this layer doesn't do anything,
-            this attribute is set to linear
 
         built : bool
             Has the model been built
@@ -207,15 +189,8 @@ class Split(NetworkNode, Layer):
                 on runtime.
         """
         NetworkNode.__init__(self)
-
+        LayerBaseAttributes.__init__(self)
         self.mask = mask.astype(bool)
-
-        self.activation_function = 'linear'
-
-        self.input_shape = None
-        self.output_shape = None
-
-        self.built = False
 
     def build(self):
         """ Initialise the layer
@@ -244,7 +219,7 @@ class Split(NetworkNode, Layer):
             return z
         return z, z
 
-    def get_delta_backprop_(self, g_prime1, new_delta1, g_prime2, new_delta2, *args, **kwargs):
+    def get_delta_backprop_(self, g_prime, new_delta, *args, **kwargs):
         """ Returns delta^{k-1}
 
             Notes
@@ -256,14 +231,10 @@ class Split(NetworkNode, Layer):
 
             Parameters
             ----------
-            g_prime1 : (N, *input_shape) np.array
-                Should be g'_{k-1} for the left child
-            new_delta1 : (N, *left_output_shape) np.array
-                Should be delta^k for the left child
-            g_prime2 : (N, *input_shape) np.array
-                Should be g'_{k-1} for the right child
-            new_delta2 : (N, *right_output_shape) np.array
-                Should be delta^k for the right child
+            g_prime : tuple of (N, k) np.array
+                Tuple of g'_{k-1} - left child being the first element and right child the second element
+            new_delta : tuple of (N, k) np.array
+                Tuple of delta^k - left child being the first element and right child the second element
 
             Returns
             -------
@@ -271,10 +242,10 @@ class Split(NetworkNode, Layer):
         """
         check_layer(self)
 
-        out_delta = np.zeros(len(new_delta1), *self.input_shape)
+        out_delta = np.zeros(len(new_delta[0]), *self.input_shape)
 
-        out_delta[:, self.mask] = g_prime1
-        out_delta[:, ~self.mask] = g_prime2
+        out_delta[:, self.mask] = new_delta[0]
+        out_delta[:, ~self.mask] = new_delta[1]
 
         return out_delta
 
@@ -296,22 +267,17 @@ class Split(NetworkNode, Layer):
 
             Returns
             -------
-            None, None
+            {}
         """
-        return None, None
+        return {}
 
-    def update_parameters_(self, bias_updates, weight_updates):
+    def update_parameters_(self, *args):
         """ This layer has no trainable parameters so nothing will be performed
 
             Notes
             -----
             Because this layer has no trainable parameters, the arguments passed
             into this method should be :obj:None, instead of np.array
-
-            Parameters
-            ----------
-            bias_updates : None
-            weight_updates : None
         """
         pass
 
@@ -322,14 +288,11 @@ class Split(NetworkNode, Layer):
             ------
             AttributeError
         """
-        raise AttributeError("Split Layer has no weights/parameters.")
+        return None
 
     def summary_(self):
         check_layer(self)
         return 'Split Layer', f'Output Shape {(None, *self.output_shape)}'
-
-    def activation_function_(self):
-        return get_activation_function(self.activation_function)
 
     @property
     def left(self):
