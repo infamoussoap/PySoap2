@@ -251,7 +251,7 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
             (N, *input_shape) np.array
         """
 
-        out_delta = np.zeros(len(new_delta[0]), *self.input_shape)
+        out_delta = np.zeros((len(new_delta[0]), *self.input_shape))
 
         out_delta[:, self.mask] = new_delta[0]
         out_delta[:, ~self.mask] = new_delta[1]
