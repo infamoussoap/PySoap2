@@ -114,11 +114,5 @@ class Input(NetworkNode, LayerBaseAttributes, Layer):
     def summary_(self):
         return f'Input', f'Input Shape  {(None, *self.input_shape)}'
 
-    @property
-    def activation_function_(self):
-        """ Since this layer has no activation function, there is nothing to be returned
-        """
-        return None
-
     def __str__(self):
         return f'Input: Input Shape  {(None, *self.input_shape)}'
