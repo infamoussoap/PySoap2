@@ -3,7 +3,8 @@ import numpy as np
 from PySoap2.layers import Layer
 from PySoap2.layers.NetworkNode import NetworkNode
 from PySoap2.layers.LayerBaseAttributes import LayerBaseAttributes
-from PySoap2.validation import check_layer
+
+from .LayerBuiltChecks import check_built
 
 
 class Flatten(NetworkNode, LayerBaseAttributes, Layer):
@@ -38,6 +39,7 @@ class Flatten(NetworkNode, LayerBaseAttributes, Layer):
 
         self.built = True
 
+    @check_built
     def predict(self, z, output_only=True):
         """ Returns the prediction of this layer
 
@@ -66,12 +68,11 @@ class Flatten(NetworkNode, LayerBaseAttributes, Layer):
             Since this layer has no activation function,
         """
 
-        check_layer(self)
-
         if output_only:
             return z.reshape(len(z), self.output_shape[0])
         return z, z.reshape(len(z), self.output_shape[0])
 
+    @check_built
     def get_delta_backprop_(self, g_prime, new_delta, *args, **kwargs):
         """ Returns the delta for the previous layer, delta^{k-1}_{m,j}.
 
@@ -92,9 +93,10 @@ class Flatten(NetworkNode, LayerBaseAttributes, Layer):
             The key to this layer is that the delta of the k+1 layer needs to be reshaped
             for the k-1 layer
         """
-        check_layer(self)
+
         return new_delta.reshape(len(new_delta), *self.input_shape)
 
+    @check_built
     def get_parameter_gradients_(self, *args, **kwargs):
         """ Returns the associated partial S/partial W^k, that is
             the gradient with respect to the weight matrix in the kth layer
@@ -107,11 +109,11 @@ class Flatten(NetworkNode, LayerBaseAttributes, Layer):
             -----
             Since nothing in this layer is trainiable, the gradients is simply None
         """
-        check_layer(self)
 
         parameter_gradients = {}
         return parameter_gradients
 
+    @check_built
     def update_parameters_(self, parameter_gradients):
         """ Perform an update to the weights by descending down the gradient
 
@@ -119,15 +121,14 @@ class Flatten(NetworkNode, LayerBaseAttributes, Layer):
             -----
             Since nothing in this layer is trainiable, we can simply pass
         """
-        check_layer(self)
         pass
 
+    @check_built
     def get_weights(self):
-        check_layer(self)
         return None, None
 
+    @check_built
     def summary_(self):
-        check_layer(self)
         return f'Flatten', f'Output Shape {(None, *self.output_shape)}'
 
     def __str__(self):

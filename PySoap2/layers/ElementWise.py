@@ -1,9 +1,10 @@
 import numpy as np
 
-from PySoap2.validation import check_layer
 from PySoap2.layers import Layer
 from PySoap2.layers.NetworkNode import NetworkNode
 from PySoap2.layers.LayerBaseAttributes import LayerBaseAttributes
+
+from .LayerBuiltChecks import check_built
 
 
 class ElementWise(NetworkNode, LayerBaseAttributes, Layer):
@@ -70,6 +71,7 @@ class ElementWise(NetworkNode, LayerBaseAttributes, Layer):
 
         self.built = True
 
+    @check_built
     def predict(self, z, output_only=True):
         """ Returns the output of this layer
 
@@ -96,13 +98,13 @@ class ElementWise(NetworkNode, LayerBaseAttributes, Layer):
                 The second np.array will store the output after it has passed through the
                 activation function.
         """
-        check_layer(self)
 
         a = self.W[None, ...] * z + self.b[None, ...]
         if output_only:
             return self.activation_function_(a)
         return a, self.activation_function_(a)
 
+    @check_built
     def get_delta_backprop_(self, g_prime, new_delta, *args):
         """ Returns the delta for the previous layer, delta^{k-1}_{m,j}.
 
@@ -124,10 +126,10 @@ class ElementWise(NetworkNode, LayerBaseAttributes, Layer):
             weights, W. But it does know the values of g'_{k-1} and delta^k, due to forward propagation
             and the backwards nature of the back propagation algorithm.
         """
-        check_layer(self)
 
         return new_delta * self.W[None, ...] * g_prime
 
+    @check_built
     def get_parameter_gradients_(self, delta, prev_z):
         """ Returns the associated partial S/partial W^k, that is
             the gradient with respect to the weight matrix in the kth layer
@@ -145,12 +147,12 @@ class ElementWise(NetworkNode, LayerBaseAttributes, Layer):
                 The first array is the gradient for the bias unit
                 The second array is the gradient for the weight matrix
         """
-        check_layer(self)
 
         parameter_gradients = {'weight': np.einsum('i...,i...', delta, prev_z), 'bias': np.sum(delta, axis=0)}
 
         return parameter_gradients
 
+    @check_built
     def update_parameters_(self, parameter_updates):
         """ Perform an update to the weights by descending down the gradient
 
@@ -159,17 +161,16 @@ class ElementWise(NetworkNode, LayerBaseAttributes, Layer):
             parameter_updates : dict of str - np.array
                 The step size for the parameters as scheduled by the optimizer
         """
-        check_layer(self)
 
         self.W -= parameter_updates['weight']
         self.b -= parameter_updates['bias']
 
+    @check_built
     def get_weights(self):
-        check_layer(self)
         return self.W, self.b
 
+    @check_built
     def summary_(self):
-        check_layer(self)
         return f'Element Wise', f'Output Shape {(None, *self.output_shape)}'
 
     def __str__(self):

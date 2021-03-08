@@ -4,7 +4,8 @@ from numpy.lib.stride_tricks import as_strided
 from PySoap2.layers import Layer
 from PySoap2.layers.NetworkNode import NetworkNode
 from PySoap2.layers.LayerBaseAttributes import LayerBaseAttributes
-from PySoap2.validation import check_layer
+
+from .LayerBuiltChecks import check_built
 
 
 class Conv_2D(NetworkNode, LayerBaseAttributes, Layer):
@@ -250,6 +251,7 @@ class Conv_2D(NetworkNode, LayerBaseAttributes, Layer):
 
         self.built = True
 
+    @check_built
     def predict(self, z, output_only=True):
         """ Returns the output of this layer
 
@@ -276,7 +278,6 @@ class Conv_2D(NetworkNode, LayerBaseAttributes, Layer):
                 The second np.array will store the output after it has passed through the
                 activation function.
         """
-        check_layer(self)
 
         conv = self.perform_conv(z, self.filter, self.b, self.stride)
 
@@ -284,6 +285,7 @@ class Conv_2D(NetworkNode, LayerBaseAttributes, Layer):
             return self.activation_function_(conv)
         return conv, self.activation_function_(conv)
 
+    @check_built
     def get_delta_backprop_(self, g_prime, new_delta, *args, **kwargs):
         """ Returns the delta for the previous layer, delta^{k-1}_{m,j}.
 
@@ -305,8 +307,6 @@ class Conv_2D(NetworkNode, LayerBaseAttributes, Layer):
             filters, W. But it does know the values of g'_{k-1} and delta^k, due to forward propagation
             and the backwards nature of the back propagation algorithm.
         """
-        check_layer(self)
-
         # I don't even know how to explain this code
         # But it makes sense when you look at the math
 
@@ -324,6 +324,7 @@ class Conv_2D(NetworkNode, LayerBaseAttributes, Layer):
         delta = np.einsum("ijkl,abcjkl,iabc->iabc", new_delta, eye_conv, g_prime, optimize='greedy')
         return delta
 
+    @check_built
     def get_parameter_gradients_(self, delta, prev_z):
         """ Get the gradients for the filter matrix and bias units
 
@@ -341,8 +342,6 @@ class Conv_2D(NetworkNode, LayerBaseAttributes, Layer):
                 The second array is the gradient for the filter matrix
 
         """
-        check_layer(self)
-
         # This code is self-explanatory when you look at the math
         windowed = self.im2window(prev_z, self.filter_spatial_shape, self.stride)
 
@@ -350,6 +349,7 @@ class Conv_2D(NetworkNode, LayerBaseAttributes, Layer):
                                'bias': np.sum(delta, axis=(0, 1, 2))}
         return parameter_gradients
 
+    @check_built
     def update_parameters_(self, parameter_updates):
         """ Update the filter and bias by descending down the gradient
 
@@ -358,17 +358,15 @@ class Conv_2D(NetworkNode, LayerBaseAttributes, Layer):
             parameter_updates : dict of str - np.array
                 The step size for the parameters as scheduled by the optimizer
         """
-        check_layer(self)
-
         self.filter -= parameter_updates['filter']
         self.b -= parameter_updates['bias']
 
+    @check_built
     def get_weights(self):
-        check_layer(self)
         return self.filter, self.b
 
+    @check_built
     def summary_(self):
-        check_layer(self)
         return f'Conv 2D {self.filter_num} x {self.filter_spatial_shape}', f'Output Shape {(None, *self.output_shape)}'
 
     def __str__(self):

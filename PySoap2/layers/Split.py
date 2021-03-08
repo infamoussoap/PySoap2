@@ -1,9 +1,10 @@
 import numpy as np
 
-from PySoap2.validation import check_layer
 from PySoap2.layers import Layer
 from PySoap2.layers.NetworkNode import NetworkNode
 from PySoap2.layers.LayerBaseAttributes import LayerBaseAttributes
+
+from .LayerBuiltChecks import check_built
 
 
 class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
@@ -46,6 +47,7 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
 
         self.built = True
 
+    @check_built
     def predict(self, z, output_only=True):
         """ Forward propagate the splitting
 
@@ -68,12 +70,12 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
                 If output_only=False, the first position will be the original input
                 with the second being the split of the input
         """
-        check_layer(self)
 
         if output_only:
             return z[:, self.mask]
         return z, z[:, self.mask]
 
+    @check_built
     def get_delta_backprop_(self, g_prime, new_delta, *args, **kwargs):
         """ Returns delta^{k-1}
 
@@ -95,9 +97,9 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
             (N, *output_shape)
         """
 
-        check_layer(self)
         return new_delta
 
+    @check_built
     def get_parameter_gradients_(self, new_delta, prev_z):
         """ This method returns the gradients of the parameters for this layer. But
             since this layer has no trainable parameters, it has no gradients
@@ -118,8 +120,10 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
             -------
             {}
         """
+
         return {}
 
+    @check_built
     def update_parameters_(self, parameter_updates):
         """ This layer has no trainable parameters so nothing will be performed
 
@@ -132,8 +136,10 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
             ----------
             parameter_updates : dict of str - np.array
         """
+
         pass
 
+    @check_built
     def get_weights(self):
         """ This layer has no trainable parameters, so error will be raised
 
@@ -141,10 +147,12 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
             ------
             AttributeError
         """
+
         return None
 
+    @check_built
     def summary_(self):
-        check_layer(self)
+
         return 'SplitChild Layer', f'Output Shape {(None, *self.output_shape)}'
 
 
@@ -207,6 +215,7 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
 
         self.built = True
 
+    @check_built
     def predict(self, z, output_only=True):
         """ Returns the prediction of this layer
 
@@ -219,6 +228,7 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
             return z
         return z, z
 
+    @check_built
     def get_delta_backprop_(self, g_prime, new_delta, *args, **kwargs):
         """ Returns delta^{k-1}
 
@@ -240,7 +250,6 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
             -------
             (N, *input_shape) np.array
         """
-        check_layer(self)
 
         out_delta = np.zeros(len(new_delta[0]), *self.input_shape)
 
@@ -249,6 +258,7 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
 
         return out_delta
 
+    @check_built
     def get_parameter_gradients_(self, new_delta, prev_z):
         """ This method returns the gradients of the parameters for this layer. But
             since this layer has no trainable parameters, it has no gradients
@@ -269,8 +279,10 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
             -------
             {}
         """
+
         return {}
 
+    @check_built
     def update_parameters_(self, *args):
         """ This layer has no trainable parameters so nothing will be performed
 
@@ -281,6 +293,7 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
         """
         pass
 
+    @check_built
     def get_weights(self):
         """ This layer has no trainable parameters, so error will be raised
 
@@ -290,8 +303,9 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
         """
         return None
 
+    @check_built
     def summary_(self):
-        check_layer(self)
+
         return 'Split Layer', f'Output Shape {(None, *self.output_shape)}'
 
     @property

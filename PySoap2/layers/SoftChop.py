@@ -5,7 +5,8 @@ from functools import partial
 from PySoap2.layers import Layer
 from PySoap2.layers.NetworkNode import NetworkNode
 from PySoap2.layers.LayerBaseAttributes import LayerBaseAttributes
-from PySoap2.validation import check_layer
+
+from .LayerBuiltChecks import check_built
 
 
 class MultiSoftChop:
@@ -198,10 +199,11 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         self.epsilon1 = np.random.rand(*self.input_shape)
         self.epsilon2 = np.random.rand(*self.input_shape)
 
+        self.built = True
+        
         self.clip_parameters()
 
-        self.built = True
-
+    @check_built
     def clip_parameters(self, min_a=0.001, min_epsilon=0.001):
         """ Clip the hyper-parameters to be in a specific bound
 
@@ -229,6 +231,7 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         self.epsilon1 = np.clip(self.epsilon1, min_epsilon, None)
         self.epsilon2 = np.clip(self.epsilon2, min_epsilon, None)
 
+    @check_built
     def predict(self, z, output_only=True):
         """ Returns the output of this layer
 
@@ -255,13 +258,13 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
                 The second np.array will store the output after it has passed through the
                 activation function.
         """
-        check_layer(self)
 
         a = self.activation_function_(z)
         if output_only:
             return a
         return a, a
 
+    @check_built
     def get_delta_backprop_(self, g_prime, new_delta, prev_z):
         """ Returns the delta for the previous layer, delta^{k-1}_{m,j}.
 
@@ -285,10 +288,10 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
             weights, W. But it does know the values of g'_{k-1} and delta^k, due to forward propagation
             and the backwards nature of the back propagation algorithm.
         """
-        check_layer(self)
 
         return new_delta * g_prime * self.activation_function_(prev_z, grad=True)
 
+    @check_built
     def get_parameter_gradients_(self, delta, prev_z):
         """ Returns the associated partial S/partial W^k, that is
             the gradient with respect to the weight matrix in the kth layer
@@ -311,11 +314,6 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
                 the `a` hyper-parameters, this also starts with dimension 2 - the 0th entry for the
                 `epsilon1` gradients and the 1st entry for the `epsilon2` gradients
         """
-        check_layer(self)
-
-        # weight_updates = np.add.reduce(delta * prev_z, axis = 0)
-        # bias_updates = np.add.reduce(delta, axis = 0)
-        # weight_updates = np.sum(delta * prev_z, axis = 0)
 
         kwargs = {'x': prev_z, 'a1': self.a1, 'a2': self.a2, 'epsilon1': self.epsilon1, 'epsilon2': self.epsilon2}
 
@@ -326,6 +324,7 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
 
         return parameter_gradients
 
+    @check_built
     def update_parameters_(self, parameter_updates):
         """ Update the softchop hyper-parameters by descending down the gradient
 
@@ -334,7 +333,6 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
             parameter_updates : dict of str - np.array
                 The step size for the parameters as scheduled by the optimizer
         """
-        check_layer(self)
 
         self.a1 -= parameter_updates['a1']
         self.a2 -= parameter_updates['a2']
@@ -344,18 +342,20 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
 
         self.clip_parameters()
 
+    @check_built
     def get_weights(self):
-        check_layer(self)
 
         return np.array([self.a1, self.a2]), np.array([self.epsilon1, self.epsilon2])
 
+    @check_built
     def summary_(self):
-        check_layer(self)
 
         return f'SoftChop', f'Output Shape {(None, *self.output_shape)}'
 
     @property
     def activation_function_(self):
+        """ activation function from LayerBaseAttributes must be overloaded to use softchop properly """
+
         return partial(MultiSoftChop.eval, a1=self.a1, a2=self.a2,
                        epsilon1=self.epsilon1, epsilon2=self.epsilon2)
 

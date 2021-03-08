@@ -1,9 +1,10 @@
 import numpy as np
 
-from PySoap2.validation import check_layer
 from PySoap2.layers import Layer
 from PySoap2.layers.NetworkNode import NetworkNode
 from PySoap2.layers.LayerBaseAttributes import LayerBaseAttributes
+
+from .LayerBuiltChecks import check_built
 
 
 class BatchNormGrads:
@@ -172,7 +173,7 @@ class BatchNorm(NetworkNode, LayerBaseAttributes, Layer):
     """ A BatchNorm layer where the inputs are normalised and then linearly scaled.
         Concretely, given an input z, this layer will return
             gamma * z_hat + beta
-        where z_hat is the normliased version of z, and gamma and beta are matrices
+        where z_hat is the normalised version of z, and gamma and beta are matrices
 
         Attributes
         ----------
@@ -214,6 +215,7 @@ class BatchNorm(NetworkNode, LayerBaseAttributes, Layer):
 
         self.built = True
 
+    @check_built
     def predict(self, z, output_only=True):
         """ Returns the output of this layer
 
@@ -245,8 +247,6 @@ class BatchNorm(NetworkNode, LayerBaseAttributes, Layer):
             Since the activation function is linear the 2 arrays, when output_only = True, are the same
             array
         """
-        check_layer(self)
-
         mean = np.mean(z, axis=0)
         std = np.std(z, axis=0)
 
@@ -256,13 +256,14 @@ class BatchNorm(NetworkNode, LayerBaseAttributes, Layer):
             return a
         return a, a
 
+    @check_built
     def get_delta_backprop_(self, g_prime, new_delta, prev_z):
         """ Returns the delta for the previous layer, delta^{k-1}_{m,j}.
 
             Parameters
             ----------
             g_prime : (N, ...) np.array
-                Should be the derivative of the ouput of the previous layer, g'_{k-1}(a^{k-1}_{m,j})
+                Should be the derivative of the output of the previous layer, g'_{k-1}(a^{k-1}_{m,j})
             new_delta : (N, ...) np.array
                 The delta for this layer, delta^k_{m, j}
             prev_z : (N, ...) np.array
@@ -279,11 +280,10 @@ class BatchNorm(NetworkNode, LayerBaseAttributes, Layer):
             weights, W. But it does know the values of g'_{k-1} and delta^k, due to forward propagation
             and the backwards nature of the back propagation algorithm.
         """
-        check_layer(self)
-
         dz_ = BatchNormGrads.dz(prev_z, new_delta, self.gamma, self.epsilon)
         return dz_ * prev_z
 
+    @check_built
     def get_parameter_gradients_(self, delta, prev_z):
         """ Returns the gradients with respect to beta and gamma
 
@@ -298,13 +298,13 @@ class BatchNorm(NetworkNode, LayerBaseAttributes, Layer):
             -------
             dict of str - np.array
         """
-        check_layer(self)
 
         z_hat = (prev_z - np.mean(prev_z, axis=0)) / np.sqrt(np.std(prev_z, axis=0) ** 2 + self.epsilon)
 
         parameter_gradients = {'beta': np.sum(delta, axis=0), 'gamma': np.sum(delta * z_hat, axis=0)}
         return parameter_gradients
 
+    @check_built
     def update_parameters_(self, parameter_updates):
         """ Perform an update to the weights by descending down the gradient
 
@@ -313,17 +313,16 @@ class BatchNorm(NetworkNode, LayerBaseAttributes, Layer):
             parameter_updates : dict of str - np.array
                 The step size for the parameters, as scheduled by the optimizer
         """
-        check_layer(self)
 
         self.beta -= parameter_updates['beta']
         self.gamma -= parameter_updates['gamma']
 
+    @check_built
     def get_weights(self):
-        check_layer(self)
         return self.beta, self.gamma
 
+    @check_built
     def summary_(self):
-        check_layer(self)
         return f'Batch Norm', f"Output Shape {(None, *self.output_shape)}"
 
     def __str__(self):

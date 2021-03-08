@@ -4,6 +4,8 @@ from PySoap2.layers import Layer
 from PySoap2.layers.NetworkNode import NetworkNode
 from PySoap2.layers.LayerBaseAttributes import LayerBaseAttributes
 
+from .LayerBuiltChecks import check_built
+
 
 class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
     """ Parent of Concatenate Node. This class provides an interface between the parent
@@ -26,6 +28,7 @@ class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
         self.output_shape = self.input_shape
         self.built = True
 
+    @check_built
     def predict(self, z, output_only=True):
         """ Returns the output of this layer
 
@@ -47,6 +50,7 @@ class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
             return z
         return z, z
 
+    @check_built
     def get_delta_backprop_(self, g_prime, new_delta, *args):
         """ Returns delta^{k-1}
 
@@ -63,15 +67,19 @@ class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
         """
         return new_delta[:, self.mask].reshape((len(new_delta), *self.input_shape))
 
+    @check_built
     def get_parameter_gradients_(self, delta, prev_z):
         return {}
 
+    @check_built
     def update_parameters_(self, parameter_updates):
         pass
 
+    @check_built
     def get_weights(self):
         return None
 
+    @check_built
     def summary_(self):
         return f'Concat-Parent', f'Output Shape {(None, *self.output_shape)}'
 
@@ -153,6 +161,7 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
 
         self.built = True
 
+    @check_built
     def predict(self, z, output_only=True):
         """ Forward propagation of this layer
 
@@ -169,6 +178,7 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
             return np.concatenate(z, axis=self.axis)
         return z, np.concatenate(z, axis=self.axis)
 
+    @check_built
     def get_delta_backprop_(self, g_prime, new_delta, *args):
         """ Returns delta^{k-1}
 
@@ -191,15 +201,19 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
         """
         return new_delta
 
+    @check_built
     def get_parameter_gradients_(self, delta, prev_z):
         return {}
 
+    @check_built
     def update_parameters_(self, parameter_updates):
         pass
 
+    @check_built
     def get_weights(self):
         return None
 
+    @check_built
     def summary_(self):
         return 'Concatenate', f'Output Shape: {(None, *self.output_shape)}'
 

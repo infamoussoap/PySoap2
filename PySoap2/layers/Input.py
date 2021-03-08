@@ -1,7 +1,8 @@
 from PySoap2.layers import Layer
 from PySoap2.layers.NetworkNode import NetworkNode
 from PySoap2.layers.LayerBaseAttributes import LayerBaseAttributes
-from PySoap2.validation import check_layer
+
+from .LayerBuiltChecks import check_built
 
 
 class Input(NetworkNode, LayerBaseAttributes, Layer):
@@ -52,6 +53,7 @@ class Input(NetworkNode, LayerBaseAttributes, Layer):
         """
         pass
 
+    @check_built
     def predict(self, z, *args, output_only=True, **kwargs):
         """ Returns the output of this layer
 
@@ -78,39 +80,38 @@ class Input(NetworkNode, LayerBaseAttributes, Layer):
                 The second np.array will store the output after it has passed through the
                 activation function.
         """
-        check_layer(self)
 
         if output_only:
             return z
         else:
             return z, z
 
+    @check_built
     def get_delta_backprop_(self, g_prime, new_delta, *args):
         """ Since this layer has no parameters, there is no implementation needed
         """
-        check_layer(self)
+
         return None
 
+    @check_built
     def get_parameter_gradients_(self, delta, prev_z):
-        """ Since this layer has no parameters, there is no implementation needed
-        """
-        check_layer(self)
+        """ Since this layer has no parameters, there is no implementation needed """
 
         parameter_gradients = {}
         return parameter_gradients
 
+    @check_built
     def update_parameters_(self, parameter_updates):
-        """ Since this layer has no parameters, there is no implementation needed
-        """
-        check_layer(self)
+        """ Since this layer has no parameters, there is no implementation needed """
+
         pass
 
+    @check_built
     def get_weights(self):
-        check_layer(self)
         return None, None
 
+    @check_built
     def summary_(self):
-        check_layer(self)
         return f'Input', f'Input Shape  {(None, *self.input_shape)}'
 
     @property
