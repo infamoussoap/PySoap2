@@ -200,7 +200,7 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         self.epsilon2 = np.random.rand(*self.input_shape)
 
         self.built = True
-        
+
         self.clip_parameters()
 
     @check_built
