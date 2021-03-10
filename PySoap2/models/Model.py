@@ -1,4 +1,6 @@
+import numpy as np
 import functools
+import random
 
 from PySoap2.optimizers import Optimizer, get_optimizer
 from PySoap2 import get_error_function, get_metric_function
@@ -122,6 +124,74 @@ class Model:
         if len(layer.parents) == 1:
             return layer_args[0]
         return layer_args
+
+    def evaluate(self, x_test, y_test):
+        """ Return the MSE of the model prediction
+            Parameters
+            ----------
+            x_test : np.array
+                X_test is assumed to be a list of all the inputs to be forward propagated. In particular
+                it is assumed that the first index of X_test is the index that inputs is accessed by
+            y_test : np.array
+                y_test is the associated list of outputs to the list of inputs X_test.
+            Returns
+            -------
+            str
+                The error
+        """
+        prediction = self.predict(x_test)
+
+        loss_val = self._loss_function(prediction, y_test)
+
+        eval_str = f'{self.loss_function}: {format(loss_val, ".4f")}'
+
+        if self.metric_function is not None:
+            metric_val = self._metric(prediction, y_test)
+            eval_str += f' - {self.metric_function}: {format(metric_val, ".4f")}'
+
+        return eval_str
+
+    def train(self, x_train, y_train, epochs=100, batch_size=None, verbose=True):
+        """ Train the neural network by means of back propagation
+            Parameters
+            ----------
+            x_train : np.array
+                x_train is assumed to be a list of all the inputs to be forward propagated. In particular
+                it is assumed that the first index of x_train is the index that inputs is accessed by
+            y_train : np.array
+                y_train is the associated list of outputs to the list of inputs x_train. More specifically,
+                the neural network will be trained to find the map x_train -> y_train
+            epochs : :obj:`int`, optional
+                Number of times the neural network will see the entire dataset
+            batch_size : :obj:`int`, optional
+                The batch size for gradient descent. If not defined then `batch_size` is set to the
+                length of the dataset, i.e. traditional gradient descent.
+            verbose : bool, optional
+                If set to `True` then the model performance will be printed after each epoch
+        """
+
+        training_length = len(x_train)
+        if batch_size is None:
+            batch_size = training_length
+        index = list(range(training_length))
+
+        for _ in range(epochs):
+            if verbose:
+                print(f'Training on {len(x_train)} samples')
+
+            random.shuffle(index)
+            for i in range(np.ceil(training_length / batch_size).astype(int)):
+                start, end = i * batch_size, (i + 1) * batch_size
+                batch_x, batch_y = x_train[index[start:end]], y_train[index[start:end]]
+
+                self._back_prop(batch_x, batch_y)
+
+            if verbose:
+                start, end = 0, batch_size
+                batch_x, batch_y = x_train[index[start:end]], y_train[index[start:end]]
+                evaluation = self.evaluate(batch_x, batch_y)
+                print(f'Epoch {_ + 1}/{epochs}')
+                print(evaluation)
 
     def _back_prop(self, x_train, y_train):
         """ Perform one iteration of backpropagation on the given batches """
