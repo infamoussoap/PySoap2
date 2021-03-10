@@ -3,6 +3,8 @@ import functools
 from PySoap2.optimizers import Optimizer, get_optimizer
 from PySoap2 import get_error_function, get_metric_function
 
+from .dictionary_tricks import simplify_recursive_dict, unpack_to_recursive_dict
+
 
 class Model:
     @staticmethod
@@ -120,6 +122,18 @@ class Model:
         if len(layer.parents) == 1:
             return layer_args[0]
         return layer_args
+
+    def _back_prop(self, x_train, y_train):
+        """ Perform one iteration of backpropagation on the given batches """
+
+        layer_gradients = self._get_layer_gradients(x_train, y_train)
+        parameter_updates = self.optimizer.step(simplify_recursive_dict(layer_gradients))
+        parameter_updates_by_layer = unpack_to_recursive_dict(parameter_updates)
+
+        for layer in self.layers_by_number_of_parents[1:]:
+            if layer.memory_location in parameter_updates_by_layer:
+                print(layer.memory_location)
+                layer.update_parameters_(parameter_updates_by_layer[layer.memory_location])
 
     def _get_layer_gradients(self, x_train, y_train):
         """ Returns the gradients for each layer as a dictionary """
