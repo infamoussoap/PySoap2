@@ -200,6 +200,12 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
         LayerBaseAttributes.__init__(self)
         self.mask = mask.astype(bool)
 
+        self.left = SplitChild(self.mask)
+        self.right = SplitChild(~self.mask)
+
+        self.left(self)
+        self.right(self)
+
     def build(self):
         """ Initialise the layer
 
@@ -307,31 +313,3 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
     def summary_(self):
 
         return 'Split Layer', f'Output Shape {(None, *self.output_shape)}'
-
-    @property
-    def left(self):
-        """ This returns the left child node in the Split layer, which will return
-            the input at the positions as dictated by the mask
-
-            Returns
-            -------
-            :obj:SplitChild
-        """
-        left_child = SplitChild(self.mask)
-        left_child(self)
-
-        return left_child
-
-    @property
-    def right(self):
-        """ This returns the right child node in the Split layer, which will return
-            the input at the positions as dictated by conjugate mask (i.e. ~mask)
-
-            Returns
-            -------
-            :obj:SplitChild
-        """
-        right_child = SplitChild(~self.mask)
-        right_child(self)
-
-        return right_child
