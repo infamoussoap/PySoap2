@@ -121,13 +121,27 @@ class Model:
             return layer_args[0]
         return layer_args
 
-    def _get_layer_deltas(self, x_train, y_train):
-        """ Returns the delta^k for all the layers """
-
+    def _get_layer_gradients(self, x_train, y_train):
+        """ Returns the gradients for each layer as a dictionary """
         prediction = self.predict(x_train, output_only=False)
 
         cached_pre_activation = {key: val[0] for (key, val) in prediction.items()}
         cached_output = {key: val[1] for (key, val) in prediction.items()}
+        cached_delta = self._get_layer_deltas(y_train, cached_pre_activation, cached_output)
+
+        grad_dict = {}
+        for layer in self.layers_by_number_of_parents[1:]:
+            z = tuple([cached_output[parent.memory_location] for parent in layer.parents])
+            if len(layer.parents) == 1:
+                z = z[0]
+
+            grad_dict[layer.memory_location] = layer.get_parameter_gradients_(cached_delta[layer.memory_location], z)
+
+        return grad_dict
+
+    def _get_layer_deltas(self, y_train, cached_pre_activation, cached_output):
+        """ Returns the delta^k for all the layers """
+
         cached_delta = {}
 
         output_id = self.output_layer.memory_location
@@ -150,7 +164,6 @@ class Model:
                 cached_delta[parent.memory_location] = layer.get_delta_backprop_(g_prime, delta, z)
 
         return cached_delta
-
 
     @property
     @functools.lru_cache()
