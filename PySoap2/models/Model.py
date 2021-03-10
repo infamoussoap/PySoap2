@@ -202,7 +202,6 @@ class Model:
 
         for layer in self.layers_by_number_of_parents[1:]:
             if layer.memory_location in parameter_updates_by_layer:
-                print(layer.memory_location)
                 layer.update_parameters_(parameter_updates_by_layer[layer.memory_location])
 
     def _get_layer_gradients(self, x_train, y_train):
