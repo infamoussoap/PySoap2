@@ -11,6 +11,9 @@ from .dictionary_tricks import simplify_recursive_dict, unpack_to_recursive_dict
 class Model:
     @staticmethod
     def _is_valid_model(start_layer, end_layer):
+        if start_layer is None and end_layer is None:
+            return True
+
         """ Checks to see if there is a valid that connects the input layer to the output layer """
         if len(start_layer.children) == 0:
             return start_layer == end_layer
