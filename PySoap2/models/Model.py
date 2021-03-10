@@ -1,4 +1,5 @@
 from PySoap2.optimizers import Optimizer, get_optimizer
+import functools
 
 
 class Model:
@@ -36,25 +37,26 @@ class Model:
         self.loss_function = loss_function
         self.metric_function = metrics
 
-        self._build_layer(self.output_layer)
+        for layer in self.layers_by_number_of_parents:
+            layer.build()
 
-    @staticmethod
-    def _build_layer(layer):
-        """ Recursively build the layers from ground up, starting from the terminal node
-            moving towards the root node.
+    @property
+    @functools.lru_cache()
+    def layers_by_number_of_parents(self):
+        """ Returns a list by order of the nodes with the least amount of parents to the most parents """
+        current_layers = [self.output_layer]  # Terminal node will have the most parents
+        layer_order = []
 
-            Parameters
-            ----------
-            layer : :obj:Layer
+        while len(current_layers) > 0:
+            for layer in current_layers:
+                if layer in layer_order:
+                    layer_order.remove(layer)
+                layer_order.append(layer)
 
-            Notes
-            -----
-            By using a ground up approach only the parent nodes that need to be built are built.
-        """
-        for parent in layer.parents:
-            if not parent.built:
-                Model._build_layer(parent)
-        layer.build()
+            parents_of_current_layers = [layer.parents for layer in current_layers]
+            current_layers = set(functools.reduce(lambda x, y: x + y, parents_of_current_layers))
+
+        return layer_order[::-1]
 
     def predict(self, z, output_only=True):
         """ Perform forward propagation of the whole network
@@ -79,46 +81,22 @@ class Model:
                 The str keys are the layers memory location, i.e. their unique identifier. The associated value
                 will be a tuple of the pre and post activations.
         """
+
+        # Input is a special case
         cached_outputs = {self.input_layer.memory_location: self.input_layer.predict(z, output_only=output_only)}
 
-        model_prediction = self._propagated_output_of_layer(self.output_layer, cached_outputs, output_only=output_only)
+        for layer in self.layers_by_number_of_parents[1:]:  # Input is assumed to have the least number of parents
+            layer_id = layer.memory_location
+
+            layer_arg = self._get_layer_predict_arguments(layer, cached_outputs, output_only=output_only)
+            cached_outputs[layer_id] = layer.predict(layer_arg, output_only=output_only)
+
         if not output_only:
             return cached_outputs
-        return model_prediction
+        return cached_outputs[self.output_layer.memory_location]
 
     @staticmethod
-    def _propagated_output_of_layer(layer, cached_outputs, output_only=True):
-        """ Returns the output of the given layer
-
-            Notes
-            -----
-            This is a recursive implementation that goes from the ground up, meaning it starts at the
-            terminal node and ends at the node that is in cached_outputs
-
-            Parameters
-            ----------
-            layer : :obj:Layer
-                The layer to return the output of
-            cached_outputs : dict of str - :obj:
-                Stores the outputs of the parent nodes. Note that when calling this layer
-                it is assumed that the the root node (or terminal nodes) is inside cached_outputs
-            output_only : bool
-                If true then cached_outputs is dict of str - np.array
-                If false then cached_outputs is dict of str - (np.array, np.array)
-        """
-        unique_identifier = layer.memory_location
-
-        if unique_identifier not in cached_outputs:
-            if len(layer.parents) == 0:
-                raise ValueError(f'{layer} has no parent nodes')
-
-            layer_arg = Model._get_layer_predict_argument(layer, cached_outputs, output_only=output_only)
-            cached_outputs[unique_identifier] = layer.predict(layer_arg, output_only=output_only)
-
-        return cached_outputs[unique_identifier]
-
-    @staticmethod
-    def _get_layer_predict_argument(layer, cached_outputs, output_only=True):
+    def _get_layer_predict_arguments(layer, cached_outputs, output_only=True):
         """ Returns the arguments to be passed into layer to be predicted
 
             Parameters
@@ -132,14 +110,11 @@ class Model:
                 If true then cached_outputs is dict of str - np.array
                 If false then cached_outputs is dict of str - (np.array, np.array)
         """
-        outputs_of_parents = [Model._propagated_output_of_layer(parent, cached_outputs, output_only=output_only)
-                              for parent in layer.parents]
+        layer_args = [cached_outputs[parent.memory_location] for parent in layer.parents]
 
         if not output_only:
-            layer_args = [post_activation for (pre_activation, post_activation) in outputs_of_parents]
-        else:
-            layer_args = outputs_of_parents
+            layer_args = [post_activation for (pre_activation, post_activation) in layer_args]
 
-        if len(outputs_of_parents) == 1:
+        if len(layer.parents) == 1:
             return layer_args[0]
         return layer_args
