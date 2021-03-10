@@ -1,5 +1,7 @@
-from PySoap2.optimizers import Optimizer, get_optimizer
 import functools
+
+from PySoap2.optimizers import Optimizer, get_optimizer
+from PySoap2 import get_error_function, get_metric_function
 
 
 class Model:
@@ -118,3 +120,62 @@ class Model:
         if len(layer.parents) == 1:
             return layer_args[0]
         return layer_args
+
+    def _get_layer_deltas(self, x_train, y_train):
+        """ Returns the delta^k for all the layers """
+
+        prediction = self.predict(x_train, output_only=False)
+
+        cached_pre_activation = {key: val[0] for (key, val) in prediction.items()}
+        cached_output = {key: val[1] for (key, val) in prediction.items()}
+        cached_delta = {}
+
+        output_id = self.output_layer.memory_location
+
+        cached_delta[output_id] = self._loss_function(cached_output[output_id], y_train,
+                                                      grad=True)  # Gradient of output
+        if self.loss_function == 'cross_entropy':
+            unique_identifier = self.output_layer.memory_location
+            cached_delta[unique_identifier] = cached_output[unique_identifier] - y_train
+
+        for layer in self.layers_by_number_of_children:
+            for parent in layer.parents:
+                delta = tuple([cached_delta[child.memory_location] for child in parent.children])
+                if len(parent.children) == 1:
+                    delta = delta[0]
+
+                g_prime = parent.activation_function_(cached_pre_activation[parent.memory_location], grad=True)
+                z = cached_output[parent.memory_location]
+
+                cached_delta[parent.memory_location] = layer.get_delta_backprop_(g_prime, delta, z)
+
+        return cached_delta
+
+
+    @property
+    @functools.lru_cache()
+    def layers_by_number_of_children(self):
+        """ Returns a list by order of the nodes with the least amount of children to the most children """
+        current_layers = [self.input_layer]  # Input node will have the most children
+        layer_order = []
+
+        while len(current_layers) > 0:
+            for layer in current_layers:
+                if layer in layer_order:
+                    layer_order.remove(layer)
+                layer_order.append(layer)
+
+            children_of_current_layers = [layer.children for layer in current_layers]
+            current_layers = set(functools.reduce(lambda x, y: x + y, children_of_current_layers))
+
+        return layer_order[::-1]
+
+    @property
+    def _loss_function(self):
+        return get_error_function(self.loss_function)
+
+    @property
+    def _metric(self):
+        if self.metric_function is not None:
+            return get_metric_function(self.metric_function)
+        return None
