@@ -210,10 +210,8 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
         LayerBaseAttributes.__init__(self)
         self.mask = mask.astype(bool)
 
-        self.add_children((SplitLeftChild(self.mask), SplitRightChild(~self.mask)))
-
-        self.children[0](self)  # Set self as parent of the children
-        self.children[1](self)
+        SplitLeftChild(self.mask)(self)
+        SplitRightChild(~self.mask)(self)
 
     def build(self):
         """ Initialise the layer
