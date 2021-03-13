@@ -36,3 +36,8 @@ class LayerBaseAttributes:
             but another alternative, if needed, is to use an attribute bound to this class
         """
         return hex(id(self))
+
+    @property
+    def id(self):
+        """ We'll use the memory location as the id of a layer """
+        return self.memory_location
