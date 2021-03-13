@@ -156,6 +156,16 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
         return 'SplitChild Layer', f'Output Shape {(None, *self.output_shape)}'
 
 
+class SplitLeftChild(SplitChild):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+class SplitRightChild(SplitChild):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
 class Split(NetworkNode, LayerBaseAttributes, Layer):
     """ Breaks up the input into two separate outputs, such that when the outputs
         are combined, it will be equal to the original input. Note that because
@@ -200,11 +210,10 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
         LayerBaseAttributes.__init__(self)
         self.mask = mask.astype(bool)
 
-        self.left = SplitChild(self.mask)
-        self.right = SplitChild(~self.mask)
+        self.add_children((SplitLeftChild(self.mask), SplitRightChild(~self.mask)))
 
-        self.left(self)
-        self.right(self)
+        self.children[0](self)  # Set self as parent of the children
+        self.children[1](self)
 
     def build(self):
         """ Initialise the layer
@@ -313,3 +322,11 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
     def summary_(self):
 
         return 'Split Layer', f'Output Shape {(None, *self.output_shape)}'
+
+    @property
+    def left(self):
+        return self.children[0]
+
+    @property
+    def right(self):
+        return self.children[1]
