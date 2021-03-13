@@ -137,7 +137,6 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
         LayerBaseAttributes.__init__(self)
 
         self.axis = axis
-        self.concat_mask = None
 
     def build(self):
         """ Initialise the input and output shape
