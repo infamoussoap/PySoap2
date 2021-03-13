@@ -40,4 +40,4 @@ class LayerBaseAttributes:
     @property
     def id(self):
         """ We'll use the memory location as the id of a layer """
-        return self.memory_location
+        return f'{type(self).__name__}_{self.memory_location}'
