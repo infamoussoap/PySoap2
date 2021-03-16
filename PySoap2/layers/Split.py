@@ -157,13 +157,21 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
 
 
 class SplitLeftChild(SplitChild):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    """ There is no difference between the implementation of the Left and Right Child nodes.
+        But these classes are created to make it clear which is the left and right node when
+        looking at the repr of the instances
+    """
+    def __init__(self, mask):
+        super().__init__(mask)
 
 
 class SplitRightChild(SplitChild):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    """ There is no difference between the implementation of the Left and Right Child nodes.
+            But these classes are created to make it clear which is the left and right node when
+            looking at the repr of the instances
+    """
+    def __init__(self, mask):
+        super().__init__(mask)
 
 
 class Split(NetworkNode, LayerBaseAttributes, Layer):
