@@ -304,6 +304,9 @@ class Model:
         model_dictionary['children_adjacency_matrix_column_names'] = np.array(list(children_adjacency_matrix.columns),
                                                                               'S')
 
+        model_dictionary['input_layer_id'] = self.input_layer.id
+        model_dictionary['output_layer_id'] = self.output_layer.id
+
         simplified_model_dictionary = simplify_recursive_dict(model_dictionary)
 
         with h5py.File(file_path, 'w') as h:
