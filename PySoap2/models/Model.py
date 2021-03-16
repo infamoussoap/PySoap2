@@ -1,6 +1,9 @@
 import numpy as np
+import pandas as pd
 import functools
 import random
+
+import h5py
 
 from PySoap2.optimizers import Optimizer, get_optimizer
 from PySoap2 import get_error_function, get_metric_function
@@ -278,3 +281,84 @@ class Model:
         if self.metric_function is not None:
             return get_metric_function(self.metric_function)
         return None
+
+    def save_model(self, file_path):
+        """ Save the self into file_path
+
+            Notes
+            -----
+            It is assumed that file_path is a .hdf file
+        """
+        parents_adjacency_matrix = self._parents_as_weighted_adjacency_matrix
+        children_adjacency_matrix = self._children_as_weighted_adjacency_matrix
+
+        layer_attributes = {layer.id: self.pruned_layer_attributes(layer)
+                            for layer in self.layers_by_number_of_parents}
+
+        model_dictionary = layer_attributes.copy()
+        model_dictionary['parents_adjacency_matrix_values'] = parents_adjacency_matrix.values
+        model_dictionary['parents_adjacency_matrix_column_names'] = np.array(list(parents_adjacency_matrix.columns),
+                                                                             'S')
+
+        model_dictionary['children_adjacency_matrix_values'] = children_adjacency_matrix.values
+        model_dictionary['children_adjacency_matrix_column_names'] = np.array(list(children_adjacency_matrix.columns),
+                                                                              'S')
+
+        simplified_model_dictionary = simplify_recursive_dict(model_dictionary)
+
+        with h5py.File(file_path, 'w') as h:
+            for key, val in simplified_model_dictionary.items():
+                h.create_dataset(key, data=val)
+
+    @property
+    def _parents_as_weighted_adjacency_matrix(self):
+        """ Returns the adjacency matrix of the parent nodes, weighted in the order
+            it occurs in the parents tuple. That is,
+                0 - No Edge Exists
+                1 - First parent in tuple
+                2 - Second parent in tuple
+                etc.
+        """
+        layer_ids = [layer.id for layer in self.layers_by_number_of_parents]
+        adjacency_matrix = pd.DataFrame(0, index=layer_ids, columns=layer_ids)
+
+        for layer in self.layers_by_number_of_parents:
+            for i, parent in enumerate(layer.parents, 1):
+                adjacency_matrix.loc[layer.id, parent.id] = i
+
+        return adjacency_matrix
+
+    @property
+    def _children_as_weighted_adjacency_matrix(self):
+        """ Returns the adjacency matrix of the children nodes, weighted in the order
+            it occurs in the children tuple. That is,
+                0 - No Edge Exists
+                1 - First child in tuple
+                2 - Second child in tuple
+                etc.
+        """
+        layer_ids = [layer.id for layer in self.layers_by_number_of_parents]
+        adjacency_matrix = pd.DataFrame(0, index=layer_ids, columns=layer_ids)
+
+        for layer in self.layers_by_number_of_parents:
+            for i, child in enumerate(layer.children, 1):
+                adjacency_matrix.loc[layer.id, child.id] = i
+
+        return adjacency_matrix
+
+    @staticmethod
+    def pruned_layer_attributes(layer):
+        """ Returns the attributes of the layer as if it was no longer inherited from
+            `NetworkNode`, that is, pruned from the tree.
+
+            Notes
+            -----
+            hdf5 files don't allow the saving on objects, only of np.arrays. Hence
+            we remove the parent and children nodes.
+        """
+        layer_attributes = layer.__dict__.copy()
+
+        del layer_attributes['parents']
+        del layer_attributes['children']
+
+        return layer_attributes
