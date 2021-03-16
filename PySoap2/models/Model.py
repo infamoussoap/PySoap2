@@ -296,6 +296,7 @@ class Model:
                             for layer in self.layers_by_number_of_parents}
 
         model_dictionary = layer_attributes.copy()
+
         model_dictionary['parents_adjacency_matrix_values'] = parents_adjacency_matrix.values
         model_dictionary['parents_adjacency_matrix_column_names'] = np.array(list(parents_adjacency_matrix.columns),
                                                                              'S')
@@ -307,11 +308,19 @@ class Model:
         model_dictionary['input_layer_id'] = self.input_layer.id
         model_dictionary['output_layer_id'] = self.output_layer.id
 
+        # Save attributes of the Model class
+        model_dictionary['optimizer_name'] = type(self.optimizer).__name__
+        model_dictionary['optimizer_attributes'] = self.optimizer.__dict__
+
+        model_dictionary['loss_function'] = self.loss_function
+        model_dictionary['metric_function'] = self.metric_function
+
         simplified_model_dictionary = simplify_recursive_dict(model_dictionary)
 
         with h5py.File(file_path, 'w') as h:
             for key, val in simplified_model_dictionary.items():
-                h.create_dataset(key, data=val)
+                if val is not None:
+                    h.create_dataset(key, data=val)
 
     @property
     def _parents_as_weighted_adjacency_matrix(self):

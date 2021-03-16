@@ -17,8 +17,16 @@ def load_model(file_path):
     input_layer = instances_of_layer_id[model_attributes['input_layer_id']]
     output_layer = instances_of_layer_id[model_attributes['output_layer_id']]
 
-    return PySoap2.models.Model(input_layer, output_layer)
+    model = PySoap2.models.Model(input_layer, output_layer)
 
+    model.optimizer = PySoap2.optimizers.__dict__[model_attributes['optimizer_name']]()
+    model.optimizer.__dict__.update(model_attributes['optimizer_attributes'])
+
+    for attribute in ['loss_function', 'metric_function']:
+        if attribute in model_attributes:
+            model.__dict__[attribute] = model_attributes[attribute]
+
+    return model
 
 def get_instances_of_layer(model_attributes):
     """ Returns a dictionary with keys of the layer_id and values as the instances
