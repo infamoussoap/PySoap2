@@ -16,3 +16,6 @@ from PySoap2 import exceptions
 from PySoap2 import validation
 
 from PySoap2 import models
+
+# Utilities
+from PySoap2 import utils
