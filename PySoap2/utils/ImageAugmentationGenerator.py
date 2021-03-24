@@ -60,3 +60,6 @@ class ImageAugmentationGenerator:
     @property
     def random_augmentation_function(self):
         return random.choice(self.image_augmentations)
+
+    def __len__(self):
+        return len(self.images)
