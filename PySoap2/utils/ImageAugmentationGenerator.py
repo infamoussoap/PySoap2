@@ -3,6 +3,8 @@ import random
 
 import scipy
 
+from .FancyPCA import fancy_pca
+
 
 def is_iterable(index):
     try:
@@ -14,8 +16,10 @@ def is_iterable(index):
 
 
 def rotate(x):
+    height, width, _ = x.shape
+
     angle = np.random.uniform(low=-10, high=10)
-    return scipy.ndimage.rotate(x, angle)
+    return scipy.ndimage.rotate(x, angle, reshape=False)
 
 
 def gaussian_blur(x):
@@ -38,6 +42,7 @@ class ImageAugmentationGenerator:
     def __init__(self, images):
         self.images = images
         self.image_augmentations = [np.fliplr, np.flipud, rotate, gaussian_blur, identity]
+        self.image_augmentations += [fancy_pca, fancy_pca, fancy_pca]
 
     def __getitem__(self, index):
         if is_iterable(index):
