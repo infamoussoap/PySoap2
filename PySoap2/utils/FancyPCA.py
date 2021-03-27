@@ -4,7 +4,7 @@
 import numpy as np
 
 
-def fancy_pca(img, alpha_std=0.5):
+def fancy_pca(img, alpha_std=0.03*255):
     """
     CREDIT:
     https://github.com/pixelatedbrian/fortnight-furniture/blob/master/src/fancy_pca.py
