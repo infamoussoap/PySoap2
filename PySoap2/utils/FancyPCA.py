@@ -1,8 +1,14 @@
+# I wrote none of this code. So big thanks to pixelatedbrian on github
+# https://github.com/pixelatedbrian/fortnight-furniture/blob/master/src/fancy_pca.py
+
 import numpy as np
 
 
 def fancy_pca(img, alpha_std=0.5):
     """
+    CREDIT:
+    https://github.com/pixelatedbrian/fortnight-furniture/blob/master/src/fancy_pca.py
+
     INPUTS:
     img:  numpy array with (h, w, rgb) shape, as floats between 0-1)
     alpha_std:  how much to perturb/scale the eigen vecs and vals
