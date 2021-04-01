@@ -1,1 +1,3 @@
 from .ImageAugmentationGenerator import ImageAugmentationGenerator
+
+from .VisualizeModel import visualize_model
