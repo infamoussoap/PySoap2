@@ -93,6 +93,9 @@ def fancy_pca(img, alpha_std=0.03*255):
         orig_img[..., idx] += add_vect[idx]
 
     orig_img = np.clip(orig_img, 0.0, 255.0)
-    orig_img = orig_img/np.max(orig_img)
+
+    max_ = np.max(orig_img)
+    if max_ > 1e-5:  # Prevent divide by 0 errors
+        orig_img = orig_img/np.max(orig_img)
 
     return orig_img
