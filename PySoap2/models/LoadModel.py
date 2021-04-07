@@ -28,6 +28,7 @@ def load_model(file_path):
 
     return model
 
+
 def get_instances_of_layer(model_attributes):
     """ Returns a dictionary with keys of the layer_id and values as the instances
         of the layers with their correct attributes.
