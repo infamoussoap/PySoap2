@@ -298,9 +298,9 @@ class Conv_2D(NetworkNode, LayerBaseAttributes, Layer):
 
             Returns
             -------
-            (filter_num, ) np.array, (*filter_shape) np.array
-                The first array is the gradient for the bias unit
-                The second array is the gradient for the filter matrix
+            dict of str - np.array
+                Keys are the parameters for the softchop function, with the corresponding values their
+                gradients
 
         """
         # This code is self-explanatory when you look at the math

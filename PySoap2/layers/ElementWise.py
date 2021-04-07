@@ -143,9 +143,9 @@ class ElementWise(NetworkNode, LayerBaseAttributes, Layer):
 
             Returns
             -------
-            (...) np.array, (...) np.array
-                The first array is the gradient for the bias unit
-                The second array is the gradient for the weight matrix
+            dict of str - np.array
+                Keys are the parameters for the softchop function, with the corresponding values their
+                gradients
         """
 
         parameter_gradients = {'weight': np.einsum('i...,i...', delta, prev_z), 'bias': np.sum(delta, axis=0)}
