@@ -153,43 +153,6 @@ class Conv_2D(NetworkNode, LayerBaseAttributes, Layer):
 
         return col @ flatten_filter[None, :, :] + bias[None, None, None, :]
 
-    @staticmethod
-    def perform_conv_broadcasting(images, filter_, bias, stride):
-        """ Performs the standard convolution of the input `z`
-
-            Parameters
-            ----------
-            images : (N, i, j, k) np.array
-                Assumed to be many z, which is accessed by the 0th index, for which the
-                window is to be slid across
-            filter_ : (:, :, k, f) np.array
-                The convolution filters, k is the color dimension of an image, and f is the number
-                of filters
-            bias : (f, ) np.array
-                The bias for each individual filter
-            stride : int
-                The filter stride
-
-            Returns
-            -------
-            (N, :, :, f) np.array
-                The convolved results
-
-            Notes
-            -----
-            This was the original implementation of convolution, which I am very certain is 100% accurate.
-            But the sum in the second last line proves to be a major bottleneck of the code. It is instead
-            much faster to flatten the `im2window` result and perform matrix multiplication with the filter.
-        """
-
-        filter_spartial_shape = filter_.shape[:2]
-        windowed = Conv_2D.im2window(images, filter_spartial_shape, stride)
-
-        conv_dot = filter_[None, None, None, :, :, :, :] * windowed[..., None]
-        conv = np.sum(conv_dot, axis=(3, 4, 5)) + bias[None, None, None, :]
-
-        return conv
-
     def __init__(self, filter_num, filter_spatial_shape, stride, activation_function, *args, activation_kwargs=None,
                  **kwargs):
         """ Initialise the basic information of this conv_2d layer
@@ -319,8 +282,6 @@ class Conv_2D(NetworkNode, LayerBaseAttributes, Layer):
         eye_conv = eye_conv.reshape((*self.input_shape, *self.output_spatial_shape, self.filter_num))
 
         # Self-explanatory once you look at the math
-        # temp = new_delta[:, None, None, None, :, :] * eye_conv[None, :]
-        # delta = np.sum(temp * g_prime[..., None, None, None], axis = (-1, -2, -3))
         delta = np.einsum("ijkl,abcjkl,iabc->iabc", new_delta, eye_conv, g_prime, optimize='greedy')
         return delta
 
