@@ -11,7 +11,7 @@ from .LayerBuiltChecks import check_built
 
 class MultiSoftChop:
     """ The element wise softchop function, where each element gets their own hyper-parameters
-        This class implements the evalaution of the softchop function, as well as the partial
+        This class implements the evaluation of the softchop function, as well as the partial
         derivatives with respect to
             - the input
             - the a1, a2, epsilon1, epsilon2 hyper-parameters
@@ -23,7 +23,7 @@ class MultiSoftChop:
             a1 : np.array (of dimension k)
                 Threshold of positive x values
             a2 : np.array (of dimension k)
-                Threshold of positive x values
+                Threshold of negative x values
             epsilon1 : np.array (of dimension k)
                 Gradient of acceptance for positive x values
             epsilon2 : np.array (of dimension k)
@@ -164,7 +164,7 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         a1 : np.array (of dimension k)
             Threshold of positive x values
         a2 : np.array (of dimension k)
-            Threshold of positive x values
+            Threshold of negative x values
         epsilon1 : np.array (of dimension k)
             Gradient of acceptance for positive x values
         epsilon2 : np.array (of dimension k)
@@ -219,10 +219,10 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
             The a1, a2, and epsilon1, epsilon2 hyper-parameters only make sense
             when they are positive
 
-            Recommend mimimum values for epsilon1, epsilon2 is 0.001. Anything lower
+            Recommend minimum values for epsilon1, epsilon2 is 0.001. Anything lower
             produces no meaningful change. Caution for epsilon too small, as it will
-            be inverterd for some of the calculations.
-            a1 and a2 can be anything, 0.001 was choosen arbitrarily for this value
+            be inverted for some of the calculations.
+            a1 and a2 can be anything, 0.001 was chosen arbitrarily for this value
         """
 
         self.a1 = np.clip(self.a1, min_a, None)
@@ -271,7 +271,7 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
             Parameters
             ----------
             g_prime : (N, ...) np.array
-                Should be the derivative of the ouput of the previous layer, g'_{k-1}(a^{k-1}_{m,j})
+                Should be the derivative of the output of the previous layer, g'_{k-1}(a^{k-1}_{m,j})
             new_delta : (N, ...) np.array
                 The delta for this layer, delta^k_{m, j}
             prev_z : (N, ...) np.array
@@ -305,14 +305,9 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
 
             Returns
             -------
-            (2, ...) np.array, (2, ...) np.array
-                The first array is the gradient for the `a` hyper-parameters. Note that
-                the arrays start with dimension 2 - the 0th entry corresponds to the `a1` gradients
-                while the 1st entry corresponds to the `a2` gradients
-
-                The second array is the gradient for the `epsilon` hyper-parameters. Similarly to
-                the `a` hyper-parameters, this also starts with dimension 2 - the 0th entry for the
-                `epsilon1` gradients and the 1st entry for the `epsilon2` gradients
+            dict of str - np.array
+                Keys are the parameters for the softchop function, with the corresponding values their
+                gradients
         """
 
         kwargs = {'x': prev_z, 'a1': self.a1, 'a2': self.a2, 'epsilon1': self.epsilon1, 'epsilon2': self.epsilon2}
