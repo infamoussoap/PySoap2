@@ -16,7 +16,7 @@ def is_iterable(index):
 
 
 def rotate(x):
-    height, width, _ = x.shape
+    height, width = x.shape[:2]
 
     angle = np.random.uniform(low=-10, high=10)
     return scipy.ndimage.rotate(x, angle, reshape=False)
@@ -41,7 +41,7 @@ class ImageAugmentationGenerator:
     """
     def __init__(self, images):
         self.images = images
-        self.image_augmentations = [np.fliplr, np.flipud, rotate, gaussian_blur, identity]
+        self.image_augmentations = [np.fliplr, np.flipud, gaussian_blur, identity]
         self.image_augmentations += [fancy_pca, fancy_pca, fancy_pca]
 
     def __getitem__(self, index):
@@ -68,3 +68,9 @@ class ImageAugmentationGenerator:
 
     def __len__(self):
         return len(self.images)
+
+    def augment_images(self, images):
+        return np.array([self.random_augmentation_function(image) for image in images])
+
+    def __call__(self, images):
+        return self.augment_images(images)
