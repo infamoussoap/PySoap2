@@ -262,7 +262,7 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         a = self.activation_function_(z)
         if output_only:
             return a
-        return a, a
+        return z, a
 
     @check_built
     def get_delta_backprop_(self, g_prime, new_delta, prev_z):
