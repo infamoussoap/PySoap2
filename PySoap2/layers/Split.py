@@ -48,7 +48,7 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
         self.built = True
 
     @check_built
-    def predict(self, z, output_only=True):
+    def predict(self, z, output_only=True, **kwargs):
         """ Forward propagate the splitting
 
             Parameters
@@ -237,7 +237,7 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
         self.built = True
 
     @check_built
-    def predict(self, z, output_only=True):
+    def predict(self, z, output_only=True, **kwargs):
         """ Returns the prediction of this layer
 
             Notes

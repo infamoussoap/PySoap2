@@ -232,7 +232,7 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         self.epsilon2 = np.clip(self.epsilon2, min_epsilon, None)
 
     @check_built
-    def predict(self, z, output_only=True):
+    def predict(self, z, output_only=True, **kwargs):
         """ Returns the output of this layer
 
             Parameters

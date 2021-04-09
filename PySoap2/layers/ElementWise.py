@@ -72,7 +72,7 @@ class ElementWise(NetworkNode, LayerBaseAttributes, Layer):
         self.built = True
 
     @check_built
-    def predict(self, z, output_only=True):
+    def predict(self, z, output_only=True, **kwargs):
         """ Returns the output of this layer
 
             Parameters
