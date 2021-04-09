@@ -12,26 +12,44 @@ from .dictionary_tricks import simplify_recursive_dict, unpack_to_recursive_dict
 from .SaveModel import get_attributes_of_full_model
 
 
+def _validate_model(model):
+    start_layer, end_layer = model.input_layer, model.output_layer
+
+    if start_layer is None and end_layer is None:
+        return True
+
+    """ Checks to see if there is a valid that connects the input layer to the output layer """
+    if _no_valid_path(start_layer, end_layer):
+        raise ValueError('No path from the input layer to the output layer')
+
+    if _start_to_end_is_different_as_end_to_start(model):
+        raise ValueError('Model has branches that do not connect to the output layer. Either remove'
+                         ' these connections or use the Concatenate Layer to combine them.')
+
+
+def _no_valid_path(start_layer, end_layer):
+    if len(start_layer.children) == 0:
+        return start_layer != end_layer
+    if end_layer in start_layer.children:
+        return False
+    return all([_no_valid_path(child, end_layer) for child in start_layer.children])
+
+
+def _start_to_end_is_different_as_end_to_start(model):
+    """ Checks if the nodes encountered when starting from the input the the output
+        is the same as the nodes encountered when starting from the output to the input
+    """
+    return len(model.layers_by_number_of_parents) != len(model.layers_by_number_of_children)
+
+
 class Model:
-    @staticmethod
-    def _is_valid_model(start_layer, end_layer):
-        if start_layer is None and end_layer is None:
-            return True
-
-        """ Checks to see if there is a valid that connects the input layer to the output layer """
-        if len(start_layer.children) == 0:
-            return start_layer == end_layer
-        if end_layer in start_layer.children:
-            return True
-
-        return any([Model._is_valid_model(child, end_layer) for child in start_layer.children])
 
     def __init__(self, input_layer, output_layer):
-        if not self._is_valid_model(input_layer, output_layer):
-            raise ValueError('There is no path from the input layer to the output layer.')
 
         self.input_layer = input_layer
         self.output_layer = output_layer
+
+        _validate_model(self)
 
         self.optimizer = None
 
