@@ -138,4 +138,4 @@ class Flatten(NetworkNode, LayerBaseAttributes, Layer):
 
     @property
     def activation_function_(self):
-        return self.parents[0].activation_function
+        return self.parents[0].activation_function_
