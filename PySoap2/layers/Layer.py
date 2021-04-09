@@ -13,9 +13,9 @@ class Layer(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def predict(self, z, output_only=True):
+    def predict(self, z):
         """ When the predict method is called in the `sequential` class it invokes this
-            method. This method is to perform the forward propagation of this current layer
+            method. This method is to perform the forward propagation (post activation) of this current layer
 
             Raises
             ------
@@ -26,11 +26,11 @@ class Layer(abc.ABC):
             -----
             Most classes that will inherent `sequential_layer` will have an associated activation
             function.
-            If `output_only = True` then this method is to return only the post-activated
-            output.
-            If `output_only = False` then this method is will return the pre-activated and post-activated
-            output, in that order.
         """
+        pass
+
+    @abc.abstractmethod
+    def predict_with_pre_and_post_activation(self, pre_activation_of_input, post_activation_of_input):
         pass
 
     @abc.abstractmethod
