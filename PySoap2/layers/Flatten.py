@@ -40,7 +40,7 @@ class Flatten(NetworkNode, LayerBaseAttributes, Layer):
         self.built = True
 
     @check_built
-    def predict(self, z, output_only=True):
+    def predict(self, z, output_only=True, pre_activation_of_input=None):
         """ Returns the prediction of this layer
 
             Parameters
@@ -51,6 +51,8 @@ class Flatten(NetworkNode, LayerBaseAttributes, Layer):
                 If set to true, then this function will return only the prediction of the neural
                 network. If set to false then this will return the outputs of the individual
                 layers. Unless back propagation is being performed, this should be set to true.
+            pre_activation_of_input : (N, *input_shape) np.array
+                The input, z, before it passed through the activation function
 
             Returns
             -------
@@ -70,7 +72,7 @@ class Flatten(NetworkNode, LayerBaseAttributes, Layer):
 
         if output_only:
             return z.reshape(len(z), self.output_shape[0])
-        return z, z.reshape(len(z), self.output_shape[0])
+        return pre_activation_of_input, z.reshape(len(z), self.output_shape[0])
 
     @check_built
     def get_delta_backprop_(self, g_prime, new_delta, *args, **kwargs):
