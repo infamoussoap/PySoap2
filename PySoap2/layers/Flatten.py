@@ -144,7 +144,7 @@ class Flatten(NetworkNode, LayerBaseAttributes, Layer):
 
             if parent.activation_function == 'linear' and grad:
                 return post_activation
-            
+
             return self.predict(post_activation, output_only=True)
 
         return reshaped_activation_function
