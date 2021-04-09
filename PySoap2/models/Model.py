@@ -102,7 +102,13 @@ class Model:
             layer_id = layer.memory_location
 
             layer_arg = self._get_layer_predict_arguments(layer, cached_outputs, output_only=output_only)
-            cached_outputs[layer_id] = layer.predict(layer_arg, output_only=output_only)
+
+            if output_only:
+                cached_outputs[layer_id] = layer.predict(layer_arg, output_only=output_only)
+            else:
+                pre_activation_args, post_activation_args = layer_arg
+                cached_outputs[layer_id] = layer.predict(post_activation_args, output_only=output_only,
+                                                         pre_activation_of_input=pre_activation_args)
 
         if not output_only:
             return cached_outputs
@@ -122,15 +128,27 @@ class Model:
             output_only : bool
                 If true then cached_outputs is dict of str - np.array
                 If false then cached_outputs is dict of str - (np.array, np.array)
+
+            Notes
+            -----
+            This function can be written more efficiently, but at the cost of readability. I chose
+            to make the function more readable
         """
         layer_args = [cached_outputs[parent.memory_location] for parent in layer.parents]
 
-        if not output_only:
-            layer_args = [post_activation for (pre_activation, post_activation) in layer_args]
-
-        if len(layer.parents) == 1:
-            return layer_args[0]
-        return layer_args
+        if output_only and len(layer.parents) == 1:
+            post_activation_argument = layer_args[0]
+            return post_activation_argument
+        elif output_only and len(layer.parents) > 1:  # Layers assumed to have more than 1 parent
+            post_activation_argument = layer_args
+            return post_activation_argument
+        elif not output_only and len(layer.parents) == 1:
+            pre_activation_argument, post_activation_argument = layer_args[0]
+            return pre_activation_argument, post_activation_argument
+        else:
+            pre_activation_args = [pre_activation for (pre_activation, post_activation) in layer_args]
+            post_activation_args = [post_activation for (pre_activation, post_activation) in layer_args]
+            return pre_activation_args, post_activation_args
 
     def evaluate(self, x_test, y_test):
         """ Return the MSE of the model prediction
