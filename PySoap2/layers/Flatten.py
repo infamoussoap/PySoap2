@@ -138,8 +138,13 @@ class Flatten(NetworkNode, LayerBaseAttributes, Layer):
 
     @property
     def activation_function_(self):
-        def reshaped_activation_function(*args, **kwargs):
-            post_activation = self.parents[0].activation_function_(*args, **kwargs)
+        def reshaped_activation_function(x, grad=False):
+            parent = self.parents[0]
+            post_activation = parent.activation_function_(x, grad=grad)
+
+            if parent.activation_function == 'linear' and grad:
+                return post_activation
+            
             return self.predict(post_activation, output_only=True)
 
         return reshaped_activation_function
