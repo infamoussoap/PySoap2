@@ -48,7 +48,7 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
         self.built = True
 
     @check_built
-    def predict(self, z, output_only=True, **kwargs):
+    def predict(self, z, output_only=True, pre_activation_of_input=None):
         """ Forward propagate the splitting
 
             Parameters
@@ -58,6 +58,8 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
             output_only : bool, optional
                 If set to true, then only the split will be returned
                 Otherwise, the original input and the split will be returned
+            pre_activation_of_input : (N, *input_shape) np.array
+                The input, z, before it passed through the activation function
 
             Returns
             -------
@@ -73,7 +75,7 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
 
         if output_only:
             return z[:, self.mask]
-        return z, z[:, self.mask]
+        return pre_activation_of_input[:, self.mask], z[:, self.mask]
 
     @check_built
     def get_delta_backprop_(self, g_prime, new_delta, *args, **kwargs):
@@ -154,6 +156,19 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
     def summary_(self):
 
         return 'SplitChild Layer', f'Output Shape {(None, *self.output_shape)}'
+
+    @property
+    def activation_function_(self):
+        def reshaped_activation_function(x, grad=False):
+            parent = self.parents[0]
+            post_activation = parent.activation_function_(x, grad=grad)
+
+            if parent.activation_function == 'linear' and grad:
+                return post_activation
+
+            return self.predict(post_activation, output_only=True)
+
+        return reshaped_activation_function
 
 
 class SplitLeftChild(SplitChild):
@@ -237,7 +252,7 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
         self.built = True
 
     @check_built
-    def predict(self, z, output_only=True, **kwargs):
+    def predict(self, z, output_only=True, pre_activation_of_input=None):
         """ Returns the prediction of this layer
 
             Notes
@@ -247,7 +262,7 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
         """
         if output_only:
             return z
-        return z, z
+        return pre_activation_of_input, z
 
     @check_built
     def get_delta_backprop_(self, g_prime, new_delta, *args, **kwargs):
@@ -336,3 +351,16 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
     @property
     def right(self):
         return self.children[1]
+
+    @property
+    def activation_function_(self):
+        def reshaped_activation_function(x, grad=False):
+            parent = self.parents[0]
+            post_activation = parent.activation_function_(x, grad=grad)
+
+            if parent.activation_function == 'linear' and grad:
+                return post_activation
+
+            return self.predict(post_activation, output_only=True)
+
+        return reshaped_activation_function

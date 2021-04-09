@@ -29,7 +29,7 @@ class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
         self.built = True
 
     @check_built
-    def predict(self, z, output_only=True):
+    def predict(self, z, output_only=True, pre_activation_of_input=None):
         """ Returns the output of this layer
 
             Parameters
@@ -39,6 +39,8 @@ class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
             output_only : bool
                 If output_only is True then only the output (concatenation) will return
                 Otherwise the tuple of inputs and concatenation will be returned
+            pre_activation_of_input : (N, *input_shape) np.array
+                The input, z, before it passed through the activation function
 
             Notes
             -----
@@ -48,7 +50,7 @@ class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
         """
         if output_only:
             return z
-        return z, z
+        return pre_activation_of_input, z
 
     @check_built
     def get_delta_backprop_(self, g_prime, new_delta, *args):
@@ -82,6 +84,19 @@ class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
     @check_built
     def summary_(self):
         return f'Concat-Parent', f'Output Shape {(None, *self.output_shape)}'
+
+    @property
+    def activation_function_(self):
+        def reshaped_activation_function(x, grad=False):
+            parent = self.parents[0]
+            post_activation = parent.activation_function_(x, grad=grad)
+
+            if parent.activation_function == 'linear' and grad:
+                return post_activation
+
+            return self.predict(post_activation, output_only=True)
+
+        return reshaped_activation_function
 
 
 class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
@@ -161,7 +176,7 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
         self.built = True
 
     @check_built
-    def predict(self, z, output_only=True, **kwargs):
+    def predict(self, z, output_only=True, pre_activation_of_input=None):
         """ Forward propagation of this layer
 
             Parameters
@@ -172,10 +187,12 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
             output_only : bool
                 If output_only is True then only the output (concatenation) will return
                 Otherwise the tuple of inputs and concatenation will be returned
+            pre_activation_of_input : (N, *input_shape) np.array
+                The input, z, before it passed through the activation function
         """
         if output_only:
             return np.concatenate(z, axis=self.axis)
-        return z, np.concatenate(z, axis=self.axis)
+        return np.concatenate(pre_activation_of_input, axis=self.axis), np.concatenate(z, axis=self.axis)
 
     @check_built
     def get_delta_backprop_(self, g_prime, new_delta, *args):
@@ -232,3 +249,15 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
 
         return self
 
+    @property
+    def activation_function_(self):
+        def reshaped_activation_function(x, grad=False):
+            parent = self.parents[0]
+            post_activation = parent.activation_function_(x, grad=grad)
+
+            if parent.activation_function == 'linear' and grad:
+                return post_activation
+
+            return self.predict(post_activation, output_only=True)
+
+        return reshaped_activation_function
