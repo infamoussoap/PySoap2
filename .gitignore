@@ -1,3 +1,4 @@
 ignore_files
+unit_tests
 PySoap_tests.ipynb
 .ipynb_checkpoints
