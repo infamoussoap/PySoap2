@@ -135,3 +135,7 @@ class Flatten(NetworkNode, LayerBaseAttributes, Layer):
 
     def __str__(self):
         return f'Flatten'
+
+    @property
+    def activation_function_(self):
+        return self.parents[0].activation_function
