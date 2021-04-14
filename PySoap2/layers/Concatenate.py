@@ -24,9 +24,16 @@ class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
         self.mask = None
 
     def build(self):
+        """ Set the input shape for this layer
+
+            Notes
+            -----
+            The output shape is determined by the concatenate (child) layer. It is in that layer
+            where this class will be considered built.
+        """
+
         self.input_shape = self.parents[0].output_shape
-        self.output_shape = self.input_shape
-        self.built = True
+        self.built = False
 
     @check_built
     def predict(self, z, output_only=True, pre_activation_of_input=None):
@@ -48,9 +55,16 @@ class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
             requires the knowledge of all the parent nodes of the Concatenate node. As such,
             concatenation occurs in the Concatenate node.
         """
+        buffered_z = np.zeros((len(z), *self.output_shape))
+        buffered_z[:, self.mask] = z
+
         if output_only:
-            return z
-        return pre_activation_of_input, z
+            return buffered_z
+
+        buffered_pre_activation = np.zeros((len(z), *self.output_shape))
+        buffered_pre_activation[:, self.mask] = pre_activation_of_input
+
+        return buffered_pre_activation, buffered_z
 
     @check_built
     def get_delta_backprop_(self, g_prime, new_delta, *args):
@@ -67,7 +81,7 @@ class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
             -------
             (N, *self.input_shape) np.array
         """
-        return new_delta[:, self.mask].reshape((len(new_delta), *self.input_shape))
+        return new_delta[:, self.mask].reshape((-1, *self.input_shape))
 
     @check_built
     def get_parameter_gradients_(self, delta, prev_z):
@@ -87,16 +101,7 @@ class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
 
     @property
     def activation_function_(self):
-        def reshaped_activation_function(x, grad=False):
-            parent = self.parents[0]
-            post_activation = parent.activation_function_(x, grad=grad)
-
-            if parent.activation_function == 'linear' and grad:
-                return post_activation
-
-            return self.predict(post_activation, output_only=True)
-
-        return reshaped_activation_function
+        return self.parents[0].activation_function_
 
 
 class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
@@ -161,16 +166,22 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
             ValueError
                 If the concatenation is not valid
         """
-        self.input_shape = tuple([parent.output_shape for parent in self.parents])
+        input_shape_of_concat_parents = tuple([parent.input_shape for parent in self.parents])
 
-        if not self._is_concat_valid(list(self.input_shape), self.axis):
+        if not self._is_concat_valid(list(input_shape_of_concat_parents), self.axis):
             raise ValueError('Every dimension, except for the concatenation axis, must be equal.')
 
-        self.output_shape = self._concat_shape(list(self.input_shape), self.axis)
+        self.output_shape = self._concat_shape(list(input_shape_of_concat_parents), self.axis)
+        self.input_shape = tuple([self.output_shape]*len(self.parents))
+
+        for parent in self.parents:
+            parent.output_shape = self.output_shape
+            parent.built = True
 
         # The mappings from the inputs and their position in the concatenated output
-        for i in range(len(self.input_shape)):
-            new_mask = [np.ones(shape) if i == j else np.zeros(shape) for (j, shape) in enumerate(self.input_shape)]
+        for i in range(len(input_shape_of_concat_parents)):
+            new_mask = [np.ones(shape) if i == j else np.zeros(shape)
+                        for (j, shape) in enumerate(input_shape_of_concat_parents)]
             self.parents[i].mask = np.concatenate(new_mask, axis=self.axis).astype(bool)
 
         self.built = True
@@ -190,9 +201,14 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
             pre_activation_of_input : (N, *input_shape) np.array
                 The input, z, before it passed through the activation function
         """
+
+        output_at_mask = [parent_output[:, parent.mask] for (parent, parent_output) in zip(self.parents, z)]
         if output_only:
-            return np.concatenate(z, axis=self.axis)
-        return np.concatenate(pre_activation_of_input, axis=self.axis), np.concatenate(z, axis=self.axis)
+            return np.concatenate(output_at_mask, axis=self.axis)
+
+        pre_activation_at_mask = [pre_activation_of_parent[:, parent.mask]
+                                  for (parent, pre_activation_of_parent) in zip(self.parents, pre_activation_of_input)]
+        return np.concatenate(pre_activation_at_mask, axis=self.axis), np.concatenate(output_at_mask, axis=self.axis)
 
     @check_built
     def get_delta_backprop_(self, g_prime, new_delta, *args):
@@ -251,13 +267,4 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
 
     @property
     def activation_function_(self):
-        def reshaped_activation_function(x, grad=False):
-            parent = self.parents[0]
-            post_activation = parent.activation_function_(x, grad=grad)
-
-            if parent.activation_function == 'linear' and grad:
-                return post_activation
-
-            return self.predict(post_activation, output_only=True)
-
-        return reshaped_activation_function
+        return self.parents[0].activation_function_

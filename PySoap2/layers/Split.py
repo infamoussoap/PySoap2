@@ -159,16 +159,7 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
 
     @property
     def activation_function_(self):
-        def reshaped_activation_function(x, grad=False):
-            parent = self.parents[0]
-            post_activation = parent.activation_function_(x, grad=grad)
-
-            if parent.activation_function == 'linear' and grad:
-                return post_activation
-
-            return self.predict(post_activation, output_only=True)
-
-        return reshaped_activation_function
+        return self.parents[0].activation_function_
 
 
 class SplitLeftChild(SplitChild):
@@ -261,8 +252,8 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
             to the SplitChild nodes, this effectively does nothing
         """
         if output_only:
-            return z
-        return pre_activation_of_input, z
+            return z.reshape(-1, *self.output_shape)
+        return pre_activation_of_input.reshape(-1, *self.input_shape), z.reshape(-1, *self.output_shape)
 
     @check_built
     def get_delta_backprop_(self, g_prime, new_delta, *args, **kwargs):
@@ -341,7 +332,6 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
 
     @check_built
     def summary_(self):
-
         return 'Split Layer', f'Output Shape {(None, *self.output_shape)}'
 
     @property
@@ -354,13 +344,4 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
 
     @property
     def activation_function_(self):
-        def reshaped_activation_function(x, grad=False):
-            parent = self.parents[0]
-            post_activation = parent.activation_function_(x, grad=grad)
-
-            if parent.activation_function == 'linear' and grad:
-                return post_activation
-
-            return self.predict(post_activation, output_only=True)
-
-        return reshaped_activation_function
+        return self.parents[0].activation_function_

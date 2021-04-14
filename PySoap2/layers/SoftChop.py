@@ -152,7 +152,7 @@ class MultiSoftChop:
 
 class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
     """ A SoftChop layer where each input element has their own softchop function.
-        Training on this layer happens on the individual hyer-parameters of the softchop
+        Training on this layer happens on the individual hyper-parameters of the softchop
         function.
 
         Attributes
@@ -169,22 +169,29 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
             Gradient of acceptance for positive x values
         epsilon2 : np.array (of dimension k)
             Gradient of acceptance for negative x values
+        b : np.array (of dimension k)
+            Bias unit
+
+        include_bias : bool
+            To include a bias unit inside the softchop function
 
         built : bool
             Has the layer been built
     """
 
-    def __init__(self):
+    def __init__(self, include_bias=True):
         NetworkNode.__init__(self)
         LayerBaseAttributes.__init__(self)
 
-        self.activation_function = 'multi_softchop'
+        self.include_bias = include_bias
 
         # Initialising Attributes of Class
         self.a1 = None
         self.a2 = None
         self.epsilon1 = None
         self.epsilon2 = None
+
+        self.b = None
 
     def build(self):
         """ Initialise the Softchop Hyper-parameters """
@@ -198,6 +205,8 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
 
         self.epsilon1 = np.random.rand(*self.input_shape)
         self.epsilon2 = np.random.rand(*self.input_shape)
+
+        self.b = (np.random.rand(*self.input_shape) - 0.5) if self.include_bias else np.zeros(self.input_shape)
 
         self.built = True
 
@@ -259,7 +268,11 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
                 activation function.
         """
 
-        a = self.activation_function_(z)
+        if self.include_bias:
+            a = MultiSoftChop.eval(z + self.b, a1=self.a1, a2=self.a2, epsilon1=self.epsilon1, epsilon2=self.epsilon2)
+        else:
+            a = MultiSoftChop.eval(z, a1=self.a1, a2=self.a2, epsilon1=self.epsilon1, epsilon2=self.epsilon2)
+
         if output_only:
             return a
         return a, a
@@ -288,8 +301,12 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
             weights, W. But it does know the values of g'_{k-1} and delta^k, due to forward propagation
             and the backwards nature of the back propagation algorithm.
         """
+        if self.include_bias:
+            dz = MultiSoftChop.dx(prev_z + self.b, self.a1, self.a2, self.epsilon1, self.epsilon2)
+        else:
+            dz = MultiSoftChop.dx(prev_z, self.a1, self.a2, self.epsilon1, self.epsilon2)
 
-        return new_delta * g_prime * self.activation_function_(prev_z, grad=True)
+        return new_delta * g_prime * dz
 
     @check_built
     def get_parameter_gradients_(self, delta, prev_z):
@@ -310,12 +327,18 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
                 gradients
         """
 
-        kwargs = {'x': prev_z, 'a1': self.a1, 'a2': self.a2, 'epsilon1': self.epsilon1, 'epsilon2': self.epsilon2}
+        if self.include_bias:
+            kwargs = {'x': prev_z + self.b, 'a1': self.a1, 'a2': self.a2,
+                      'epsilon1': self.epsilon1, 'epsilon2': self.epsilon2}
+        else:
+            kwargs = {'x': prev_z, 'a1': self.a1, 'a2': self.a2,
+                      'epsilon1': self.epsilon1, 'epsilon2': self.epsilon2}
 
         parameter_gradients = {'a1': np.einsum('i...,i...', delta, MultiSoftChop.da1(**kwargs)),
                                'a2': np.einsum('i...,i...', delta, MultiSoftChop.da2(**kwargs)),
                                'epsilon1': np.einsum('i...,i...', delta, MultiSoftChop.de1(**kwargs)),
-                               'epsilon2': np.einsum('i...,i...', delta, MultiSoftChop.de2(**kwargs))}
+                               'epsilon2': np.einsum('i...,i...', delta, MultiSoftChop.de2(**kwargs)),
+                               'bias': np.einsum('i...,i...', delta, MultiSoftChop.dx(**kwargs))}
 
         return parameter_gradients
 
@@ -335,24 +358,18 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         self.epsilon1 -= parameter_updates['epsilon1']
         self.epsilon2 -= parameter_updates['epsilon2']
 
+        if self.include_bias:
+            self.b -= parameter_updates['bias']
+
         self.clip_parameters()
 
     @check_built
     def get_weights(self):
-
         return np.array([self.a1, self.a2]), np.array([self.epsilon1, self.epsilon2])
 
     @check_built
     def summary_(self):
-
         return f'SoftChop', f'Output Shape {(None, *self.output_shape)}'
-
-    @property
-    def activation_function_(self):
-        """ activation function from LayerBaseAttributes must be overloaded to use softchop properly """
-
-        return partial(MultiSoftChop.eval, a1=self.a1, a2=self.a2,
-                       epsilon1=self.epsilon1, epsilon2=self.epsilon2)
 
     def __str__(self):
         return f'SoftChop: Output Shape {(None, *self.output_shape)}'
