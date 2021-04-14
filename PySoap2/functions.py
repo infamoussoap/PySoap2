@@ -1,6 +1,17 @@
 import numpy as np
 
 
+def _positive_sigmoid(x):
+    """ Stable sigmoid function for positive values """
+    return 1 / (1 + np.exp(-x))
+
+
+def _negative_sigmoid(x):
+    """ Stable sigmoid function for negative values """
+    exp = np.exp(x)
+    return exp / (exp + 1)
+
+
 def get_activation_function(name, **kwargs):
     """ Returns the function of the given name
 
@@ -45,7 +56,39 @@ def get_activation_function(name, **kwargs):
                 return 1
             return x
         return linear
+    elif name == 'sigmoid':
+        def sigmoid(x, grad=False):
+            """ Stable sigmoid function for positive and negative values of x
 
+                Parameters
+                ----------
+                x : np.array
+                grad : bool
+                    If true, returns the gradient of the sigmoid
+
+                Returns
+                -------
+                np.array
+                    Same shape as x, the input
+            """
+            positive = x >= 0
+            negative = ~positive
+
+            result = np.zeros_like(x, dtype=np.float64)
+            result[positive] = _positive_sigmoid(x[positive])
+            result[negative] = _negative_sigmoid(x[negative])
+
+            if grad:
+                return result * (1 - result)
+            return result
+        return sigmoid
+    elif name == 'tanh':
+        def tanh(x, grad=False):
+            result = np.tanh(x)
+            if grad:
+                return 1 - result ** 2
+            return result
+        return tanh
     else:
         raise Exception(f'{name} is not a defined function.')
 
