@@ -1,7 +1,5 @@
 import numpy as np
 
-from functools import partial
-
 from PySoap2.layers import Layer
 from PySoap2.layers.NetworkNode import NetworkNode
 from PySoap2.layers.LayerBaseAttributes import LayerBaseAttributes
