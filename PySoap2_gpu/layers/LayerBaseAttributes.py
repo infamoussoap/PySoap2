@@ -24,6 +24,8 @@ class LayerBaseAttributes:
         self.gpu_context = None
         self.gpu_queue = None
 
+        self.gpu_program = None
+
         self.built = False
 
     @property
