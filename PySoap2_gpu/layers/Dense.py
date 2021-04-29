@@ -7,7 +7,7 @@ from PySoap2_gpu.layers import Layer
 from PySoap2_gpu.layers.NetworkNode import NetworkNode
 from PySoap2_gpu.layers.LayerBaseAttributes import LayerBaseAttributes
 
-from dense_c_code import dense_source_code
+from .dense_c_code import dense_source_code
 from .ValueChecks import assert_instance_of_cl_array
 
 
@@ -120,10 +120,10 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
         return parameter_gradients
 
     def update_parameters_(self, parameter_updates):
-        pass
+        raise NotImplementedError
 
     def get_weights(self):
-        pass
+        raise NotImplementedError
 
     def summary_(self):
         return f'Dense {(self.hidden_nodes,)}', f'Output Shape {(None, *self.output_shape)}'
