@@ -74,7 +74,7 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
 
         out_device = cl_array.empty(self.gpu_queue, (N, *self.output_shape), dtype=np.float32)
 
-        args = [z_device, self.W_device, self.b_device, self.input_length_device, self.output_length_device
+        args = [z_device, self.W_device, self.b_device, self.input_length_device, self.output_length_device,
                 out_device]
         args_data = [arg.data for arg in args]
 
