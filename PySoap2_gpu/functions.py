@@ -23,5 +23,25 @@ def get_activation_function(name, gpu_context):
 
         return relu
 
+    elif name == 'sigmoid':
+        elementwise_sigmoid = cl.elementwise.ElementwiseKernel(gpu_context,
+                                                               "float *x, float *out",
+                                                               """
+                                                               out[i] = SIGMOID(x[i])
+                                                               """,
+                                                               "sigmoid",
+                                                               preamble='#define SIGMOID(x) x > 0 ? '
+                                                                        '1.0/(1.0 + exp(-x)) : exp(x) / (exp(x) + 1.0))'
+                                                               )
+
+        def sigmoid(x_device, grad=False):
+            out_device = cl_array.empty_like(x_device)
+            elementwise_sigmoid(x_device, out_device)
+            if grad:
+                return out_device * (1 - out_device)
+            return out_device
+
+        return sigmoid
+
     else:
         raise Exception(f'{name} is not a defined function.')
