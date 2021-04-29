@@ -15,7 +15,7 @@ __kernel void predict(__global const float *z, __global const float *W, __global
     out[i*output_length + j] = total;
 }
 
-
+__g
 __kernel void delta_back_prop(__global const float *g_prime, __global const float *new_delta, 
                               __global const float *W, __global int *inputLength, 
                               __global int *outputLength, __global float *out)
