@@ -111,7 +111,25 @@ class MultiSoftChop:
         return out_device
 
 
-class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
+class SoftChopInterfaceToDevice:
+    def __init__(self, device_context, device_queue):
+        self.device_queue = device_queue
+
+        self.device_program = cl.Program(device_context, softchop_source_code).build()
+
+    def delta_back_prop(self, g_prime, new_delta, dz, out):
+        device_global_shape = (int(np.prod(g_prime.shape)),)
+
+        self.device_program.delta_back_prop(self.device_queue, device_global_shape, None,
+                                            g_prime.data, new_delta.data, dz.data, out.data)
+
+    def parameter_gradient(self, delta, parameter, input_length, N, out):
+        device_global_shape = (input_length.get(),)
+        self.device_program.parameter_gradient(self.device_queue, device_global_shape, None,
+                                               delta.data, parameter.data, input_length.data, N.data, out.data)
+
+
+class SoftChop(SoftChopInterfaceToDevice, NetworkNode, LayerBaseAttributes, Layer):
     def __init__(self, include_bias=True):
         NetworkNode.__init__(self)
         LayerBaseAttributes.__init__(self)
@@ -129,12 +147,17 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         self.gpu_queue = gpu_queue
         self.gpu_context = gpu_context
 
-        self.gpu_program = cl.Program(self.gpu_context, softchop_source_code).build()
+        SoftChopInterfaceToDevice.__init__(self, self.gpu_context, self.gpu_queue)
 
         input_shape = self.parents[0].output_shape
 
         self.input_shape = input_shape
         self.output_shape = input_shape
+
+        self.input_length_device = cl_array.to_device(self.gpu_queue, np.array(np.prod(self.input_shape),
+                                                                               dtype=np.int32))
+        self.output_length_device = cl_array.to_device(self.gpu_queue, np.array(np.prod(self.output_shape),
+                                                                                dtype=np.int32))
 
         self.a1 = cl_array.to_device(gpu_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float32))
         self.a2 = cl_array.to_device(gpu_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float32))
@@ -153,11 +176,11 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         self.clip_parameters()
 
     def clip_parameters(self, min_a=0.001, min_e=0.001):
-        self.clip_cl_array_in_place(self.a1)
-        self.clip_cl_array_in_place(self.a2)
+        self.clip_cl_array_in_place(self.a1, min_a)
+        self.clip_cl_array_in_place(self.a2, min_a)
 
-        self.clip_cl_array_in_place(self.e1)
-        self.clip_cl_array_in_place(self.e2)
+        self.clip_cl_array_in_place(self.e1, min_e)
+        self.clip_cl_array_in_place(self.e2, min_e)
 
     def predict(self, z, output_only=True, **kwargs):
         assert_instance_of_cl_array(z)
@@ -169,23 +192,42 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         return out, out
 
     def get_delta_backprop_(self, g_prime, new_delta, prev_z):
-        out_gpu = cl_array.empty_like(prev_z)
-
         dz = self.MultiSoftChop.dx(prev_z, self.a1, self.a2, self.e1, self.e2)
 
-        args = [g_prime, new_delta, dz, out_gpu]
-        args_data = [arg.data for arg in args]
+        out_gpu = cl_array.empty_like(prev_z)
+        super().delta_back_prop(g_prime, new_delta, dz, out_gpu)
 
-        self.gpu_program.delta_back_prop(self.gpu_queue, int(np.prod(g_prime.shape)), None, *args_data)
+        return out_gpu
 
     def get_parameter_gradients_(self, delta, prev_z):
         args = (prev_z, self.a1, self.a2, self.e1, self.e2)
 
-        dz = {'da1': self.MultiSoftChop.da1(*args),
-              'da2': self.MultiSoftChop.da2(*args),
-              'de1': self.MultiSoftChop.de1(*args),
-              'de2': self.MultiSoftChop.de2(*args)}
+        dz = {'a1': self.MultiSoftChop.da1(*args),
+              'a2': self.MultiSoftChop.da2(*args),
+              'e1': self.MultiSoftChop.de1(*args),
+              'e2': self.MultiSoftChop.de2(*args)}
 
-        self.gpu_program.parameter_gradient(self.gpu_queue, )
+        N = np.array(len(prev_z)).astype(np.int32)
+        N_device = cl_array.to_device(self.gpu_queue, N)
 
-        parameter_gradients = {}
+        parameter_gradients = {'a1': cl_array.empty_like(self.a1),
+                               'a2': cl_array.empty_like(self.a2),
+                               'e1': cl_array.empty_like(self.e1),
+                               'e2': cl_array.empty_like(self.e2)}
+
+        for key in parameter_gradients.keys():
+            super().parameter_gradient(delta, dz[key], self.input_length_device, N_device, parameter_gradients[key])
+
+        return parameter_gradients
+
+    def update_parameters_(self, parameter_updates):
+        raise NotImplementedError
+
+    def get_weights(self):
+        raise NotImplementedError
+
+    def summary_(self):
+        return f'SoftChop {self.input_shape}', f'Output Shape {(None, *self.output_shape)}'
+
+    def __str__(self):
+        return f'SoftChop: Output Shape {(None, *self.output_shape)}'
