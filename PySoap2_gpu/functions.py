@@ -1,5 +1,8 @@
 import pyopencl as cl
 import pyopencl.array as cl_array
+from pyopencl import clmath
+
+import numpy as np
 
 
 def get_activation_function(name, gpu_context):
@@ -51,3 +54,30 @@ def get_activation_function(name, gpu_context):
 
     else:
         raise Exception(f'{name} is not a defined function.')
+
+
+def get_error_function(name):
+    if name == 'mse':
+        def mse(predictions, targets, grad=False):
+            if grad:
+                return 2 * (predictions - targets)
+            N = predictions.shape[0]
+            return np.sum(((predictions - targets) ** 2) / 2) / N
+
+        return mse
+    elif name == 'cross_entropy':
+        def cross_entropy(predictions, targets, epsilon=1e-12, grad=False):
+            predictions = np.clip(predictions, epsilon, 1. - epsilon)  # Need to fix this line
+
+            if grad:
+                return -targets / predictions + (1 - targets) / (1 - predictions)
+
+            N = predictions.shape[0]
+            ce = -np.sum(targets * clmath.log(predictions + 1e-9)) / N
+            return ce
+
+        return cross_entropy
+
+
+def get_metric_function(name):
+    pass
