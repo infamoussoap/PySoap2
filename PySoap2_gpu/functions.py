@@ -26,7 +26,7 @@ def get_activation_function(name, gpu_context):
     elif name == 'linear':
         def linear(x_device, grad=False):
             if grad:
-                return cl_array.zeros_like(x_device) + np.float32(1)
+                return cl_array.zeros_like(x_device) + 1.0
             return x_device
 
     elif name == 'sigmoid':
