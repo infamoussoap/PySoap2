@@ -23,6 +23,12 @@ def get_activation_function(name, gpu_context):
 
         return relu
 
+    elif name == 'linear':
+        def linear(x_device, grad=False):
+            if grad:
+                return cl_array.zeros_like(x_device) + np.float32(1)
+            return x_device
+
     elif name == 'sigmoid':
         elementwise_sigmoid = cl.elementwise.ElementwiseKernel(gpu_context,
                                                                "float *x, float *out",
