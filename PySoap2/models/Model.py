@@ -238,8 +238,9 @@ class Model:
 
     def _back_prop(self, x_train, y_train):
         """ Perform one iteration of backpropagation on the given batches """
+        predictions_of_model_layers = self.predict(x_train, output_only=False)
 
-        layer_gradients = self._get_layer_gradients(x_train, y_train)
+        layer_gradients = self._get_layer_gradients(predictions_of_model_layers, y_train)
         parameter_updates = self.optimizer.step(simplify_recursive_dict(layer_gradients))
         parameter_updates_by_layer = unpack_to_recursive_dict(parameter_updates)
 
@@ -247,12 +248,10 @@ class Model:
             if layer.memory_location in parameter_updates_by_layer:
                 layer.update_parameters_(parameter_updates_by_layer[layer.memory_location])
 
-    def _get_layer_gradients(self, x_train, y_train):
+    def _get_layer_gradients(self, predictions_of_model_layers, y_train):
         """ Returns the gradients for each layer as a dictionary """
-        prediction = self.predict(x_train, output_only=False)
-
-        cached_pre_activation = {key: val[0] for (key, val) in prediction.items()}
-        cached_output = {key: val[1] for (key, val) in prediction.items()}
+        cached_pre_activation = {key: val[0] for (key, val) in predictions_of_model_layers.items()}
+        cached_output = {key: val[1] for (key, val) in predictions_of_model_layers.items()}
         cached_delta = self._get_layer_deltas(y_train, cached_pre_activation, cached_output)
 
         grad_dict = {}
