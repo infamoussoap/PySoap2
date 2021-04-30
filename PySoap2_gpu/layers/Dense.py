@@ -11,20 +11,85 @@ from .c_code.dense_c_code import dense_source_code
 from .ValueChecks import assert_instance_of_cl_array
 
 
-class Dense(NetworkNode, LayerBaseAttributes, Layer):
-    """ A fully connected layer
-
-        Parameters
-        ----------
-        hidden_nodes : int
-            The number of neurons in this layer
-        activation_function : str
-            The name of the activation function of this layer
-        activation_kwargs : dict of str - :obj:, optional
-            The keyword arguments for the activation function if it has hyper-parameters
+class DenseInterfaceToDevice:
     """
+        Notes
+        -----
+        Arguments to all methods are assumed to be stored on the device
+    """
+    def __init__(self, device_context, device_queue):
+        self.device_context = device_context
+        self.device_queue = device_queue
 
+        self.device_program = cl.Program(self.device_context, dense_source_code).build()
+
+    def predict(self, z, W, b, input_length, output_length, out):
+        device_global_shape = out.shape
+
+        self.device_program.predict(self.device_queue, device_global_shape, None,
+                                    z.data, W.data, b.data, input_length.data, output_length.data,
+                                    out.data)
+
+    def delta_back_prop(self, g_prime, new_delta, W, input_length, output_length, out):
+        device_global_shape = g_prime.shape
+
+        self.device_program.delta_back_prop(self.device_queue, device_global_shape, None,
+                                            g_prime.data, new_delta.data, W.data, input_length.data,
+                                            output_length.data, out.data)
+
+    def weight_gradient(self, delta, prev_z, input_length, output_length, N, out):
+        device_global_shape = (output_length.get(), input_length.get())  # Same shape as the weight matrix
+
+        self.device_program.weight_gradient(self.device_queue, device_global_shape, None,
+                                            delta.data, prev_z.data, input_length.data, output_length.data,
+                                            N.data, out.data)
+
+    def bias_gradient(self, delta, output_length, N, out):
+        device_global_shape = (output_length.get(),)
+
+        self.device_program.bias_gradient(self.device_queue, device_global_shape, None,
+                                          delta.data, output_length.data, N.data, out.data)
+
+
+class Dense(DenseInterfaceToDevice, NetworkNode, LayerBaseAttributes, Layer):
+    """ A Dense layer that only performs computations on the GPU (or device)
+
+        hidden_nodes : int
+            Effectively the length of the output of the Dense layer
+        activation_function : str
+            The name of the activation function
+        activation_kwargs : dict
+            The kwargs, if there is any, for the activation function
+
+        W_device : (*output_shape, *input_shape) cl_array
+            The weight matrix, stored on the GPU (or device)
+        b_device : (*output_shape) cl_array
+            The bias, stored on the GPU (or device)
+
+        input_length_device : cl_array of np.int32
+            The length of the input - np.prod(input_shape)
+        output_length_device : cl_array of np.int32
+            The length of the output - np.prod(output_shape)
+
+        gpu_program : cl.Program
+            The compiled C program for Dense computations
+
+        built : bool
+            Has the layer been built yet
+
+    """
     def __init__(self, hidden_nodes, activation_function, *arg, activation_kwargs=None, **kwargs):
+        """ A fully connected layer
+
+            Parameters
+            ----------
+            hidden_nodes : int
+                The number of neurons in this layer
+            activation_function : str
+                The name of the activation function of this layer
+            activation_kwargs : dict of str - :obj:, optional
+                The keyword arguments for the activation function if it has hyper-parameters
+        """
         NetworkNode.__init__(self)
         LayerBaseAttributes.__init__(self)
 
@@ -44,6 +109,8 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
 
         self.gpu_context = gpu_context
         self.gpu_queue = gpu_queue
+
+        DenseInterfaceToDevice.__init__(self, self.gpu_context, self.gpu_queue)
 
         input_shape = self.parents[0].output_shape
 
@@ -70,15 +137,12 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
     def predict(self, z_device, output_only=True, **kwargs):
         assert_instance_of_cl_array(z_device)
 
-        N = len(z_device)
+        n = len(z_device)
 
-        out_device = cl_array.empty(self.gpu_queue, (N, *self.output_shape), dtype=np.float32)
+        out_device = cl_array.empty(self.gpu_queue, (n, *self.output_shape), dtype=np.float32)
 
-        args = [z_device, self.W_device, self.b_device, self.input_length_device, self.output_length_device,
-                out_device]
-        args_data = [arg.data for arg in args]
-
-        self.gpu_program.predict(self.gpu_queue, (N, *self.output_shape), None, *args_data)
+        super().predict(z_device, self.W_device, self.b_device, self.input_length_device, self.output_length_device,
+                        out_device)
 
         if output_only:
             return self.activation_function_(out_device)
@@ -90,11 +154,8 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
 
         out_device = cl_array.empty(self.gpu_queue, g_prime_device.shape, dtype=np.float32)
 
-        args = [g_prime_device, delta_device, self.W_device, self.input_length_device,
-                self.output_length_device, out_device]
-        args_data = [arg.data for arg in args]
-
-        self.gpu_program.delta_back_prop(self.gpu_queue, g_prime_device.shape, None, *args_data)
+        super().delta_back_prop(g_prime_device, delta_device, self.W_device, self.input_length_device,
+                                self.output_length_device, out_device)
 
         return out_device
 
@@ -106,15 +167,11 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
         N_device = cl_array.to_device(self.gpu_queue, N)
 
         W_grad_device = cl_array.empty(self.gpu_queue, self.W_device.shape, dtype=np.float32)
-        args = [delta_device, z_device, self.input_length_device, self.output_length_device,
-                N_device, W_grad_device]
-        args_data = [arg.data for arg in args]
-        self.gpu_program.weight_gradient(self.gpu_queue, self.W_device.shape, None, *args_data)
+        super().weight_gradient(delta_device, z_device, self.input_length_device, self.output_length_device,
+                                N_device, W_grad_device)
 
         b_grad_device = cl_array.empty(self.gpu_queue, self.b_device.shape, dtype=np.float32)
-        args = [delta_device, self.output_length_device, N_device, b_grad_device]
-        args_data = [arg.data for arg in args]
-        self.gpu_program.bias_gradient(self.gpu_queue, self.output_shape, None, *args_data)
+        super().bias_gradient(delta_device, self.output_length_device, N_device, b_grad_device)
 
         parameter_gradients = {'weight': W_grad_device, 'bias': b_grad_device}
         return parameter_gradients
