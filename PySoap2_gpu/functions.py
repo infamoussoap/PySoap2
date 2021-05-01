@@ -69,10 +69,10 @@ def get_error_function(name):
         return mse
     elif name == 'cross_entropy':
         def cross_entropy(predictions, targets, epsilon=1e-12, grad=False):
-            clip_cl_array_in_place(predictions, epsilon, 1. - epsilon)
+            clip_cl_array_in_place(predictions, epsilon, 1.0 - epsilon)
 
             if grad:
-                return -targets / predictions + (1 - targets) / (1 - predictions)
+                return -targets / predictions + (1.0 - targets) / (1.0 - predictions)
 
             N = predictions.shape[0]
             ce = -np.sum(targets * clmath.log(predictions + 1e-9)) / N
@@ -82,4 +82,10 @@ def get_error_function(name):
 
 
 def get_metric_function(name):
-    pass
+    if name == 'accuracy':
+        def accuracy(predictions, target):
+            return np.mean(np.argmax(predictions, axis=-1) == np.argmax(target, axis=-1))
+
+        return accuracy
+    else:
+        raise Exception(f'{name} is not a defined metric.')
