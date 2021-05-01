@@ -183,7 +183,8 @@ class Dense(DenseInterfaceToDevice, NetworkNode, LayerBaseAttributes, Layer):
         return parameter_gradients
 
     def update_parameters_(self, parameter_updates):
-        raise NotImplementedError
+        self.W_device -= parameter_updates['weight']
+        self.b_device -= parameter_updates['bias']
 
     def get_weights(self):
         raise NotImplementedError
