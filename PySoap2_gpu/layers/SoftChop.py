@@ -12,7 +12,7 @@ from PySoap2_gpu.layers.LayerBaseAttributes import LayerBaseAttributes
 
 from .ValueChecks import assert_instance_of_cl_array
 
-from PySoap2_gpu.utils import clip_cl_array_by_min_value_in_place
+from PySoap2_gpu.utils import clip_cl_array_in_place
 
 
 class MultiSoftChop:
@@ -182,11 +182,11 @@ class SoftChop(SoftChopInterfaceToDevice, NetworkNode, LayerBaseAttributes, Laye
         self.clip_parameters()
 
     def clip_parameters(self, min_a=0.001, min_e=0.001):
-        clip_cl_array_by_min_value_in_place(self.a1, min_a)
-        clip_cl_array_by_min_value_in_place(self.a2, min_a)
+        clip_cl_array_in_place(self.gpu_context, self.a1, min_a, None)
+        clip_cl_array_in_place(self.gpu_context, self.a2, min_a, None)
 
-        clip_cl_array_by_min_value_in_place(self.e1, min_e)
-        clip_cl_array_by_min_value_in_place(self.e2, min_e)
+        clip_cl_array_in_place(self.gpu_context, self.e1, min_e, None)
+        clip_cl_array_in_place(self.gpu_context, self.e2, min_e, None)
 
     def predict(self, z, output_only=True, **kwargs):
         assert_instance_of_cl_array(z)
