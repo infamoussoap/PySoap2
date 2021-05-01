@@ -30,7 +30,7 @@ class LayerBaseAttributes:
 
     @property
     def activation_function_(self):
-        return get_activation_function(self.activation_function, self.gpu_context)
+        return get_activation_function(self.gpu_context, self.gpu_queue, self.activation_function)
 
     @property
     def memory_location(self):
