@@ -1,8 +1,10 @@
+import numpy as np
+
 import pyopencl as cl
 import pyopencl.array as cl_array
 from pyopencl import clmath
 
-import numpy as np
+from PySoap2_gpu.utils import clip_cl_array_in_place
 
 
 def get_activation_function(name, gpu_context):
@@ -67,7 +69,7 @@ def get_error_function(name):
         return mse
     elif name == 'cross_entropy':
         def cross_entropy(predictions, targets, epsilon=1e-12, grad=False):
-            predictions = np.clip(predictions, epsilon, 1. - epsilon)  # Need to fix this line
+            clip_cl_array_in_place(predictions, epsilon, 1. - epsilon)
 
             if grad:
                 return -targets / predictions + (1 - targets) / (1 - predictions)
