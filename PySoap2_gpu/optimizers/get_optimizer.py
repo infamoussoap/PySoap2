@@ -1,4 +1,4 @@
-from PySoap2 import optimizers
+from PySoap2_gpu import optimizers
 
 
 def get_optimizer(optimizer_str):
