@@ -4,12 +4,14 @@ import pyopencl as cl
 import pyopencl.array as cl_array
 from pyopencl import clmath
 
+from functools import partial
+
 from PySoap2_gpu.utils import clip_cl_array_in_place
 
 from PySoap2_gpu.utils import cl_math_functions
 
 
-def get_activation_function(name, gpu_context):
+def get_activation_function(gpu_context, gpu_queue, name):
     if gpu_context is None:
         raise ValueError('Context for gpu cannot be None.')
 
@@ -18,9 +20,9 @@ def get_activation_function(name, gpu_context):
             """ x is assumed to be an instance of cl.array.Array"""
             out_device = cl_array.empty_like(x_device)
             if grad:
-                cl_math_functions.elementwise_relu_grad(x_device, out_device)
+                cl_math_functions.elementwise_relu_grad(gpu_context)(x_device, out_device)
             else:
-                cl_math_functions.elementwise_relu(x_device, out_device)
+                cl_math_functions.elementwise_relu(gpu_context)(x_device, out_device)
             return out_device
 
         return relu
@@ -30,13 +32,14 @@ def get_activation_function(name, gpu_context):
             if grad:
                 return cl_array.zeros_like(x_device) + 1.0
             return x_device
+        return linear
     elif name == 'softmax':
-        return cl_math_functions.softmax_gpu
+        return partial(cl_math_functions.softmax_gpu, gpu_context, gpu_queue)
 
     elif name == 'sigmoid':
         def sigmoid(x_device, grad=False):
             out_device = cl_array.empty_like(x_device)
-            cl_math_functions.elementwise_sigmoid(x_device, out_device)
+            cl_math_functions.elementwise_sigmoid(gpu_context)(x_device, out_device)
             if grad:
                 return out_device * (1 - out_device)
             return out_device
