@@ -4,11 +4,11 @@ import pyopencl.array as cl_array
 from PySoap2.models import Model as CpuBaseModel
 
 from PySoap2_gpu.optimizers import Optimizer, get_optimizer
+from PySoap2_gpu.utils.dictionary_tricks import simplify_recursive_dict, unpack_to_recursive_dict
+from PySoap2_gpu.functions import get_error_function, get_metric_function
 
-from .dictionary_tricks import simplify_recursive_dict, unpack_to_recursive_dict
 
-
-class Mode(CpuBaseModel):
+class Model(CpuBaseModel):
     def __init__(self, input_layer, output_layer):
         CpuBaseModel.__init__(self, input_layer, output_layer)
 
