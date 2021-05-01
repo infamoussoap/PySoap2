@@ -42,7 +42,7 @@ class Input(NetworkNode, LayerBaseAttributes, Layer):
         # This layer is assumed to be built from creation
         self.built = True
 
-    def build(self, *args):
+    def build(self, device_context, device_queue):
         """ Initialises the layer
 
             Notes
@@ -51,7 +51,8 @@ class Input(NetworkNode, LayerBaseAttributes, Layer):
             This method is only written so as to make the `Layer` uniform in
             implementation
         """
-        pass
+        self.gpu_context = device_context
+        self.gpu_queue = device_queue
 
     def predict(self, z, *args, output_only=True, **kwargs):
         """ Returns the output of this layer
