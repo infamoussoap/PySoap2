@@ -31,7 +31,7 @@ __kernel void max_across_last_axis(__global const float *x, __global int *inputL
     out[i] = max;
 }
 
-__kernel void arg_max_across_last_axis(__global const float *x, __global int *inputLength, __global float *out)
+__kernel void arg_max_across_last_axis(__global const float *x, __global int *inputLength, __global int *out)
 {
     int i = get_global_id(0);
     int input_length = *inputLength;
