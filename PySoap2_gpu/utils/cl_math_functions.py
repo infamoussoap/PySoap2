@@ -66,7 +66,7 @@ def arg_max_across_last_axis(device_context, device_queue, x_gpu):
     cl_array_max_program = cl.Program(device_context, cl_array_max_source_code).build()
 
     last_axis_length = cl_array.to_device(device_queue, np.array(x_gpu.shape[-1], dtype=np.int32))
-    out_gpu = cl_array.empty(device_queue, x_gpu.shape[:-1], dtype=np.float32)
+    out_gpu = cl_array.empty(device_queue, x_gpu.shape[:-1], dtype=np.int32)
 
     event = cl_array_max_program.arg_max_across_last_axis(device_queue, (np.prod(out_gpu.shape),), None,
                                                           x_gpu.data, last_axis_length.data, out_gpu.data)
