@@ -1,3 +1,5 @@
+import numpy as np
+
 from pyopencl import clmath
 
 from .Optimizer import Optimizer
@@ -80,7 +82,7 @@ class Adam(Optimizer):
         self.v = {key: self.b2 * v + (1 - self.b2) * (g ** 2) if g is not None else None
                   for (key, v, g) in zip(grad_dict.keys(), self.v.values(), grad_dict.values())}
 
-        a = self.learning_rate * clmath.sqrt(1 - self.b2 ** self.t) / (1 - self.b1 ** self.t)
+        a = self.learning_rate * np.sqrt(1 - self.b2 ** self.t) / (1 - self.b1 ** self.t)
 
         return {key: a * m / (clmath.sqrt(v) + self.e) if v is not None else None
                 for (key, m, v) in zip(self.m.keys(), self.m.values(), self.v.values())}
