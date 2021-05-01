@@ -1,4 +1,5 @@
 ignore_files
 unit_tests
 PySoap_tests.ipynb
+PySoap2-Gpu Tests.ipynb
 .ipynb_checkpoints
