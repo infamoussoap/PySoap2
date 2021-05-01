@@ -6,3 +6,4 @@ from .NetworkNode import NetworkNode
 from .Dense import Dense
 from .Input import Input
 from .SoftChop import SoftChop
+from .Flatten import Flatten
