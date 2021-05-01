@@ -48,7 +48,23 @@ class Model(CpuBaseModel):
         x_test_device = cl_array.to_device(self.device_queue, x_test)
         y_test_device = cl_array.to_device(self.device_queue, y_test)
 
-        return super().evaluate(x_test_device, y_test_device)
+        prediction = self.predict(x_test_device)
+
+        loss_val = self._loss_function(prediction, y_test_device)
+
+        if isinstance(loss_val, cl_array.Array):
+            loss_val = loss_val.get()
+
+        eval_str = f'{self.loss_function}: {format(loss_val, ".4f")}'
+
+        if self.metric_function is not None:
+            metric_val = self._metric(prediction, y_test_device)
+            if isinstance(metric_val, cl_array.Array):
+                metric_val = metric_val.get()
+
+            eval_str += f' - {self.metric_function}: {format(metric_val, ".4f")}'
+
+        return eval_str
 
     def _back_prop(self, x_train, y_train):
         """ Perform one iteration of backpropagation on the given batches """
@@ -66,10 +82,10 @@ class Model(CpuBaseModel):
 
     @property
     def _loss_function(self):
-        return get_error_function(self.loss_function)
+        return get_error_function(self.device_context, self.device_queue, self.loss_function)
 
     @property
     def _metric(self):
         if self.metric_function is not None:
-            return get_metric_function(self.metric_function)
+            return get_metric_function(self.device_context, self.device_queue, self.metric_function)
         return None
