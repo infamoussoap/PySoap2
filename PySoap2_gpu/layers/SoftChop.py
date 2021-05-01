@@ -33,7 +33,8 @@ class MultiSoftChop:
         args = [x_device, a1_device, a2_device, epsilon1_device, epsilon2_device, input_length_device, out_device]
         args_data = [arg.data for arg in args]
 
-        self.gpu_program.softchop_eval(self.gpu_queue, (N, input_length), None, *args_data)
+        event = self.gpu_program.softchop_eval(self.gpu_queue, (N, input_length), None, *args_data)
+        event.wait()
 
         return out_device
 
@@ -48,7 +49,8 @@ class MultiSoftChop:
         args = [x_device, a1_device, a2_device, epsilon1_device, epsilon2_device, input_length_device, out_device]
         args_data = [arg.data for arg in args]
 
-        self.gpu_program.softchop_dx(self.gpu_queue, (N, input_length), None, *args_data)
+        event = self.gpu_program.softchop_dx(self.gpu_queue, (N, input_length), None, *args_data)
+        event.wait()
 
         return out_device
 
@@ -63,7 +65,8 @@ class MultiSoftChop:
         args = [x_device, a1_device, a2_device, epsilon1_device, epsilon2_device, input_length_device, out_device]
         args_data = [arg.data for arg in args]
 
-        self.gpu_program.softchop_da1(self.gpu_queue, (N, input_length), None, *args_data)
+        event = self.gpu_program.softchop_da1(self.gpu_queue, (N, input_length), None, *args_data)
+        event.wait()
 
         return out_device
 
@@ -78,7 +81,8 @@ class MultiSoftChop:
         args = [x_device, a1_device, a2_device, epsilon1_device, epsilon2_device, input_length_device, out_device]
         args_data = [arg.data for arg in args]
 
-        self.gpu_program.softchop_da2(self.gpu_queue, (N, input_length), None, *args_data)
+        event = self.gpu_program.softchop_da2(self.gpu_queue, (N, input_length), None, *args_data)
+        event.wait()
 
         return out_device
 
@@ -93,7 +97,8 @@ class MultiSoftChop:
         args = [x_device, a1_device, a2_device, epsilon1_device, epsilon2_device, input_length_device, out_device]
         args_data = [arg.data for arg in args]
 
-        self.gpu_program.softchop_de1(self.gpu_queue, (N, input_length), None, *args_data)
+        event = self.gpu_program.softchop_de1(self.gpu_queue, (N, input_length), None, *args_data)
+        event.wait()
 
         return out_device
 
@@ -108,7 +113,8 @@ class MultiSoftChop:
         args = [x_device, a1_device, a2_device, epsilon1_device, epsilon2_device, input_length_device, out_device]
         args_data = [arg.data for arg in args]
 
-        self.gpu_program.softchop_de2(self.gpu_queue, (N, input_length), None, *args_data)
+        event = self.gpu_program.softchop_de2(self.gpu_queue, (N, input_length), None, *args_data)
+        event.wait()
 
         return out_device
 
@@ -122,13 +128,15 @@ class SoftChopInterfaceToDevice:
     def delta_back_prop(self, g_prime, new_delta, dz, out):
         device_global_shape = (int(np.prod(g_prime.shape)),)
 
-        self.device_program.delta_back_prop(self.device_queue, device_global_shape, None,
-                                            g_prime.data, new_delta.data, dz.data, out.data)
+        event = self.device_program.delta_back_prop(self.device_queue, device_global_shape, None,
+                                                    g_prime.data, new_delta.data, dz.data, out.data)
+        event.wait()
 
     def parameter_gradient(self, delta, parameter, input_length, N, out):
         device_global_shape = (input_length.get(),)
-        self.device_program.parameter_gradient(self.device_queue, device_global_shape, None,
-                                               delta.data, parameter.data, input_length.data, N.data, out.data)
+        event = self.device_program.parameter_gradient(self.device_queue, device_global_shape, None,
+                                                       delta.data, parameter.data, input_length.data, N.data, out.data)
+        event.wait()
 
 
 class SoftChop(SoftChopInterfaceToDevice, NetworkNode, LayerBaseAttributes, Layer):

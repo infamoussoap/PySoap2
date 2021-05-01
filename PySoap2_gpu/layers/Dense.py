@@ -17,6 +17,7 @@ class DenseInterfaceToDevice:
         -----
         Arguments to all methods are assumed to be stored on the device
     """
+
     def __init__(self, device_context, device_queue):
         self.device_context = device_context
         self.device_queue = device_queue
@@ -26,29 +27,33 @@ class DenseInterfaceToDevice:
     def predict(self, z, W, b, input_length, output_length, out):
         device_global_shape = out.shape
 
-        self.device_program.predict(self.device_queue, device_global_shape, None,
-                                    z.data, W.data, b.data, input_length.data, output_length.data,
-                                    out.data)
+        event = self.device_program.predict(self.device_queue, device_global_shape, None,
+                                            z.data, W.data, b.data, input_length.data, output_length.data,
+                                            out.data)
+        event.wait()
 
     def delta_back_prop(self, g_prime, new_delta, W, input_length, output_length, out):
         device_global_shape = g_prime.shape
 
-        self.device_program.delta_back_prop(self.device_queue, device_global_shape, None,
-                                            g_prime.data, new_delta.data, W.data, input_length.data,
-                                            output_length.data, out.data)
+        event = self.device_program.delta_back_prop(self.device_queue, device_global_shape, None,
+                                                    g_prime.data, new_delta.data, W.data, input_length.data,
+                                                    output_length.data, out.data)
+        event.wait()
 
     def weight_gradient(self, delta, prev_z, input_length, output_length, N, out):
         device_global_shape = (output_length.get(), input_length.get())  # Same shape as the weight matrix
 
-        self.device_program.weight_gradient(self.device_queue, device_global_shape, None,
-                                            delta.data, prev_z.data, input_length.data, output_length.data,
-                                            N.data, out.data)
+        event = self.device_program.weight_gradient(self.device_queue, device_global_shape, None,
+                                                    delta.data, prev_z.data, input_length.data, output_length.data,
+                                                    N.data, out.data)
+        event.wait()
 
     def bias_gradient(self, delta, output_length, N, out):
         device_global_shape = (output_length.get(),)
 
-        self.device_program.bias_gradient(self.device_queue, device_global_shape, None,
-                                          delta.data, output_length.data, N.data, out.data)
+        event = self.device_program.bias_gradient(self.device_queue, device_global_shape, None,
+                                                  delta.data, output_length.data, N.data, out.data)
+        event.wait()
 
 
 class Dense(DenseInterfaceToDevice, NetworkNode, LayerBaseAttributes, Layer):
@@ -78,6 +83,7 @@ class Dense(DenseInterfaceToDevice, NetworkNode, LayerBaseAttributes, Layer):
             Has the layer been built yet
 
     """
+
     def __init__(self, hidden_nodes, activation_function, *arg, activation_kwargs=None, **kwargs):
         """ A fully connected layer
 
