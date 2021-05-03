@@ -230,7 +230,13 @@ class SoftChop(SoftChopInterfaceToDevice, NetworkNode, LayerBaseAttributes, Laye
         return parameter_gradients
 
     def update_parameters_(self, parameter_updates):
-        raise NotImplementedError
+        self.a1 -= parameter_updates['a1']
+        self.a2 -= parameter_updates['a2']
+
+        self.e1 -= parameter_updates['e1']
+        self.e2 -= parameter_updates['e2']
+
+        self.clip_parameters()
 
     def get_weights(self):
         raise NotImplementedError
