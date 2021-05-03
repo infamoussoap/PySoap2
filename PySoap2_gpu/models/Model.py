@@ -5,7 +5,8 @@ from PySoap2.models import Model as CpuBaseModel
 
 from PySoap2_gpu.optimizers import Optimizer, get_optimizer
 from PySoap2_gpu.utils.dictionary_tricks import simplify_recursive_dict, unpack_to_recursive_dict
-from PySoap2_gpu.functions import get_error_function, get_metric_function
+
+from PySoap2_gpu.functions import ErrorFunction, MetricFunction
 
 
 class Model(CpuBaseModel):
@@ -17,6 +18,12 @@ class Model(CpuBaseModel):
 
         self.device_context = cl.Context([device])
         self.device_queue = cl.CommandQueue(self.device_context)
+
+        if ErrorFunction.initialized:
+            ErrorFunction(self.device_context, self.device_queue)
+
+        if MetricFunction.initialized:
+            MetricFunction(self.device_context, self.device_queue)
 
     def build(self, loss_function, optimizer, metrics=None):
         if isinstance(optimizer, Optimizer):
@@ -82,10 +89,10 @@ class Model(CpuBaseModel):
 
     @property
     def _loss_function(self):
-        return get_error_function(self.device_context, self.device_queue, self.loss_function)
+        return ErrorFunction.get_error_function(self.loss_function)
 
     @property
     def _metric(self):
         if self.metric_function is not None:
-            return get_metric_function(self.device_context, self.device_queue, self.metric_function)
+            return MetricFunction.get_metric_function(self.metric_function)
         return None
