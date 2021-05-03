@@ -1,6 +1,6 @@
-from .functions import get_activation_function
-from .functions import get_metric_function
-from .functions import get_error_function
+from .functions import ActivationFunction
+from .functions import MetricFunction
+from .functions import ErrorFunction
 
 import PySoap2_gpu.layers as layers
 
