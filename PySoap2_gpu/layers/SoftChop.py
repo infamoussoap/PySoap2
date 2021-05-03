@@ -12,7 +12,7 @@ from PySoap2_gpu.layers.LayerBaseAttributes import LayerBaseAttributes
 
 from .ValueChecks import assert_instance_of_cl_array
 
-from PySoap2_gpu.utils import clip_cl_array_in_place
+from PySoap2_gpu.utils import ClArrayTricks
 
 
 class MultiSoftChop:
@@ -157,6 +157,9 @@ class SoftChop(SoftChopInterfaceToDevice, NetworkNode, LayerBaseAttributes, Laye
         self.gpu_queue = gpu_queue
         self.gpu_context = gpu_context
 
+        if not ClArrayTricks.initialized:
+            ClArrayTricks(gpu_context, gpu_queue)
+
         SoftChopInterfaceToDevice.__init__(self, self.gpu_context, self.gpu_queue)
 
         input_shape = self.parents[0].output_shape
@@ -182,11 +185,11 @@ class SoftChop(SoftChopInterfaceToDevice, NetworkNode, LayerBaseAttributes, Laye
         self.clip_parameters()
 
     def clip_parameters(self, min_a=0.001, min_e=0.001):
-        clip_cl_array_in_place(self.gpu_context, self.a1, min_a, None)
-        clip_cl_array_in_place(self.gpu_context, self.a2, min_a, None)
+        ClArrayTricks.clip_cl_array_in_place(self.a1, min_a, None)
+        ClArrayTricks.clip_cl_array_in_place(self.a2, min_a, None)
 
-        clip_cl_array_in_place(self.gpu_context, self.e1, min_e, None)
-        clip_cl_array_in_place(self.gpu_context, self.e2, min_e, None)
+        ClArrayTricks.clip_cl_array_in_place(self.e1, min_e, None)
+        ClArrayTricks.clip_cl_array_in_place(self.e2, min_e, None)
 
     def predict(self, z, output_only=True, **kwargs):
         assert_instance_of_cl_array(z)

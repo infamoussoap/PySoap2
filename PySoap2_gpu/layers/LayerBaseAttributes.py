@@ -1,4 +1,4 @@
-from PySoap2_gpu import get_activation_function
+from PySoap2_gpu import ActivationFunction
 
 
 class LayerBaseAttributes:
@@ -30,7 +30,9 @@ class LayerBaseAttributes:
 
     @property
     def activation_function_(self):
-        return get_activation_function(self.gpu_context, self.gpu_queue, self.activation_function)
+        if not ActivationFunction.initialized:
+            ActivationFunction(self.gpu_context, self.gpu_queue)
+        return ActivationFunction.get_activation_function(self.activation_function)
 
     @property
     def memory_location(self):
