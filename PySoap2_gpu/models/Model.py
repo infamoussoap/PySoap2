@@ -19,10 +19,10 @@ class Model(CpuBaseModel):
         self.device_context = cl.Context([device])
         self.device_queue = cl.CommandQueue(self.device_context)
 
-        if ErrorFunction.initialized:
+        if not ErrorFunction.initialized:
             ErrorFunction(self.device_context, self.device_queue)
 
-        if MetricFunction.initialized:
+        if not MetricFunction.initialized:
             MetricFunction(self.device_context, self.device_queue)
 
     def build(self, loss_function, optimizer, metrics=None):
