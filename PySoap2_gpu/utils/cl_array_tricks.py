@@ -40,7 +40,7 @@ class ClArrayTricks:
     @staticmethod
     def clip_cl_array_in_place(array, min_val, max_val):
         if min_val is not None:
-            ClArrayTricks.clip_cl_array_by_max_value_in_place(array, min_val)
+            ClArrayTricks.clip_cl_array_by_min_value_in_place(array, min_val)
 
         if max_val is not None:
             ClArrayTricks.clip_cl_array_by_max_value_in_place(array, max_val)
