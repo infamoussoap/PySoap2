@@ -10,6 +10,44 @@ from PySoap2_gpu.layers.LayerBaseAttributes import LayerBaseAttributes
 from .c_code.split_c_code import split_source_code
 
 
+class SplitInterfaceToDevice:
+    device_context = None
+    device_queue = None
+    device_program = None
+
+    initialized = False
+
+    def __init__(self, device_context, device_queue):
+        SplitInterfaceToDevice.device_context = device_context
+        SplitInterfaceToDevice.device_queue = device_queue
+
+        SplitInterfaceToDevice.device_program = cl.Program(device_context, split_source_code).build()
+
+        SplitInterfaceToDevice.initialized = True
+
+    @staticmethod
+    def get_input_at_mask(input_, mask_positions, input_length, output_length, output_):
+        device_global_shape = output_.shape
+
+        event = SplitInterfaceToDevice.device_program.get_input_at_mask(SplitInterfaceToDevice.device_queue,
+                                                                        device_global_shape, None,
+                                                                        input_.data, mask_positions.data,
+                                                                        input_length.data,
+                                                                        output_length.data, output_.data)
+        event.wait()
+
+    @staticmethod
+    def set_input_at_mask_as_output(input_, mask_positions, input_length, output_length, output_):
+        device_global_shape = output_.shape
+
+        event = SplitInterfaceToDevice.device_program.set_input_at_mask_as_output(SplitInterfaceToDevice.device_queue,
+                                                                                  device_global_shape, None,
+                                                                                  input_.data, mask_positions.data,
+                                                                                  input_length.data,
+                                                                                  output_length.data, output_.data)
+        event.wait()
+
+
 class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
     def __init__(self, mask):
         LayerBaseAttributes.__init__(self)
@@ -18,8 +56,150 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
         self.mask = mask
 
     def build(self, device_context, device_queue):
+        self.device_context = device_context
+        self.device_queue = device_queue
+
+        if not SplitInterfaceToDevice.initialized:
+            SplitInterfaceToDevice(device_context, device_queue)
+
+        input_shape = self.parents[0].output_shape
+
+        self.input_shape = input_shape
+        self.output_shape = (int(np.sum(self.mask)),)
+
+        mask_positions = np.arange(int(np.prod(input_shape))).reshape(input_shape)[self.mask]
+        self.mask_positions_device = cl_array.to_device(device_queue, mask_positions.astype(np.int32))
+
+        input_length = np.array(np.prod(self.input_shape)).astype(np.int32)
+        output_length = np.array(np.prod(self.output_shape)).astype(np.int32)
+
+        self.input_length_device = cl_array.to_device(device_queue, input_length)
+        self.output_length_device = cl_array.to_device(device_queue, output_length)
+
+        self.built = True
+
+    def predict(self, z, output_only=True, pre_activation_of_input=None):
+        N = len(z)
+        out_device = cl_array.empty(self.device_queue, (N, *self.output_shape), dtype=np.float32)
+
+        SplitInterfaceToDevice.get_input_at_mask(z, self.mask_positions_device, self.input_length_device,
+                                                 self.output_length_device, out_device)
+
+        if output_only:
+            return out_device
+        return pre_activation_of_input
+
+    def get_delta_backprop_(self, g_prime, new_delta, prev_z):
+        return new_delta
+
+    def get_parameter_gradients_(self, delta, prev_z):
+        return {}
+
+    def update_parameters_(self, parameter_updates):
         pass
 
+    def get_weights(self):
+        return None
+
+    def summary_(self):
+
+        return 'SplitChild Layer', f'Output Shape {(None, *self.output_shape)}'
+
+    @property
+    def activation_function_(self):
+        return self.parents[0].activation_function_
 
 
+class SplitLeftChild(SplitChild):
+    """ There is no difference between the implementation of the Left and Right Child nodes.
+        But these classes are created to make it clear which is the left and right node when
+        looking at the repr of the instances
+    """
+    def __init__(self, mask):
+        super().__init__(mask)
 
+
+class SplitRightChild(SplitChild):
+    """ There is no difference between the implementation of the Left and Right Child nodes.
+        But these classes are created to make it clear which is the left and right node when
+        looking at the repr of the instances
+    """
+    def __init__(self, mask):
+        super().__init__(mask)
+
+
+class Split(NetworkNode, LayerBaseAttributes, Layer):
+    def __init__(self, mask):
+        NetworkNode.__init__(self)
+        LayerBaseAttributes.__init__(self)
+        self.mask = mask.astype(bool)
+
+        SplitLeftChild(self.mask)(self)
+        SplitRightChild(~self.mask)(self)
+
+    def build(self, device_context, device_queue):
+        """ Initialise the layer
+            Notes
+            -----
+            The output_shape is the same as the input_shape because the input must
+            be based onto the children for it to be split
+        """
+        self.device_context = device_context
+        self.device_queue = device_queue
+
+        if not SplitInterfaceToDevice.initialized:
+            SplitInterfaceToDevice(device_context, device_queue)
+
+        input_shape = self.parents[0].output_shape
+
+        self.input_shape = input_shape
+        self.output_shape = input_shape
+
+        input_length = np.array(np.prod(self.input_shape)).astype(np.int32)
+        output_length = np.array(np.prod(self.output_shape)).astype(np.int32)
+
+        self.input_length_device = cl_array.to_device(device_queue, input_length)
+        self.output_length_device = cl_array.to_device(device_queue, output_length)
+
+        self.built = True
+
+    def predict(self, z, output_only=True, pre_activation_of_input=None):
+        if output_only:
+            return z.reshape(-1, *self.output_shape)
+        return pre_activation_of_input.reshape(-1, *self.input_shape), z.reshape(-1, *self.output_shape)
+
+    def get_delta_backprop_(self, g_prime, new_delta, prev_z):
+        N = len(new_delta[0])
+
+        out_delta = cl_array.empty(self.device_queue, (N, *self.input_shape), dtype=np.float32)
+
+        for i, child in enumerate(self.children):
+            SplitInterfaceToDevice.set_input_at_mask_as_output(out_delta, child.mask_positions_device,
+                                                               child.input_length_device, child.output_length_device,
+                                                               new_delta[i])
+
+        return out_delta
+
+    def get_parameter_gradients_(self, new_delta, prev_z):
+        return {}
+
+    def update_parameters_(self, *args):
+        pass
+
+    def get_weights(self):
+        return None
+
+    def summary_(self):
+        return 'Split Layer', f'Output Shape {(None, *self.output_shape)}'
+
+    @property
+    def left(self):
+        return self.children[0]
+
+    @property
+    def right(self):
+        return self.children[1]
+
+    @property
+    def activation_function_(self):
+        return self.parents[0].activation_function_
