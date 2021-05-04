@@ -153,32 +153,32 @@ class SoftChop(SoftChopInterfaceToDevice, NetworkNode, LayerBaseAttributes, Laye
 
         self.b = None
 
-    def build(self, gpu_context, gpu_queue):
-        self.gpu_queue = gpu_queue
-        self.gpu_context = gpu_context
+    def build(self, device_context, device_queue):
+        self.device_queue = device_queue
+        self.device_context = device_context
 
         if not ClArrayTricks.initialized:
-            ClArrayTricks(gpu_context, gpu_queue)
+            ClArrayTricks(device_context, device_queue)
 
-        SoftChopInterfaceToDevice.__init__(self, self.gpu_context, self.gpu_queue)
+        SoftChopInterfaceToDevice.__init__(self, self.device_context, self.device_queue)
 
         input_shape = self.parents[0].output_shape
 
         self.input_shape = input_shape
         self.output_shape = input_shape
 
-        self.input_length_device = cl_array.to_device(self.gpu_queue, np.array(np.prod(self.input_shape),
-                                                                               dtype=np.int32))
-        self.output_length_device = cl_array.to_device(self.gpu_queue, np.array(np.prod(self.output_shape),
-                                                                                dtype=np.int32))
+        self.input_length_device = cl_array.to_device(self.device_queue, np.array(np.prod(self.input_shape),
+                                                                                  dtype=np.int32))
+        self.output_length_device = cl_array.to_device(self.device_queue, np.array(np.prod(self.output_shape),
+                                                                                   dtype=np.int32))
 
-        self.a1 = cl_array.to_device(gpu_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float32))
-        self.a2 = cl_array.to_device(gpu_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float32))
+        self.a1 = cl_array.to_device(device_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float32))
+        self.a2 = cl_array.to_device(device_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float32))
 
-        self.e1 = cl_array.to_device(gpu_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float32))
-        self.e2 = cl_array.to_device(gpu_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float32))
+        self.e1 = cl_array.to_device(device_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float32))
+        self.e2 = cl_array.to_device(device_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float32))
 
-        self.MultiSoftChop = MultiSoftChop(self.gpu_context, self.gpu_queue)
+        self.MultiSoftChop = MultiSoftChop(self.device_context, self.device_queue)
 
         self.built = True
 
@@ -217,7 +217,7 @@ class SoftChop(SoftChopInterfaceToDevice, NetworkNode, LayerBaseAttributes, Laye
               'e2': self.MultiSoftChop.de2(*args)}
 
         N = np.array(len(prev_z)).astype(np.int32)
-        N_device = cl_array.to_device(self.gpu_queue, N)
+        N_device = cl_array.to_device(self.device_queue, N)
 
         parameter_gradients = {'a1': cl_array.empty_like(self.a1),
                                'a2': cl_array.empty_like(self.a2),

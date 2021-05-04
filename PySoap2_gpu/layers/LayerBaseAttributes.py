@@ -12,8 +12,8 @@ class LayerBaseAttributes:
             Assumed to be linear activation
         built : bool
             Set to False
-        gpu_context : pyopencl.Context
-        gpu_queue : pyopencl.CommandQueue
+        device_context : pyopencl.Context
+        device_queue : pyopencl.CommandQueue
     """
     def __init__(self):
         self.input_shape = ()
@@ -21,17 +21,17 @@ class LayerBaseAttributes:
 
         self.activation_function = 'linear'
 
-        self.gpu_context = None
-        self.gpu_queue = None
+        self.device_context = None
+        self.device_queue = None
 
-        self.gpu_program = None
+        self.device_program = None
 
         self.built = False
 
     @property
     def activation_function_(self):
         if not ActivationFunction.initialized:
-            ActivationFunction(self.gpu_context, self.gpu_queue)
+            ActivationFunction(self.device_context, self.device_queue)
         return ActivationFunction.get_activation_function(self.activation_function)
 
     @property

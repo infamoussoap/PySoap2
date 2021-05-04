@@ -28,10 +28,10 @@ class Flatten(NetworkNode, LayerBaseAttributes, Layer):
         NetworkNode.__init__(self)
         LayerBaseAttributes.__init__(self)
 
-    def build(self, gpu_context, gpu_queue):
+    def build(self, device_context, device_queue):
         """ Built/initialised the layer """
-        self.gpu_context = gpu_context
-        self.gpu_queue = gpu_queue
+        self.device_context = device_context
+        self.device_queue = device_queue
 
         input_shape = self.parents[0].output_shape
 

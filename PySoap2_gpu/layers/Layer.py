@@ -6,7 +6,7 @@ class Layer(abc.ABC):
     """
 
     @abc.abstractmethod
-    def build(self, gpu_context, gpu_queue):
+    def build(self, device_context, device_queue):
         """ When the build method is called in the `sequential` class it invokes this
             method. This allows the for the given layer to initialise the required variables.
         """

@@ -51,8 +51,8 @@ class Input(NetworkNode, LayerBaseAttributes, Layer):
             This method is only written so as to make the `Layer` uniform in
             implementation
         """
-        self.gpu_context = device_context
-        self.gpu_queue = device_queue
+        self.device_context = device_context
+        self.device_queue = device_queue
 
     def predict(self, z, *args, output_only=True, **kwargs):
         """ Returns the output of this layer

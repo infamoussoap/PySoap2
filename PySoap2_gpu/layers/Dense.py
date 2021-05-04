@@ -76,7 +76,7 @@ class Dense(DenseInterfaceToDevice, NetworkNode, LayerBaseAttributes, Layer):
         output_length_device : cl_array of np.int32
             The length of the output - np.prod(output_shape)
 
-        gpu_program : cl.Program
+        device_program : cl.Program
             The compiled C program for Dense computations
 
         built : bool
@@ -110,21 +110,21 @@ class Dense(DenseInterfaceToDevice, NetworkNode, LayerBaseAttributes, Layer):
         self.input_length_device = None
         self.output_length_device = None
 
-    def build(self, gpu_context, gpu_queue):
+    def build(self, device_context, device_queue):
         """ Initialises the weight and bias units """
 
-        self.gpu_context = gpu_context
-        self.gpu_queue = gpu_queue
+        self.device_context = device_context
+        self.device_queue = device_queue
 
-        DenseInterfaceToDevice.__init__(self, self.gpu_context, self.gpu_queue)
+        DenseInterfaceToDevice.__init__(self, self.device_context, self.device_queue)
 
         input_shape = self.parents[0].output_shape
 
         self.output_shape = (self.hidden_nodes,)
         self.input_shape = input_shape
 
-        self.input_length_device = cl_array.to_device(self.gpu_queue, np.array(self.input_shape[0], dtype=np.int32))
-        self.output_length_device = cl_array.to_device(self.gpu_queue, np.array(self.output_shape[0], dtype=np.int32))
+        self.input_length_device = cl_array.to_device(self.device_queue, np.array(self.input_shape[0], dtype=np.int32))
+        self.output_length_device = cl_array.to_device(self.device_queue, np.array(self.output_shape[0], dtype=np.int32))
 
         # Initialise the the weight with Glorot-Uniform, a uniform distribution over [-limit, limit],
         # where limit = sqrt(6 / (fan_in + fan_out)) (fan_in is the number of input units in the weight
@@ -133,10 +133,10 @@ class Dense(DenseInterfaceToDevice, NetworkNode, LayerBaseAttributes, Layer):
         W = np.random.uniform(low=-limit, high=limit, size=(*self.output_shape, *input_shape)).astype(np.float32)
         b = np.zeros(self.output_shape).astype(np.float32)
 
-        self.W_device = cl_array.to_device(self.gpu_queue, W)
-        self.b_device = cl_array.to_device(self.gpu_queue, b)
+        self.W_device = cl_array.to_device(self.device_queue, W)
+        self.b_device = cl_array.to_device(self.device_queue, b)
 
-        self.gpu_program = cl.Program(self.gpu_context, dense_source_code).build()
+        self.device_program = cl.Program(self.device_context, dense_source_code).build()
 
         self.built = True
 
@@ -145,7 +145,7 @@ class Dense(DenseInterfaceToDevice, NetworkNode, LayerBaseAttributes, Layer):
 
         n = len(z_device)
 
-        out_device = cl_array.empty(self.gpu_queue, (n, *self.output_shape), dtype=np.float32)
+        out_device = cl_array.empty(self.device_queue, (n, *self.output_shape), dtype=np.float32)
 
         super().predict(z_device, self.W_device, self.b_device, self.input_length_device, self.output_length_device,
                         out_device)
@@ -158,7 +158,7 @@ class Dense(DenseInterfaceToDevice, NetworkNode, LayerBaseAttributes, Layer):
         assert_instance_of_cl_array(g_prime_device)
         assert_instance_of_cl_array(delta_device)
 
-        out_device = cl_array.empty(self.gpu_queue, g_prime_device.shape, dtype=np.float32)
+        out_device = cl_array.empty(self.device_queue, g_prime_device.shape, dtype=np.float32)
 
         super().delta_back_prop(g_prime_device, delta_device, self.W_device, self.input_length_device,
                                 self.output_length_device, out_device)
@@ -170,13 +170,13 @@ class Dense(DenseInterfaceToDevice, NetworkNode, LayerBaseAttributes, Layer):
         assert_instance_of_cl_array(z_device)
 
         N = np.array(len(z_device)).astype(np.int32)
-        N_device = cl_array.to_device(self.gpu_queue, N)
+        N_device = cl_array.to_device(self.device_queue, N)
 
-        W_grad_device = cl_array.empty(self.gpu_queue, self.W_device.shape, dtype=np.float32)
+        W_grad_device = cl_array.empty(self.device_queue, self.W_device.shape, dtype=np.float32)
         super().weight_gradient(delta_device, z_device, self.input_length_device, self.output_length_device,
                                 N_device, W_grad_device)
 
-        b_grad_device = cl_array.empty(self.gpu_queue, self.b_device.shape, dtype=np.float32)
+        b_grad_device = cl_array.empty(self.device_queue, self.b_device.shape, dtype=np.float32)
         super().bias_gradient(delta_device, self.output_length_device, N_device, b_grad_device)
 
         parameter_gradients = {'weight': W_grad_device, 'bias': b_grad_device}
