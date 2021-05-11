@@ -8,3 +8,4 @@ from .Input import Input
 from .SoftChop import SoftChop
 from .Flatten import Flatten
 from .Split import Split
+from .Concatenate import Concatenate
