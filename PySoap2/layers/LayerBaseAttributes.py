@@ -26,7 +26,7 @@ class LayerBaseAttributes:
         return get_activation_function(self.activation_function)
 
     @property
-    def memory_location(self):
+    def _memory_location(self):
         """ Return the location in memory, to be used as a unique identify for instances
             of LayerBaseAttributes
 
@@ -40,4 +40,4 @@ class LayerBaseAttributes:
     @property
     def id(self):
         """ We'll use the memory location as the id of a layer """
-        return f'{type(self).__name__}_{self.memory_location}'
+        return f'{type(self).__name__}_{self._memory_location}'

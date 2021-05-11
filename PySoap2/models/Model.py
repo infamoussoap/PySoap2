@@ -109,15 +109,15 @@ class Model:
 
             dict of str - (np.array, np.array)
                 This is returned in output_only=False
-                The str keys are the layers memory location, i.e. their unique identifier. The associated value
+                The str keys are the layers id, i.e. their unique identifier. The associated value
                 will be a tuple of the pre and post activations.
         """
 
         # Input is a special case
-        cached_outputs = {self.input_layer.memory_location: self.input_layer.predict(z, output_only=output_only)}
+        cached_outputs = {self.input_layer.id: self.input_layer.predict(z, output_only=output_only)}
 
         for layer in self.layers_by_number_of_parents[1:]:  # Input is assumed to have the least number of parents
-            layer_id = layer.memory_location
+            layer_id = layer.id
 
             layer_arg = self._get_layer_predict_arguments(layer, cached_outputs, output_only=output_only)
 
@@ -130,7 +130,7 @@ class Model:
 
         if not output_only:
             return cached_outputs
-        return cached_outputs[self.output_layer.memory_location]
+        return cached_outputs[self.output_layer.id]
 
     @staticmethod
     def _get_layer_predict_arguments(layer, cached_outputs, output_only=True):
@@ -152,7 +152,7 @@ class Model:
             This function can be written more efficiently, but at the cost of readability. I chose
             to make the function more readable
         """
-        layer_args = [cached_outputs[parent.memory_location] for parent in layer.parents]
+        layer_args = [cached_outputs[parent.id] for parent in layer.parents]
 
         if output_only and len(layer.parents) == 1:
             post_activation_argument = layer_args[0]
@@ -245,8 +245,8 @@ class Model:
         parameter_updates_by_layer = unpack_to_recursive_dict(parameter_updates)
 
         for layer in self.layers_by_number_of_parents[1:]:
-            if layer.memory_location in parameter_updates_by_layer:
-                layer.update_parameters_(parameter_updates_by_layer[layer.memory_location])
+            if layer.id in parameter_updates_by_layer:
+                layer.update_parameters_(parameter_updates_by_layer[layer.id])
 
     def _get_layer_gradients(self, predictions_of_model_layers, y_train):
         """ Returns the gradients for each layer as a dictionary """
@@ -256,11 +256,11 @@ class Model:
 
         grad_dict = {}
         for layer in self.layers_by_number_of_parents[1:]:
-            z = tuple([cached_output[parent.memory_location] for parent in layer.parents])
+            z = tuple([cached_output[parent.id] for parent in layer.parents])
             if len(layer.parents) == 1:
                 z = z[0]
 
-            grad_dict[layer.memory_location] = layer.get_parameter_gradients_(cached_delta[layer.memory_location], z)
+            grad_dict[layer.id] = layer.get_parameter_gradients_(cached_delta[layer.id], z)
 
         return grad_dict
 
@@ -269,24 +269,24 @@ class Model:
 
         cached_delta = {}
 
-        output_id = self.output_layer.memory_location
+        output_id = self.output_layer.id
 
         cached_delta[output_id] = self._loss_function(cached_output[output_id], y_train,
                                                       grad=True)  # Gradient of output
         if self.loss_function == 'cross_entropy':
-            unique_identifier = self.output_layer.memory_location
+            unique_identifier = self.output_layer.id
             cached_delta[unique_identifier] = cached_output[unique_identifier] - y_train
 
         for layer in self.layers_by_number_of_children:
             for parent in layer.parents:
-                delta = tuple([cached_delta[child.memory_location] for child in parent.children])
+                delta = tuple([cached_delta[child.id] for child in parent.children])
                 if len(parent.children) == 1:
                     delta = delta[0]
 
-                g_prime = parent.activation_function_(cached_pre_activation[parent.memory_location], grad=True)
-                z = cached_output[parent.memory_location]
+                g_prime = parent.activation_function_(cached_pre_activation[parent.id], grad=True)
+                z = cached_output[parent.id]
 
-                cached_delta[parent.memory_location] = layer.get_delta_backprop_(g_prime, delta, z)
+                cached_delta[parent.id] = layer.get_delta_backprop_(g_prime, delta, z)
 
         return cached_delta
 
