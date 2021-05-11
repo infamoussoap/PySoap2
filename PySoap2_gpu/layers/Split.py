@@ -80,14 +80,20 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
 
     def predict(self, z, output_only=True, pre_activation_of_input=None):
         N = len(z)
-        out_device = cl_array.empty(self.device_queue, (N, *self.output_shape), dtype=np.float32)
+        z_at_mask = cl_array.empty(self.device_queue, (N, *self.output_shape), dtype=np.float32)
 
         SplitInterfaceToDevice.get_input_at_mask(z, self.mask_positions_device, self.input_length_device,
-                                                 self.output_length_device, out_device)
+                                                 self.output_length_device, z_at_mask)
 
         if output_only:
-            return out_device
-        return pre_activation_of_input
+            return z_at_mask
+
+        pre_activation_of_input_at_mask = cl_array.empty(self.device_queue, (N, *self.output_shape), dtype=np.float32)
+        SplitInterfaceToDevice.get_input_at_mask(pre_activation_of_input, self.mask_positions_device,
+                                                 self.input_length_device, self.output_length_device,
+                                                 pre_activation_of_input_at_mask)
+
+        return pre_activation_of_input_at_mask, z_at_mask
 
     def get_delta_backprop_(self, g_prime, new_delta, prev_z):
         return new_delta
