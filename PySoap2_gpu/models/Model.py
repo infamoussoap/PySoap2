@@ -10,14 +10,18 @@ from PySoap2_gpu.functions import ErrorFunction, MetricFunction
 
 
 class Model(CpuBaseModel):
-    def __init__(self, input_layer, output_layer):
+    def __init__(self, input_layer, output_layer, device_context=None, device_queue=None):
         CpuBaseModel.__init__(self, input_layer, output_layer)
 
-        platform = cl.get_platforms()[0]
-        device = platform.get_devices()[0]
+        if device_queue is None and device_context is None:
+            platform = cl.get_platforms()[0]
+            device = platform.get_devices()[0]
 
-        self.device_context = cl.Context([device])
-        self.device_queue = cl.CommandQueue(self.device_context)
+            self.device_context = cl.Context([device])
+            self.device_queue = cl.CommandQueue(self.device_context)
+        else:
+            self.device_queue = device_queue
+            self.device_context = device_context
 
         if not ErrorFunction.initialized:
             ErrorFunction(self.device_context, self.device_queue)
