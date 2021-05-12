@@ -16,104 +16,133 @@ from PySoap2_gpu.utils import ClArrayTricks
 
 
 class MultiSoftChop:
-    def __init__(self, gpu_context, gpu_queue):
-        self.gpu_context = gpu_context
-        self.gpu_queue = gpu_queue
+    """ The interface between the compiled pyopencl-c code with python
 
-        self.gpu_program = cl.Program(self.gpu_context, multi_softchop_source_code).build()
+        Notes
+        -----
+        Arguments to all methods are assumed to be stored on the device
+    """
 
-    def eval(self, x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):
+    device_context = None
+    device_queue = None
+
+    device_program = None
+
+    initialized = False
+
+    def __init__(self, device_context, device_queue):
+        if not MultiSoftChop.initialized:
+            MultiSoftChop.device_context = device_context
+            MultiSoftChop.device_queue = device_queue
+
+            MultiSoftChop.device_program = cl.Program(device_context, multi_softchop_source_code).build()
+
+            MultiSoftChop.initialized = True
+
+    @staticmethod
+    def eval(x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):
         out_device = cl_array.empty_like(x_device)
 
         input_length = np.array(np.prod(a1_device.shape)).astype(np.int32)
         N = np.array(len(x_device)).astype(np.int32)
 
-        input_length_device = cl_array.to_device(self.gpu_queue, input_length)
+        input_length_device = cl_array.to_device(MultiSoftChop.device_queue, input_length)
 
         args = [x_device, a1_device, a2_device, epsilon1_device, epsilon2_device, input_length_device, out_device]
         args_data = [arg.data for arg in args]
 
-        event = self.gpu_program.softchop_eval(self.gpu_queue, (N, input_length), None, *args_data)
+        event = MultiSoftChop.device_program.softchop_eval(MultiSoftChop.device_queue, (N, input_length), None,
+                                                           *args_data)
         event.wait()
 
         return out_device
 
-    def dx(self, x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):
+    @staticmethod
+    def dx(x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):
         out_device = cl_array.empty_like(x_device)
 
         input_length = np.array(np.prod(a1_device.shape)).astype(np.int32)
         N = np.array(len(x_device)).astype(np.int32)
 
-        input_length_device = cl_array.to_device(self.gpu_queue, input_length)
+        input_length_device = cl_array.to_device(MultiSoftChop.device_queue, input_length)
 
         args = [x_device, a1_device, a2_device, epsilon1_device, epsilon2_device, input_length_device, out_device]
         args_data = [arg.data for arg in args]
 
-        event = self.gpu_program.softchop_dx(self.gpu_queue, (N, input_length), None, *args_data)
+        event = MultiSoftChop.device_program.softchop_dx(MultiSoftChop.device_queue, (N, input_length), None,
+                                                         *args_data)
         event.wait()
 
         return out_device
 
-    def da1(self, x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):
+    @staticmethod
+    def da1(x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):
         out_device = cl_array.empty_like(x_device)
 
         input_length = np.array(np.prod(a1_device.shape)).astype(np.int32)
         N = np.array(len(x_device)).astype(np.int32)
 
-        input_length_device = cl_array.to_device(self.gpu_queue, input_length)
+        input_length_device = cl_array.to_device(MultiSoftChop.device_queue, input_length)
 
         args = [x_device, a1_device, a2_device, epsilon1_device, epsilon2_device, input_length_device, out_device]
         args_data = [arg.data for arg in args]
 
-        event = self.gpu_program.softchop_da1(self.gpu_queue, (N, input_length), None, *args_data)
+        event = MultiSoftChop.device_program.softchop_da1(MultiSoftChop.device_queue, (N, input_length), None,
+                                                          *args_data)
         event.wait()
 
         return out_device
 
-    def da2(self, x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):
+    @staticmethod
+    def da2(x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):
         out_device = cl_array.empty_like(x_device)
 
         input_length = np.array(np.prod(a1_device.shape)).astype(np.int32)
         N = np.array(len(x_device)).astype(np.int32)
 
-        input_length_device = cl_array.to_device(self.gpu_queue, input_length)
+        input_length_device = cl_array.to_device(MultiSoftChop.device_queue, input_length)
 
         args = [x_device, a1_device, a2_device, epsilon1_device, epsilon2_device, input_length_device, out_device]
         args_data = [arg.data for arg in args]
 
-        event = self.gpu_program.softchop_da2(self.gpu_queue, (N, input_length), None, *args_data)
+        event = MultiSoftChop.device_program.softchop_da2(MultiSoftChop.device_queue, (N, input_length), None,
+                                                          *args_data)
         event.wait()
 
         return out_device
 
-    def de1(self, x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):
+    @staticmethod
+    def de1(x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):
         out_device = cl_array.empty_like(x_device)
 
         input_length = np.array(np.prod(a1_device.shape)).astype(np.int32)
         N = np.array(len(x_device)).astype(np.int32)
 
-        input_length_device = cl_array.to_device(self.gpu_queue, input_length)
+        input_length_device = cl_array.to_device(MultiSoftChop.device_queue, input_length)
 
         args = [x_device, a1_device, a2_device, epsilon1_device, epsilon2_device, input_length_device, out_device]
         args_data = [arg.data for arg in args]
 
-        event = self.gpu_program.softchop_de1(self.gpu_queue, (N, input_length), None, *args_data)
+        event = MultiSoftChop.device_program.softchop_de1(MultiSoftChop.device_queue, (N, input_length), None,
+                                                          *args_data)
         event.wait()
 
         return out_device
 
-    def de2(self, x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):
+    @staticmethod
+    def de2(x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):
         out_device = cl_array.empty_like(x_device)
 
         input_length = np.array(np.prod(a1_device.shape)).astype(np.int32)
         N = np.array(len(x_device)).astype(np.int32)
 
-        input_length_device = cl_array.to_device(self.gpu_queue, input_length)
+        input_length_device = cl_array.to_device(MultiSoftChop.device_queue, input_length)
 
         args = [x_device, a1_device, a2_device, epsilon1_device, epsilon2_device, input_length_device, out_device]
         args_data = [arg.data for arg in args]
 
-        event = self.gpu_program.softchop_de2(self.gpu_queue, (N, input_length), None, *args_data)
+        event = MultiSoftChop.device_program.softchop_de2(MultiSoftChop.device_queue, (N, input_length), None,
+                                                          *args_data)
         event.wait()
 
         return out_device
@@ -178,7 +207,7 @@ class SoftChop(SoftChopInterfaceToDevice, NetworkNode, LayerBaseAttributes, Laye
         self.e1 = cl_array.to_device(device_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float32))
         self.e2 = cl_array.to_device(device_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float32))
 
-        self.MultiSoftChop = MultiSoftChop(self.device_context, self.device_queue)
+        MultiSoftChop(self.device_context, self.device_queue)
 
         self.built = True
 
@@ -194,14 +223,14 @@ class SoftChop(SoftChopInterfaceToDevice, NetworkNode, LayerBaseAttributes, Laye
     def predict(self, z, output_only=True, **kwargs):
         assert_instance_of_cl_array(z)
 
-        out = self.MultiSoftChop.eval(z, self.a1, self.a2, self.e1, self.e2)
+        out = MultiSoftChop.eval(z, self.a1, self.a2, self.e1, self.e2)
 
         if output_only:
             return out
         return out, out
 
     def get_delta_backprop_(self, g_prime, new_delta, prev_z):
-        dz = self.MultiSoftChop.dx(prev_z, self.a1, self.a2, self.e1, self.e2)
+        dz = MultiSoftChop.dx(prev_z, self.a1, self.a2, self.e1, self.e2)
 
         out_gpu = cl_array.empty_like(prev_z)
         super().delta_back_prop(g_prime, new_delta, dz, out_gpu)
@@ -211,10 +240,10 @@ class SoftChop(SoftChopInterfaceToDevice, NetworkNode, LayerBaseAttributes, Laye
     def get_parameter_gradients_(self, delta, prev_z):
         args = (prev_z, self.a1, self.a2, self.e1, self.e2)
 
-        dz = {'a1': self.MultiSoftChop.da1(*args),
-              'a2': self.MultiSoftChop.da2(*args),
-              'e1': self.MultiSoftChop.de1(*args),
-              'e2': self.MultiSoftChop.de2(*args)}
+        dz = {'a1': MultiSoftChop.da1(*args),
+              'a2': MultiSoftChop.da2(*args),
+              'e1': MultiSoftChop.de1(*args),
+              'e2': MultiSoftChop.de2(*args)}
 
         N = np.array(len(prev_z)).astype(np.int32)
         N_device = cl_array.to_device(self.device_queue, N)
