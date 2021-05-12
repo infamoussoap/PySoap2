@@ -12,90 +12,85 @@ from .ValueChecks import assert_instance_of_cl_array
 
 
 class DenseInterfaceToDevice:
-    """
+    """ The interface between the compiled pyopencl-c code with python
+
         Notes
         -----
         Arguments to all methods are assumed to be stored on the device
     """
 
+    device_context = None
+    device_queue = None
+
+    device_program = None
+
+    initialized = False
+
     def __init__(self, device_context, device_queue):
-        self.device_context = device_context
-        self.device_queue = device_queue
+        """ Compile the c-program
 
-        self.device_program = cl.Program(self.device_context, dense_source_code).build()
+            Notes
+            -----
+            Once this class has been initialized, the c-program will be compiled on the given device context and
+            will be bound to the class (not instances of the class).
+            It will no longer be possible to re-initialize this class again.
+        """
+        if not DenseInterfaceToDevice.initialized:
+            DenseInterfaceToDevice.device_context = device_context
+            DenseInterfaceToDevice.device_queue = device_queue
 
-    def predict(self, z, W, b, input_length, output_length, out):
+            DenseInterfaceToDevice.device_program = cl.Program(device_context, dense_source_code).build()
+
+            DenseInterfaceToDevice.initialized = True
+
+    @staticmethod
+    def predict(z, W, b, input_length, output_length, out):
         device_global_shape = out.shape
 
-        event = self.device_program.predict(self.device_queue, device_global_shape, None,
-                                            z.data, W.data, b.data, input_length.data, output_length.data,
-                                            out.data)
+        event = DenseInterfaceToDevice.device_program.predict(DenseInterfaceToDevice.device_queue, device_global_shape,
+                                                              None,
+                                                              z.data, W.data, b.data, input_length.data,
+                                                              output_length.data, out.data)
         event.wait()
 
-    def delta_back_prop(self, g_prime, new_delta, W, input_length, output_length, out):
+    @staticmethod
+    def delta_back_prop(g_prime, new_delta, W, input_length, output_length, out):
         device_global_shape = g_prime.shape
 
-        event = self.device_program.delta_back_prop(self.device_queue, device_global_shape, None,
-                                                    g_prime.data, new_delta.data, W.data, input_length.data,
-                                                    output_length.data, out.data)
+        event = DenseInterfaceToDevice.device_program.delta_back_prop(DenseInterfaceToDevice.device_queue,
+                                                                      device_global_shape, None,
+                                                                      g_prime.data, new_delta.data, W.data,
+                                                                      input_length.data, output_length.data, out.data)
         event.wait()
 
-    def weight_gradient(self, delta, prev_z, input_length, output_length, N, out):
+    @staticmethod
+    def weight_gradient(delta, prev_z, input_length, output_length, N, out):
         device_global_shape = (output_length.get(), input_length.get())  # Same shape as the weight matrix
 
-        event = self.device_program.weight_gradient(self.device_queue, device_global_shape, None,
-                                                    delta.data, prev_z.data, input_length.data, output_length.data,
-                                                    N.data, out.data)
+        event = DenseInterfaceToDevice.device_program.weight_gradient(DenseInterfaceToDevice.device_queue,
+                                                                      device_global_shape, None,
+                                                                      delta.data, prev_z.data, input_length.data,
+                                                                      output_length.data, N.data, out.data)
         event.wait()
 
-    def bias_gradient(self, delta, output_length, N, out):
+    @staticmethod
+    def bias_gradient(delta, output_length, N, out):
         device_global_shape = (output_length.get(),)
 
-        event = self.device_program.bias_gradient(self.device_queue, device_global_shape, None,
-                                                  delta.data, output_length.data, N.data, out.data)
+        event = DenseInterfaceToDevice.device_program.bias_gradient(DenseInterfaceToDevice.device_queue,
+                                                                    device_global_shape, None, delta.data,
+                                                                    output_length.data, N.data, out.data)
         event.wait()
 
 
-class Dense(DenseInterfaceToDevice, NetworkNode, LayerBaseAttributes, Layer):
+class Dense(NetworkNode, LayerBaseAttributes, Layer):
     """ A Dense layer that only performs computations on the GPU (or device)
 
-        hidden_nodes : int
-            Effectively the length of the output of the Dense layer
-        activation_function : str
-            The name of the activation function
-        activation_kwargs : dict
-            The kwargs, if there is any, for the activation function
-
-        W_device : (*output_shape, *input_shape) cl_array
-            The weight matrix, stored on the GPU (or device)
-        b_device : (*output_shape) cl_array
-            The bias, stored on the GPU (or device)
-
-        input_length_device : cl_array of np.int32
-            The length of the input - np.prod(input_shape)
-        output_length_device : cl_array of np.int32
-            The length of the output - np.prod(output_shape)
-
-        device_program : cl.Program
-            The compiled C program for Dense computations
-
-        built : bool
-            Has the layer been built yet
-
+        For more details, check documentation in PySoap2
     """
 
     def __init__(self, hidden_nodes, activation_function, *arg, activation_kwargs=None, **kwargs):
-        """ A fully connected layer
-
-            Parameters
-            ----------
-            hidden_nodes : int
-                The number of neurons in this layer
-            activation_function : str
-                The name of the activation function of this layer
-            activation_kwargs : dict of str - :obj:, optional
-                The keyword arguments for the activation function if it has hyper-parameters
-        """
+        """ A fully connected layer """
         NetworkNode.__init__(self)
         LayerBaseAttributes.__init__(self)
 
@@ -116,7 +111,7 @@ class Dense(DenseInterfaceToDevice, NetworkNode, LayerBaseAttributes, Layer):
         self.device_context = device_context
         self.device_queue = device_queue
 
-        DenseInterfaceToDevice.__init__(self, self.device_context, self.device_queue)
+        DenseInterfaceToDevice(self.device_context, self.device_queue)
 
         input_shape = self.parents[0].output_shape
 
@@ -136,8 +131,6 @@ class Dense(DenseInterfaceToDevice, NetworkNode, LayerBaseAttributes, Layer):
         self.W_device = cl_array.to_device(self.device_queue, W)
         self.b_device = cl_array.to_device(self.device_queue, b)
 
-        self.device_program = cl.Program(self.device_context, dense_source_code).build()
-
         self.built = True
 
     def predict(self, z_device, output_only=True, **kwargs):
@@ -147,8 +140,8 @@ class Dense(DenseInterfaceToDevice, NetworkNode, LayerBaseAttributes, Layer):
 
         out_device = cl_array.empty(self.device_queue, (n, *self.output_shape), dtype=np.float32)
 
-        super().predict(z_device, self.W_device, self.b_device, self.input_length_device, self.output_length_device,
-                        out_device)
+        DenseInterfaceToDevice.predict(z_device, self.W_device, self.b_device, self.input_length_device,
+                                       self.output_length_device, out_device)
 
         if output_only:
             return self.activation_function_(out_device)
@@ -160,8 +153,8 @@ class Dense(DenseInterfaceToDevice, NetworkNode, LayerBaseAttributes, Layer):
 
         out_device = cl_array.empty(self.device_queue, g_prime_device.shape, dtype=np.float32)
 
-        super().delta_back_prop(g_prime_device, delta_device, self.W_device, self.input_length_device,
-                                self.output_length_device, out_device)
+        DenseInterfaceToDevice.delta_back_prop(g_prime_device, delta_device, self.W_device, self.input_length_device,
+                                               self.output_length_device, out_device)
 
         return out_device
 
@@ -173,11 +166,11 @@ class Dense(DenseInterfaceToDevice, NetworkNode, LayerBaseAttributes, Layer):
         N_device = cl_array.to_device(self.device_queue, N)
 
         W_grad_device = cl_array.empty(self.device_queue, self.W_device.shape, dtype=np.float32)
-        super().weight_gradient(delta_device, z_device, self.input_length_device, self.output_length_device,
-                                N_device, W_grad_device)
+        DenseInterfaceToDevice.weight_gradient(delta_device, z_device, self.input_length_device,
+                                               self.output_length_device, N_device, W_grad_device)
 
         b_grad_device = cl_array.empty(self.device_queue, self.b_device.shape, dtype=np.float32)
-        super().bias_gradient(delta_device, self.output_length_device, N_device, b_grad_device)
+        DenseInterfaceToDevice.bias_gradient(delta_device, self.output_length_device, N_device, b_grad_device)
 
         parameter_gradients = {'weight': W_grad_device, 'bias': b_grad_device}
         return parameter_gradients
@@ -187,7 +180,7 @@ class Dense(DenseInterfaceToDevice, NetworkNode, LayerBaseAttributes, Layer):
         self.b_device -= parameter_updates['bias']
 
     def get_weights(self):
-        raise NotImplementedError
+        return self.W_device, self.b_device
 
     def summary_(self):
         return f'Dense {(self.hidden_nodes,)}', f'Output Shape {(None, *self.output_shape)}'
