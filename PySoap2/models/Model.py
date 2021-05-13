@@ -278,11 +278,9 @@ class Model:
             cached_delta[unique_identifier] = cached_output[unique_identifier] - y_train
 
         for layer in self.layers_by_number_of_children:
+            #print(layer.id)
             for parent in layer.parents:
-                delta = tuple([cached_delta[child.id] for child in parent.children])
-                if len(parent.children) == 1:
-                    delta = delta[0]
-
+                delta = list([cached_delta[child.id] for child in parent.children])
                 g_prime = parent.activation_function_(cached_pre_activation[parent.id], grad=True)
                 z = cached_output[parent.id]
 
