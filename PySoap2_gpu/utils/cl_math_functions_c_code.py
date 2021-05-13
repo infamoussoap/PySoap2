@@ -51,3 +51,21 @@ __kernel void arg_max_across_last_axis(__global const float *x, __global int *in
     out[i] = arg_max;
 }
 """
+
+cl_array_sum_across_axis_source_code = """
+__kernel void sum_across_0_axis(__global const float *x, __global int *inputLength, __global int *N_, 
+                                __global float *out)
+{
+    int i = get_global_id(0);
+    int input_length = *inputLength;
+    int N = *N_;
+
+    float total = 0.0;
+
+    for (int n = 0; n < N; n++)
+    {
+        total += x[i + n*input_length];
+    }
+    out[i] = total;
+}
+"""

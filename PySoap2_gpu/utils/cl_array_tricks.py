@@ -5,6 +5,7 @@ from pyopencl.elementwise import ElementwiseKernel
 import pyopencl.array as cl_array
 
 from .cl_math_functions_c_code import cl_array_max_source_code
+from .cl_math_functions_c_code import cl_array_sum_across_axis_source_code
 
 
 class ClArrayTricks:
@@ -13,6 +14,7 @@ class ClArrayTricks:
     clip_cl_array_by_min_value_in_place = None
     clip_cl_array_by_max_value_in_place = None
     cl_array_max_program = None
+    cl_array_sum_program = None
 
     device_context = None
     device_queue = None
@@ -34,6 +36,7 @@ class ClArrayTricks:
                                                                               "clip_in_place_elementwise")
 
         ClArrayTricks.cl_array_max_program = cl.Program(device_context, cl_array_max_source_code).build()
+        ClArrayTricks.cl_array_sum_program = cl.Program(device_context, cl_array_sum_across_axis_source_code).build()
 
         ClArrayTricks.initialized = True
 
@@ -69,3 +72,23 @@ class ClArrayTricks:
         event.wait()
 
         return out_gpu
+
+    @staticmethod
+    def sum_across_0_axis(arrays):
+        """ arrays assumed to be list of cl_array each of the same shape """
+        stacked_arrays = cl_array.stack(arrays, axis=0)
+        N, *input_shape = stacked_arrays.shape
+
+        input_shape = tuple(input_shape)
+        input_length = int(np.prod(input_shape))
+
+        input_length_device = cl_array.to_device(ClArrayTricks.device_queue, np.array(input_length, dtype=np.int32))
+        N_device = cl_array.to_device(ClArrayTricks.device_queue, np.array(N, dtype=np.int32))
+        out = cl_array.empty(ClArrayTricks.device_queue, input_shape, dtype=np.float32)
+
+        event = ClArrayTricks.cl_array_sum_program.sum_across_0_axis(ClArrayTricks.device_queue, (input_length,), None,
+                                                                     stacked_arrays.data, input_length_device.data,
+                                                                     N_device.data, out.data)
+        event.wait()
+
+        return out
