@@ -19,6 +19,8 @@ from .Flatten import Flatten
 from .Split import Split
 from .Concatenate import Concatenate
 
+from .ValuesAtMask import ValuesAtMask
+
 # Technical Layers for the Split and Concatenate Nodes
 from .Split import SplitLeftChild
 from .Split import SplitRightChild
