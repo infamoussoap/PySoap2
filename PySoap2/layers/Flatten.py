@@ -81,9 +81,7 @@ class Flatten(NetworkNode, LayerBaseAttributes, Layer):
             Parameters
             ----------
             g_prime : (N, *input_shape) np.array
-                Should be the derivative of the ouput of the previous layer, g'_{k-1}(a^{k-1}_{m,j})
-            new_delta : (N, *output_shape) np.array
-                The delta for this layer, delta^k_{m, j}
+            new_delta : list of (N, *output_shape) np.array
 
             Returns
             -------
@@ -95,8 +93,9 @@ class Flatten(NetworkNode, LayerBaseAttributes, Layer):
             The key to this layer is that the delta of the k+1 layer needs to be reshaped
             for the k-1 layer
         """
+        delta = np.sum(np.array(new_delta), axis=0)
 
-        return new_delta.reshape(len(new_delta), *self.input_shape)
+        return delta.reshape(-1, *self.input_shape)
 
     @check_built
     def get_parameter_gradients_(self, *args, **kwargs):

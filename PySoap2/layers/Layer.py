@@ -41,8 +41,8 @@ class Layer(abc.ABC):
             ----------
             g_prime : np.array
                 Should be the derivative of the output of the previous layer, g'_{k-1}(a^{k-1}_{m,j})
-            new_delta : np.array
-                The delta for this layer, delta^k_{m, j}
+            new_delta : list of np.array
+                The gradients (or deltas) from the children, to be back-propagated. Note
             prev_z : np.array
                 The input for this layer, z^{n-1}
 
@@ -57,6 +57,9 @@ class Layer(abc.ABC):
             to work correctly. So perhaps this should be a static method of this class, but I'm not
             too sure about that yet. But until then, NotBuiltError will be raised unless it has
             been built
+
+            While a layer can have multiple children, they still can't have multiple parents (unless you are
+            the concatenate node). As such, g_prime and prev_z are np.array, not a list of np.array.
         """
         pass
 

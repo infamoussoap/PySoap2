@@ -283,7 +283,7 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
             ----------
             g_prime : (N, ...) np.array
                 Should be the derivative of the output of the previous layer, g'_{k-1}(a^{k-1}_{m,j})
-            new_delta : (N, ...) np.array
+            new_delta : list of (N, ...) np.array
                 The delta for this layer, delta^k_{m, j}
             prev_z : (N, ...) np.array
                 The input for this layer, z^{n-1}
@@ -304,7 +304,9 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         else:
             dz = MultiSoftChop.dx(prev_z, self.a1, self.a2, self.epsilon1, self.epsilon2)
 
-        return new_delta * g_prime * dz
+        delta = np.sum(np.array(new_delta), axis=0)
+
+        return delta * g_prime * dz
 
     @check_built
     def get_parameter_gradients_(self, delta, prev_z):

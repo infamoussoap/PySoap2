@@ -73,15 +73,15 @@ class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
             Parameters
             ----------
             g_prime : (N, ...) np.array
-                Should be the derivative of the output of the previous layer, g'_{k-1}
-            new_delta : (N, ...) np.array
-                The delta for this layer, delta^k
+            new_delta : list of (N, ...) np.array
+                Note that ConcatenateParent is only assumed to have 1 child, the Concatenate layer.
+                So this is a list of only 1 np.array
 
             Returns
             -------
             (N, *self.input_shape) np.array
         """
-        return new_delta[:, self.mask].reshape((-1, *self.input_shape))
+        return new_delta[0][:, self.mask].reshape((-1, *self.input_shape))
 
     @check_built
     def get_parameter_gradients_(self, delta, prev_z):
@@ -217,9 +217,8 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
             Parameters
             ----------
             g_prime : np.array
-                Should be the derivative of the ouput of the previous layer, g'_{k-1}(a^{k-1}_{m,j})
-            new_delta : np.array
-                The delta for this layer, delta^k_{m, j}
+            new_delta : list of np.array
+                While the ConcatenateParent can only have one layer, the concatenate node can have multiple
 
             Returns
             -------
@@ -231,7 +230,7 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
             ConcatenateParent, allowing each instance of the Concatenate and ConcatenateParent class
             to have a static output shape of delta^{k-1}
         """
-        return new_delta
+        return np.sum(np.array(new_delta), axis=0)
 
     @check_built
     def get_parameter_gradients_(self, delta, prev_z):

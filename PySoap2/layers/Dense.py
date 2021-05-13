@@ -106,7 +106,7 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
         return out_a, self.activation_function_(out_a)
 
     @check_built
-    def get_delta_backprop_(self, g_prime, new_delta, *args):
+    def get_delta_backprop_(self, g_prime, incoming_deltas, *args):
         """ Returns the delta for the previous layer, delta^{k-1}_{m,j}.
 
             Notes
@@ -119,7 +119,7 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
             ----------
             g_prime : (N, j) np.array
                 Should be the derivative of the ouput of the previous layer, g'_{k-1}(a^{k-1}_{m,j})
-            new_delta : (N, k) np.array
+            incoming_deltas : list of (N, k) np.array
                 The delta for this layer, delta^k_{m, j}
 
             Returns
@@ -127,8 +127,8 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
             np.array
                 Returns delta of the previous layer, delta^{k-1}
         """
-
-        return g_prime*(new_delta @ self.W)
+        delta = np.sum(np.array(incoming_deltas), axis=0)
+        return g_prime*(delta @ self.W)
 
     @check_built
     def get_parameter_gradients_(self, delta, prev_z):

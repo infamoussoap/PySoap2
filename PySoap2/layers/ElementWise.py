@@ -112,8 +112,7 @@ class ElementWise(NetworkNode, LayerBaseAttributes, Layer):
             ----------
             g_prime : (N, ...) np.array
                 Should be the derivative of the output of the previous layer, g'_{k-1}(a^{k-1}_{m,j})
-            new_delta : (N, ...) np.array
-                The delta for this layer, delta^k_{m, j}
+            new_delta : list of (N, ...) np.array
 
             Returns
             -------
@@ -126,8 +125,9 @@ class ElementWise(NetworkNode, LayerBaseAttributes, Layer):
             weights, W. But it does know the values of g'_{k-1} and delta^k, due to forward propagation
             and the backwards nature of the back propagation algorithm.
         """
+        delta = np.sum(np.array(new_delta), axis=0)
 
-        return new_delta * self.W[None, ...] * g_prime
+        return delta * self.W[None, ...] * g_prime
 
     @check_built
     def get_parameter_gradients_(self, delta, prev_z):

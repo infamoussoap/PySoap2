@@ -91,15 +91,14 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
             ----------
             g_prime : (N, *input_shape) np.array
                 Should be g'_{k-1}
-            new_delta : (N, *output_shape) np.array
-                Should be delta^k
+            new_delta : list of (N, *output_shape) np.array
 
             Returns
             -------
             (N, *output_shape)
         """
 
-        return new_delta
+        return np.sum(np.array(new_delta), axis=0)
 
     @check_built
     def get_parameter_gradients_(self, new_delta, prev_z):
@@ -270,8 +269,9 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
             ----------
             g_prime : tuple of (N, k) np.array
                 Tuple of g'_{k-1} - left child being the first element and right child the second element
-            new_delta : tuple of (N, k) np.array
-                Tuple of delta^k - left child being the first element and right child the second element
+            new_delta : list of (N, k) np.array
+                Note that the Split node is assumed to only have 2 children, the SplitLeftChild and SplitRightChild
+                These 2 children can possible have multiple children, not limited to just 1.
 
             Returns
             -------

@@ -263,11 +263,8 @@ class BatchNorm(NetworkNode, LayerBaseAttributes, Layer):
             Parameters
             ----------
             g_prime : (N, ...) np.array
-                Should be the derivative of the output of the previous layer, g'_{k-1}(a^{k-1}_{m,j})
-            new_delta : (N, ...) np.array
-                The delta for this layer, delta^k_{m, j}
+            new_delta : list of (N, ...) np.array
             prev_z : (N, ...) np.array
-                The input for this layer, z^{k-1}
 
             Returns
             -------
@@ -280,7 +277,9 @@ class BatchNorm(NetworkNode, LayerBaseAttributes, Layer):
             weights, W. But it does know the values of g'_{k-1} and delta^k, due to forward propagation
             and the backwards nature of the back propagation algorithm.
         """
-        dz_ = BatchNormGrads.dz(prev_z, new_delta, self.gamma, self.epsilon)
+        delta = np.sum(np.array(new_delta), axis=0)
+
+        dz_ = BatchNormGrads.dz(prev_z, delta, self.gamma, self.epsilon)
         return dz_ * prev_z
 
     @check_built

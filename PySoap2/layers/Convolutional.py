@@ -255,9 +255,7 @@ class Conv_2D(NetworkNode, LayerBaseAttributes, Layer):
             Parameters
             ----------
             g_prime : (N, *input_shape) np.array
-                Should be the derivative of the ouput of the previous layer, g'_{k-1}(a^{k-1}_{m,j})
-            new_delta : (N, *output_shape) np.array
-                The delta for this layer, delta^{k, f}_{m, j}
+            new_delta : list of (N, *output_shape) np.array
 
             Returns
             -------
@@ -282,8 +280,10 @@ class Conv_2D(NetworkNode, LayerBaseAttributes, Layer):
         eye_conv = eye_conv.reshape((*self.input_shape, *self.output_spatial_shape, self.filter_num))
 
         # Self-explanatory once you look at the math
-        delta = np.einsum("ijkl,abcjkl,iabc->iabc", new_delta, eye_conv, g_prime, optimize='greedy')
-        return delta
+
+        delta = np.sum(np.array(new_delta), axis=0)
+        out_delta = np.einsum("ijkl,abcjkl,iabc->iabc", delta, eye_conv, g_prime, optimize='greedy')
+        return out_delta
 
     @check_built
     def get_parameter_gradients_(self, delta, prev_z):
