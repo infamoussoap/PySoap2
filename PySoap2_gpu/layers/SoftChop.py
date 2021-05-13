@@ -1,4 +1,5 @@
 import numpy as np
+from functools import reduce
 
 import pyopencl as cl
 import pyopencl.array as cl_array
@@ -247,9 +248,10 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
 
     def get_delta_backprop_(self, g_prime, new_delta, prev_z):
         dz = MultiSoftChop.dx(prev_z, self.a1, self.a2, self.e1, self.e2)
+        summed_delta_device = reduce(lambda x, y: x + y, new_delta)
 
         out_gpu = cl_array.empty_like(prev_z)
-        SoftChopInterfaceToDevice.delta_back_prop(g_prime, new_delta, dz, out_gpu)
+        SoftChopInterfaceToDevice.delta_back_prop(g_prime, summed_delta_device, dz, out_gpu)
 
         return out_gpu
 

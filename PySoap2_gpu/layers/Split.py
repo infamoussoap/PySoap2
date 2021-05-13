@@ -1,4 +1,5 @@
 import numpy as np
+from functools import reduce
 
 import pyopencl as cl
 import pyopencl.array as cl_array
@@ -96,7 +97,8 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
         return pre_activation_of_input_at_mask, z_at_mask
 
     def get_delta_backprop_(self, g_prime, new_delta, prev_z):
-        return new_delta
+        summed_delta_device = reduce(lambda x, y: x + y, new_delta)
+        return summed_delta_device
 
     def get_parameter_gradients_(self, delta, prev_z):
         return {}

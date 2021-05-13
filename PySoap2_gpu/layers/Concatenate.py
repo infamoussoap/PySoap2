@@ -1,4 +1,5 @@
 import numpy as np
+from functools import reduce
 
 import pyopencl.array as cl_array
 
@@ -194,7 +195,7 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
         return input_
 
     def get_delta_backprop_(self, g_prime, new_delta, prev_z):
-        return new_delta
+        return reduce(lambda x, y: x + y, new_delta)
 
     def get_parameter_gradients_(self, delta, prev_z):
         return {}

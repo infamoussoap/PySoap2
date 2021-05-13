@@ -1,4 +1,5 @@
 import numpy as np
+from functools import reduce
 
 from PySoap2_gpu.layers import Layer
 from PySoap2_gpu.layers.NetworkNode import NetworkNode
@@ -33,9 +34,10 @@ class Flatten(NetworkNode, LayerBaseAttributes, Layer):
 
     def get_delta_backprop_(self, g_prime, new_delta, *args, **kwargs):
         assert_instance_of_cl_array(g_prime)
-        assert_instance_of_cl_array(new_delta)
 
-        return new_delta.reshape(-1, *self.input_shape)
+        summed_delta_device = reduce(lambda x, y: x + y, new_delta)
+
+        return summed_delta_device.reshape(-1, *self.input_shape)
 
     def get_parameter_gradients_(self, *args, **kwargs):
         return {}

@@ -41,7 +41,7 @@ class Layer(abc.ABC):
             ----------
             g_prime : np.array
                 Should be the derivative of the output of the previous layer, g'_{k-1}(a^{k-1}_{m,j})
-            new_delta : np.array
+            new_delta : list of np.array
                 The delta for this layer, delta^k_{m, j}
             prev_z : np.array
                 The input for this layer, z^{n-1}

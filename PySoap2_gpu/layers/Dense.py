@@ -1,4 +1,5 @@
 import numpy as np
+from functools import reduce
 
 import pyopencl as cl
 import pyopencl.array as cl_array
@@ -147,14 +148,15 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
             return self.activation_function_(out_device)
         return out_device, self.activation_function_(out_device)
 
-    def get_delta_backprop_(self, g_prime_device, delta_device, *args):
+    def get_delta_backprop_(self, g_prime_device, new_delta, *args):
         assert_instance_of_cl_array(g_prime_device)
-        assert_instance_of_cl_array(delta_device)
 
         out_device = cl_array.empty(self.device_queue, g_prime_device.shape, dtype=np.float32)
 
-        DenseInterfaceToDevice.delta_back_prop(g_prime_device, delta_device, self.W_device, self.input_length_device,
-                                               self.output_length_device, out_device)
+        summed_delta_device = reduce(lambda x, y: x + y, new_delta)
+
+        DenseInterfaceToDevice.delta_back_prop(g_prime_device, summed_delta_device, self.W_device,
+                                               self.input_length_device, self.output_length_device, out_device)
 
         return out_device
 
