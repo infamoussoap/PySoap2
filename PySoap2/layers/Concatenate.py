@@ -1,4 +1,5 @@
 import numpy as np
+from functools import reduce
 
 from PySoap2.layers import Layer
 from PySoap2.layers.NetworkNode import NetworkNode
@@ -230,7 +231,7 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
             ConcatenateParent, allowing each instance of the Concatenate and ConcatenateParent class
             to have a static output shape of delta^{k-1}
         """
-        return np.sum(np.array(new_delta), axis=0)
+        return reduce(lambda x, y: x + y, new_delta)
 
     @check_built
     def get_parameter_gradients_(self, delta, prev_z):

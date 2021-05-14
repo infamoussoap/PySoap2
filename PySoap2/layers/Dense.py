@@ -1,4 +1,5 @@
 import numpy as np
+from functools import reduce
 
 from PySoap2.layers import Layer
 from PySoap2.layers.NetworkNode import NetworkNode
@@ -137,7 +138,7 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
 
             Parameters
             ----------
-            delta : (N, k) np.array
+            delta : list of (N, k) np.array
                 In latex, this should be delta_k
             prev_z : (N, j) np.array
                 This should be the output, post activation, of the previous layer (z_{k-1})
@@ -148,7 +149,7 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
                 Keys are the parameters for the softchop function, with the corresponding values their
                 gradients
         """
-
+        delta = reduce(lambda x, y: x + y, delta)
         parameter_gradients = {'weight': delta.T @ prev_z, 'bias': np.sum(delta, axis=0)}
 
         return parameter_gradients
