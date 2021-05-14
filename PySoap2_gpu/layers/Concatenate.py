@@ -42,14 +42,18 @@ class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
         return pre_activation_of_input, z
 
     def get_delta_backprop_(self, g_prime, new_delta, prev_z):
-        """ new_delta is assumed to come from the concatenate layer """
-        delta_shape = new_delta[0].shape
+        """ new_delta is assumed to come from the concatenate layer, and so is a list of
+            1 cl_array
+         """
+        delta = new_delta[0]
+
+        delta_shape = delta.shape
         delta_length = cl_array.to_device(self.device_queue, np.array(np.prod(delta_shape)).astype(np.int32))
 
         N = len(new_delta)
         out = cl_array.empty(self.device_queue, (N, *self.input_shape), dtype=np.float32)
 
-        SplitInterfaceToDevice.get_input_at_mask(new_delta, self.mask_positions_device, delta_length,
+        SplitInterfaceToDevice.get_input_at_mask(delta, self.mask_positions_device, delta_length,
                                                  self.input_length_device, out)
         return out
 
