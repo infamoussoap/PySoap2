@@ -271,20 +271,20 @@ class Model:
 
         output_id = self.output_layer.id
 
-        cached_delta[output_id] = self._loss_function(cached_output[output_id], y_train,
-                                                      grad=True)  # Gradient of output
+        # This is for numerical stability
         if self.loss_function == 'cross_entropy':
-            unique_identifier = self.output_layer.id
-            cached_delta[unique_identifier] = cached_output[unique_identifier] - y_train
+            cached_delta[output_id] = [cached_output[output_id] - y_train]
+        else:
+            cached_delta[output_id] = [self._loss_function(cached_output[output_id], y_train,
+                                                          grad=True)]
 
-        for layer in self.layers_by_number_of_children:
-            #print(layer.id)
-            for parent in layer.parents:
-                delta = list([cached_delta[child.id] for child in parent.children])
-                g_prime = parent.activation_function_(cached_pre_activation[parent.id], grad=True)
-                z = cached_output[parent.id]
+        # output_layer assumed to have the least amount of children
+        for layer in self.layers_by_number_of_children[1:]:
+            g_prime = layer.activation_function_(cached_pre_activation[layer.id], grad=True)
+            z = cached_output[layer.id]
 
-                cached_delta[parent.id] = layer.get_delta_backprop_(g_prime, delta, z)
+            cached_delta[layer.id] = [child.get_delta_backprop_(g_prime, cached_delta[child.id], z)
+                                      for child in layer.children]
 
         return cached_delta
 
