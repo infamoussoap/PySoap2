@@ -161,18 +161,19 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
         return out_device
 
     def get_parameter_gradients_(self, delta_device, z_device):
-        assert_instance_of_cl_array(delta_device)
         assert_instance_of_cl_array(z_device)
+
+        summed_delta_device = reduce(lambda x, y: x + y, delta_device)
 
         N = np.array(len(z_device)).astype(np.int32)
         N_device = cl_array.to_device(self.device_queue, N)
 
         W_grad_device = cl_array.empty(self.device_queue, self.W_device.shape, dtype=np.float32)
-        DenseInterfaceToDevice.weight_gradient(delta_device, z_device, self.input_length_device,
+        DenseInterfaceToDevice.weight_gradient(summed_delta_device, z_device, self.input_length_device,
                                                self.output_length_device, N_device, W_grad_device)
 
         b_grad_device = cl_array.empty(self.device_queue, self.b_device.shape, dtype=np.float32)
-        DenseInterfaceToDevice.bias_gradient(delta_device, self.output_length_device, N_device, b_grad_device)
+        DenseInterfaceToDevice.bias_gradient(summed_delta_device, self.output_length_device, N_device, b_grad_device)
 
         parameter_gradients = {'weight': W_grad_device, 'bias': b_grad_device}
         return parameter_gradients

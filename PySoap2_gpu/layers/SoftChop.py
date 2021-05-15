@@ -271,9 +271,11 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
                                'e1': cl_array.empty_like(self.e1),
                                'e2': cl_array.empty_like(self.e2)}
 
+        summed_delta_device = reduce(lambda x, y: x + y, delta)
+
         for key in parameter_gradients.keys():
-            SoftChopInterfaceToDevice.parameter_gradient(delta, dz[key], self.input_length_device, N_device,
-                                                         parameter_gradients[key])
+            SoftChopInterfaceToDevice.parameter_gradient(summed_delta_device, dz[key], self.input_length_device,
+                                                         N_device, parameter_gradients[key])
 
         return parameter_gradients
 
