@@ -50,10 +50,10 @@ class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
         delta_shape = delta.shape
         delta_length = cl_array.to_device(self.device_queue, np.array(np.prod(delta_shape)).astype(np.int32))
 
-        N = len(new_delta)
+        N = len(delta)
         out = cl_array.empty(self.device_queue, (N, *self.input_shape), dtype=np.float32)
 
-        SplitInterfaceToDevice.get_input_at_mask(delta, self.mask_positions_device, delta_length,
+        SplitInterfaceToDevice.get_input_at_mask(delta, self.mask_positions_device, self.output_length_device,
                                                  self.input_length_device, out)
         return out
 
