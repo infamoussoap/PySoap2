@@ -88,8 +88,8 @@ class Model(CpuBaseModel):
         parameter_updates_by_layer = unpack_to_recursive_dict(parameter_updates)
 
         for layer in self.layers_by_number_of_parents[1:]:
-            if layer.memory_location in parameter_updates_by_layer:
-                layer.update_parameters_(parameter_updates_by_layer[layer.memory_location])
+            if layer.id in parameter_updates_by_layer:
+                layer.update_parameters_(parameter_updates_by_layer[layer.id])
 
     @property
     def _loss_function(self):
