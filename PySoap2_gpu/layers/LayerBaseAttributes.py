@@ -24,8 +24,6 @@ class LayerBaseAttributes:
         self.device_context = None
         self.device_queue = None
 
-        self.device_program = None
-
         self.built = False
 
     @property
