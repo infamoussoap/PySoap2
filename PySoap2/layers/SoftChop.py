@@ -1,4 +1,5 @@
 import numpy as np
+from functools import reduce
 
 from PySoap2.layers import Layer
 from PySoap2.layers.NetworkNode import NetworkNode
@@ -333,6 +334,8 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         else:
             kwargs = {'x': prev_z, 'a1': self.a1, 'a2': self.a2,
                       'epsilon1': self.epsilon1, 'epsilon2': self.epsilon2}
+
+        delta = reduce(lambda x, y: x + y, delta)
 
         parameter_gradients = {'a1': np.einsum('i...,i...', delta, MultiSoftChop.da1(**kwargs)),
                                'a2': np.einsum('i...,i...', delta, MultiSoftChop.da2(**kwargs)),
