@@ -41,3 +41,16 @@ class LayerBaseAttributes:
     def id(self):
         """ We'll use the memory location as the id of a layer """
         return f'{type(self).__name__}_{self._memory_location}'
+
+    def get_layer_attributes_(self):
+        """ Returns the attributes of the layer as a dictionary.
+
+            Note the attributes that are returned are only the ones that can
+            be saved as a hdf5 file (or converted to be saved as as hdf5)
+        """
+        layer_attributes = self.__dict__.copy()
+
+        del layer_attributes['parents']
+        del layer_attributes['children']
+
+        return layer_attributes

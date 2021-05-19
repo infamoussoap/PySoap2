@@ -23,25 +23,8 @@ def get_attributes_of_layers(model):
         -------
         dict of str - dict
     """
-    layer_attributes = {layer.id: _get_attributes_of_layer(layer)
+    layer_attributes = {layer.id: layer.get_layer_attributes_()
                         for layer in model.layers_by_number_of_parents}
-
-    return layer_attributes
-
-
-def _get_attributes_of_layer(layer):
-    """ Returns the attributes of the layer as if it was no longer inherited from
-        `NetworkNode`, that is, pruned from the tree.
-
-        Notes
-        -----
-        hdf5 files don't allow the saving on objects, only of np.arrays. Hence
-        we remove the parent and children nodes.
-    """
-    layer_attributes = layer.__dict__.copy()
-
-    del layer_attributes['parents']
-    del layer_attributes['children']
 
     return layer_attributes
 
