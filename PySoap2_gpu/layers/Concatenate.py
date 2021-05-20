@@ -8,6 +8,7 @@ from PySoap2_gpu.layers.NetworkNode import NetworkNode
 from PySoap2_gpu.layers.LayerBaseAttributes import LayerBaseAttributes
 
 from .Split import SplitInterfaceToDevice
+from .ValueChecks import check_built
 
 
 class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
@@ -31,11 +32,13 @@ class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
 
         self.built = True
 
+    @check_built
     def predict(self, z, output_only=True, pre_activation_of_input=None):
         if output_only:
             return z
         return pre_activation_of_input, z
 
+    @check_built
     def get_delta_backprop_(self, g_prime, new_delta, prev_z):
         """ new_delta is assumed to come from the concatenate layer, and so is a list of
             1 cl_array
@@ -52,15 +55,19 @@ class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
                                                  self.input_length_device, out)
         return out
 
+    @check_built
     def get_parameter_gradients_(self, delta, prev_z):
         return {}
 
+    @check_built
     def update_parameters_(self, parameter_updates):
         pass
 
+    @check_built
     def get_weights(self):
         return None
 
+    @check_built
     def summary_(self):
         return f'Concat-Parent', f'Output Shape {(None, *self.output_shape)}'
 
@@ -160,6 +167,7 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
 
         self.built = True
 
+    @check_built
     def predict(self, z, output_only=True, pre_activation_of_input=None):
         if output_only:
             return self._concatenate_with_parents_mask_positions(z)
@@ -191,18 +199,23 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
                                                                input_length_device, array)
         return input_
 
+    @check_built
     def get_delta_backprop_(self, g_prime, new_delta, prev_z):
         return reduce(lambda x, y: x + y, new_delta)
 
+    @check_built
     def get_parameter_gradients_(self, delta, prev_z):
         return {}
 
+    @check_built
     def update_parameters_(self, parameter_updates):
         pass
 
+    @check_built
     def get_weights(self):
         return None
 
+    @check_built
     def summary_(self):
         return 'Concatenate', f'Output Shape: {(None, *self.output_shape)}'
 
@@ -225,3 +238,35 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
     @property
     def activation_function_(self):
         return self.parents[0].activation_function_
+
+
+def set_list_of_inputs_at_masks_as_outputs(device_queue, inputs_, mask_positions, output_shape):
+    """ asd
+
+        Parameters
+        ----------
+        device_queue : cl.CommandQueue
+        inputs_ : list of (N, ...) cl_array.Array
+            The that each cl_array in the list don't need to have the same dimensions. Only that
+            the first dimension is the same (the first dimension is the length of the dataset)
+        mask_positions : list of (N, ...) cl_array.Array
+            The that each cl_array in the list don't need to have the same dimensions. Only that
+            the first dimension is the same (the first dimension is the length of the dataset)
+        output_shape : tuple of int
+    """
+
+    N = len(inputs_[0])
+    input_ = cl_array.empty(device_queue, (N, *output_shape), dtype=np.float32)
+
+    output_length = np.prod(output_shape).astype(np.int32)
+    output_length_device = cl_array.to_device(device_queue, output_length)
+
+    for array, mask_positions in zip(inputs_, mask_positions):
+        input_shape = array.shape[1:]
+        input_length = np.array(np.prod(input_shape), dtype=np.int32)
+        input_length_device = cl_array.to_device(device_queue, input_length)
+
+        SplitInterfaceToDevice.set_input_at_mask_as_output(input_, mask_positions,
+                                                           output_length_device,
+                                                           input_length_device, array)
+    return input_
