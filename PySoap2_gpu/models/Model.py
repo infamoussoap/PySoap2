@@ -1,3 +1,5 @@
+import numpy as np
+
 import pyopencl as cl
 import pyopencl.array as cl_array
 
@@ -43,19 +45,37 @@ class Model(CpuBaseModel):
         for layer in self.layers_by_number_of_parents:
             layer.build(self.device_context, self.device_queue)
 
-    def predict_and_send_input_to_device(self, z_cpu, output_only=True):
-        z_device = cl_array.to_device(self.device_queue, z_cpu)
-        return super().predict(z_device, output_only=output_only)
+    def predict(self, z, output_only=True):
+        """ Forward propagates the input
 
-    def predict_and_covert_output_to_cpu(self, z_cpu, output_only=True):
-        cached_output_on_device = self.predict_and_send_input_to_device(z_cpu, output_only=output_only)
+            Parameters
+            ----------
+            z : np.array or cl_array.Array
+            output_only : bool
 
-        if output_only:
-            return cached_output_on_device.get()
-        else:
-            return {key: val.get() for key, val in cached_output_on_device.items()}
+            Notes
+            -----
+            If z is a np.array then it will be converted to be a cl_array.Array
+        """
+
+        if not isinstance(z, cl_array.Array):
+            z = z.astype(np.float32)
+            z = cl_array.to_device(self.device_queue, z)
+
+        return super().predict(z, output_only=output_only)
 
     def evaluate(self, x_test, y_test):
+        """ Evaluates the model with the given loss-function and metric function
+
+            Parameters
+            ----------
+            x_test : np.array
+            y_test : np.array
+        """
+
+        x_test = x_test.astype(np.float32)
+        y_test = y_test.astype(np.float32)
+
         x_test_device = cl_array.to_device(self.device_queue, x_test)
         y_test_device = cl_array.to_device(self.device_queue, y_test)
 
@@ -78,10 +98,20 @@ class Model(CpuBaseModel):
         return eval_str
 
     def _back_prop(self, x_train, y_train):
-        """ Perform one iteration of backpropagation on the given batches """
+        """ Perform one iteration of backpropagation on the given batches
+
+            Parameters
+            ----------
+            x_train : np.array
+            y_train : np.array
+        """
+
+        x_train = x_train.astype(np.float32)
+        y_train = y_train.astype(np.float32)
+
         y_train_device = cl_array.to_device(self.device_queue, y_train)
 
-        predictions_of_model_layers = self.predict_and_send_input_to_device(x_train, output_only=False)
+        predictions_of_model_layers = self.predict(x_train, output_only=False)
 
         layer_gradients = self._get_layer_gradients(predictions_of_model_layers, y_train_device)
         parameter_updates = self.optimizer.step(simplify_recursive_dict(layer_gradients))
