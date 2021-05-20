@@ -55,6 +55,7 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
         NetworkNode.__init__(self)
 
         self.mask = mask
+        self.mask_positions_device = None
 
     def build(self, device_context, device_queue):
         self.device_context = device_context
@@ -70,12 +71,6 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
 
         mask_positions = np.arange(int(np.prod(input_shape))).reshape(input_shape)[self.mask]
         self.mask_positions_device = cl_array.to_device(device_queue, mask_positions.astype(np.int32))
-
-        input_length = np.array(np.prod(self.input_shape)).astype(np.int32)
-        output_length = np.array(np.prod(self.output_shape)).astype(np.int32)
-
-        self.input_length_device = cl_array.to_device(device_queue, input_length)
-        self.output_length_device = cl_array.to_device(device_queue, output_length)
 
         self.built = True
 
@@ -162,12 +157,6 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
 
         self.input_shape = input_shape
         self.output_shape = input_shape
-
-        input_length = np.array(np.prod(self.input_shape)).astype(np.int32)
-        output_length = np.array(np.prod(self.output_shape)).astype(np.int32)
-
-        self.input_length_device = cl_array.to_device(device_queue, input_length)
-        self.output_length_device = cl_array.to_device(device_queue, output_length)
 
         self.built = True
 

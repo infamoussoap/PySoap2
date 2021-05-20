@@ -29,11 +29,6 @@ class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
         self.input_shape = input_shape
         self.output_shape = None  # To be determined by the concat child
 
-        input_length = np.array(np.prod(self.input_shape)).astype(np.int32)
-
-        self.input_length_device = cl_array.to_device(device_queue, input_length)
-        self.output_length_device = None  # To be determined by the concat child
-
         self.built = True
 
     def predict(self, z, output_only=True, pre_activation_of_input=None):
@@ -148,11 +143,9 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
         self.output_shape = self._concat_shape(input_shape_of_concat_parents, self.axis)
 
         output_length = np.array(np.prod(self.output_shape)).astype(np.int32)
-        self.output_length_device = cl_array.to_device(self.device_queue, output_length)
 
         for concat_parent in self.parents:
             concat_parent.output_shape = self.output_shape
-            concat_parent.output_length_device = cl_array.to_device(self.device_queue, output_length)
             concat_parent.built = True
 
         # The mappings from the inputs and their position in the concatenated output

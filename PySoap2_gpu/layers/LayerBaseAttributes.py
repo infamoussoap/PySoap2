@@ -1,3 +1,4 @@
+import numpy as np
 import pyopencl.array as cl_array
 
 from PySoap2_gpu import ActivationFunction
@@ -70,3 +71,21 @@ class LayerBaseAttributes:
                 layer_attributes[key] = val.get()
 
         return layer_attributes
+
+    @property
+    def input_length_device(self):
+        if len(self.input_shape) == 0:
+            input_length = np.array(0, dtype=np.int32)
+        else:
+            input_length = np.array(np.prod(self.input_shape), dtype=np.int32)
+
+        return cl_array.to_device(self.device_queue, input_length)
+
+    @property
+    def output_length_device(self):
+        if len(self.output_shape) == 0:
+            output_length = np.array(0, dtype=np.int32)
+        else:
+            output_length = np.array(np.prod(self.output_shape), dtype=np.int32)
+
+        return cl_array.to_device(self.device_queue, output_length)

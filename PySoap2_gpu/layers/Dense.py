@@ -103,9 +103,6 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
         self.W_device = None
         self.b_device = None
 
-        self.input_length_device = None
-        self.output_length_device = None
-
     def build(self, device_context, device_queue):
         """ Initialises the weight and bias units """
 
@@ -118,9 +115,6 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
 
         self.output_shape = (self.hidden_nodes,)
         self.input_shape = input_shape
-
-        self.input_length_device = cl_array.to_device(self.device_queue, np.array(self.input_shape[0], dtype=np.int32))
-        self.output_length_device = cl_array.to_device(self.device_queue, np.array(self.output_shape[0], dtype=np.int32))
 
         # Initialise the the weight with Glorot-Uniform, a uniform distribution over [-limit, limit],
         # where limit = sqrt(6 / (fan_in + fan_out)) (fan_in is the number of input units in the weight
