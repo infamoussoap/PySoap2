@@ -10,6 +10,8 @@ from PySoap2_gpu.layers.LayerBaseAttributes import LayerBaseAttributes
 
 from .Split import SplitInterfaceToDevice
 
+from .ValueChecks import check_built
+
 
 class ValuesAtMask(NetworkNode, LayerBaseAttributes, Layer):
     """ Given an input to this layer, this will only return the values at the mask positions """
@@ -36,6 +38,7 @@ class ValuesAtMask(NetworkNode, LayerBaseAttributes, Layer):
 
         self.built = True
 
+    @check_built
     def predict(self, z, output_only=True, pre_activation_of_input=None):
         """ Forward propagate the input at the mask positions
 
@@ -70,6 +73,7 @@ class ValuesAtMask(NetworkNode, LayerBaseAttributes, Layer):
 
         return pre_activation_of_input_at_mask, z_at_mask
 
+    @check_built
     def get_delta_backprop_(self, g_prime, new_delta, *args, **kwargs):
         """ Returns delta^{k-1}
 
@@ -100,15 +104,19 @@ class ValuesAtMask(NetworkNode, LayerBaseAttributes, Layer):
 
         return buffered_delta
 
+    @check_built
     def get_parameter_gradients_(self, new_delta, prev_z):
         return {}
 
+    @check_built
     def update_parameters_(self, parameter_updates):
         pass
 
+    @check_built
     def get_weights(self):
         return None
 
+    @check_built
     def summary_(self):
         return 'ValueAtMask Layer', f'Output Shape {(None, *self.output_shape)}'
 

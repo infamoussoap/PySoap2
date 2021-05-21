@@ -10,6 +10,7 @@ from PySoap2_gpu.layers.LayerBaseAttributes import LayerBaseAttributes
 
 from .c_code.split_c_code import split_source_code
 
+from .ValueChecks import check_built
 
 class SplitInterfaceToDevice:
     device_context = None
@@ -74,6 +75,7 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
 
         self.built = True
 
+    @check_built
     def predict(self, z, output_only=True, pre_activation_of_input=None):
         N = len(z)
         z_at_mask = cl_array.empty(self.device_queue, (N, *self.output_shape), dtype=np.float32)
@@ -91,21 +93,25 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
 
         return pre_activation_of_input_at_mask, z_at_mask
 
+    @check_built
     def get_delta_backprop_(self, g_prime, new_delta, prev_z):
         summed_delta_device = reduce(lambda x, y: x + y, new_delta)
         return summed_delta_device
 
+    @check_built
     def get_parameter_gradients_(self, delta, prev_z):
         return {}
 
+    @check_built
     def update_parameters_(self, parameter_updates):
         pass
 
+    @check_built
     def get_weights(self):
         return None
 
+    @check_built
     def summary_(self):
-
         return 'SplitChild Layer', f'Output Shape {(None, *self.output_shape)}'
 
     @property
@@ -160,11 +166,13 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
 
         self.built = True
 
+    @check_built
     def predict(self, z, output_only=True, pre_activation_of_input=None):
         if output_only:
             return z.reshape(-1, *self.output_shape)
         return pre_activation_of_input.reshape(-1, *self.input_shape), z.reshape(-1, *self.output_shape)
 
+    @check_built
     def get_delta_backprop_(self, g_prime, new_delta, prev_z):
         N = len(new_delta[0])
 
@@ -177,15 +185,19 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
 
         return out_delta
 
+    @check_built
     def get_parameter_gradients_(self, new_delta, prev_z):
         return {}
 
+    @check_built
     def update_parameters_(self, *args):
         pass
 
+    @check_built
     def get_weights(self):
         return None
 
+    @check_built
     def summary_(self):
         return 'Split Layer', f'Output Shape {(None, *self.output_shape)}'
 

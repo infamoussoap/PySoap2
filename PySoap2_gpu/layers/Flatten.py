@@ -6,6 +6,7 @@ from PySoap2_gpu.layers.NetworkNode import NetworkNode
 from PySoap2_gpu.layers.LayerBaseAttributes import LayerBaseAttributes
 
 from .ValueChecks import assert_instance_of_cl_array
+from .ValueChecks import check_built
 
 
 class Flatten(NetworkNode, LayerBaseAttributes, Layer):
@@ -25,6 +26,7 @@ class Flatten(NetworkNode, LayerBaseAttributes, Layer):
 
         self.built = True
 
+    @check_built
     def predict(self, z, output_only=True, pre_activation_of_input=None):
         assert_instance_of_cl_array(z)
 
@@ -32,6 +34,7 @@ class Flatten(NetworkNode, LayerBaseAttributes, Layer):
             return z.reshape(-1, *self.output_shape)
         return pre_activation_of_input, z.reshape(-1, *self.output_shape)
 
+    @check_built
     def get_delta_backprop_(self, g_prime, new_delta, *args, **kwargs):
         assert_instance_of_cl_array(g_prime)
 
@@ -39,15 +42,19 @@ class Flatten(NetworkNode, LayerBaseAttributes, Layer):
 
         return summed_delta_device.reshape(-1, *self.input_shape)
 
+    @check_built
     def get_parameter_gradients_(self, *args, **kwargs):
         return {}
 
+    @check_built
     def update_parameters_(self, parameter_gradients):
         pass
 
+    @check_built
     def get_weights(self):
         return None, None
 
+    @check_built
     def summary_(self):
         return f'Flatten', f'Output Shape {(None, *self.output_shape)}'
 

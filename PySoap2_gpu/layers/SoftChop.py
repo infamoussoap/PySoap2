@@ -12,6 +12,7 @@ from PySoap2_gpu.layers.NetworkNode import NetworkNode
 from PySoap2_gpu.layers.LayerBaseAttributes import LayerBaseAttributes
 
 from .ValueChecks import assert_instance_of_cl_array
+from .ValueChecks import check_built
 
 from PySoap2_gpu.utils import ClArrayTricks
 
@@ -225,6 +226,7 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
 
         self.clip_parameters()
 
+    @check_built
     def clip_parameters(self, min_a=0.001, min_e=0.001):
         ClArrayTricks.clip_cl_array_in_place(self.a1, min_a, None)
         ClArrayTricks.clip_cl_array_in_place(self.a2, min_a, None)
@@ -232,6 +234,7 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         ClArrayTricks.clip_cl_array_in_place(self.e1, min_e, None)
         ClArrayTricks.clip_cl_array_in_place(self.e2, min_e, None)
 
+    @check_built
     def predict(self, z, output_only=True, **kwargs):
         assert_instance_of_cl_array(z)
 
@@ -241,6 +244,7 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
             return out
         return out, out
 
+    @check_built
     def get_delta_backprop_(self, g_prime, new_delta, prev_z):
         dz = MultiSoftChop.dx(prev_z, self.a1, self.a2, self.e1, self.e2)
         summed_delta_device = reduce(lambda x, y: x + y, new_delta)
@@ -250,6 +254,7 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
 
         return out_gpu
 
+    @check_built
     def get_parameter_gradients_(self, delta, prev_z):
         args = (prev_z, self.a1, self.a2, self.e1, self.e2)
 
@@ -274,6 +279,7 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
 
         return parameter_gradients
 
+    @check_built
     def update_parameters_(self, parameter_updates):
         self.a1 -= parameter_updates['a1']
         self.a2 -= parameter_updates['a2']
@@ -283,9 +289,11 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
 
         self.clip_parameters()
 
+    @check_built
     def get_weights(self):
         raise NotImplementedError
 
+    @check_built
     def summary_(self):
         return f'SoftChop {self.input_shape}', f'Output Shape {(None, *self.output_shape)}'
 

@@ -10,6 +10,7 @@ from PySoap2_gpu.layers.LayerBaseAttributes import LayerBaseAttributes
 
 from .c_code.dense_c_code import dense_source_code
 from .ValueChecks import assert_instance_of_cl_array
+from .ValueChecks import check_built
 
 
 class DenseInterfaceToDevice:
@@ -128,6 +129,7 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
 
         self.built = True
 
+    @check_built
     def predict(self, z_device, output_only=True, **kwargs):
         assert_instance_of_cl_array(z_device)
 
@@ -142,6 +144,7 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
             return self.activation_function_(out_device)
         return out_device, self.activation_function_(out_device)
 
+    @check_built
     def get_delta_backprop_(self, g_prime_device, new_delta, *args):
         assert_instance_of_cl_array(g_prime_device)
 
@@ -154,6 +157,7 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
 
         return out_device
 
+    @check_built
     def get_parameter_gradients_(self, delta_device, z_device):
         assert_instance_of_cl_array(z_device)
 
@@ -172,13 +176,16 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
         parameter_gradients = {'weight': W_grad_device, 'bias': b_grad_device}
         return parameter_gradients
 
+    @check_built
     def update_parameters_(self, parameter_updates):
         self.W_device -= parameter_updates['weight']
         self.b_device -= parameter_updates['bias']
 
+    @check_built
     def get_weights(self):
         return self.W_device, self.b_device
 
+    @check_built
     def summary_(self):
         return f'Dense {(self.hidden_nodes,)}', f'Output Shape {(None, *self.output_shape)}'
 

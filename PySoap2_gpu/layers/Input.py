@@ -3,6 +3,7 @@ from PySoap2_gpu.layers.NetworkNode import NetworkNode
 from PySoap2_gpu.layers.LayerBaseAttributes import LayerBaseAttributes
 
 from .ValueChecks import assert_instance_of_cl_array
+from .ValueChecks import check_built
 
 
 class Input(NetworkNode, LayerBaseAttributes, Layer):
@@ -35,6 +36,7 @@ class Input(NetworkNode, LayerBaseAttributes, Layer):
         self.device_context = device_context
         self.device_queue = device_queue
 
+    @check_built
     def predict(self, z, *args, output_only=True, **kwargs):
         assert_instance_of_cl_array(z)
 
@@ -42,18 +44,23 @@ class Input(NetworkNode, LayerBaseAttributes, Layer):
             return z
         return z, z
 
+    @check_built
     def get_delta_backprop_(self, g_prime, new_delta, *args):
         return None
 
+    @check_built
     def get_parameter_gradients_(self, delta, prev_z):
         return {}
 
+    @check_built
     def update_parameters_(self, parameter_updates):
         pass
 
+    @check_built
     def get_weights(self):
         return None, None
 
+    @check_built
     def summary_(self):
         return f'Input', f'Input Shape  {(None, *self.input_shape)}'
 
