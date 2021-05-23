@@ -33,6 +33,7 @@ class Kravchuk_2d(NetworkNode, LayerBaseAttributes, Layer):
         self.P2_device = None
         self.M1_device = None
         self.M2_device = None
+        self.M3_device = None
 
     def build(self, device_context, device_queue):
         """ Initialises the weight and bias units """
@@ -53,6 +54,7 @@ class Kravchuk_2d(NetworkNode, LayerBaseAttributes, Layer):
 
         m1 = input_shape[0]
         m2 = input_shape[1]
+        m3 = None if len(input_shape) == 2 else input_shape[2]
         P1 = kravchuk_polynomials(m1 - 1, self.p).astype(np.float32)
         P2 = kravchuk_polynomials(m2 - 1, self.p2).astype(np.float32)
 
@@ -60,6 +62,8 @@ class Kravchuk_2d(NetworkNode, LayerBaseAttributes, Layer):
         self.P2_device = cl_array.to_device(device_queue, P2)
         self.M1_device = cl_array.to_device(device_queue, np.array(m1, dtype=np.int32))
         self.M2_device = cl_array.to_device(device_queue, np.array(m2, dtype=np.int32))
+        if m3 is not None:
+            self.M3_device = cl_array.to_device(device_queue, np.array(m3, dtype=np.int32))
 
         self.built = True
 
@@ -67,7 +71,8 @@ class Kravchuk_2d(NetworkNode, LayerBaseAttributes, Layer):
     def predict(self, z, output_only=True, pre_activation_of_input=None):
         out = cl_array.empty_like(z)
         PolynomialTransformationInterface.polynomial_transform_2d(self.P1_device, self.P2_device, z, self.M1_device,
-                                                                  self.M2_device, self.input_length_device, out)
+                                                                  self.M2_device, self.M3_device,
+                                                                  self.input_length_device, out)
 
         if output_only:
             return out
@@ -81,7 +86,7 @@ class Kravchuk_2d(NetworkNode, LayerBaseAttributes, Layer):
 
         # Inverse Transform
         PolynomialTransformationInterface.polynomial_transform_2d(self.P1_device.T, self.P2_device.T, delta,
-                                                                  self.M1_device, self.M2_device,
+                                                                  self.M1_device, self.M2_device, self.M3_device,
                                                                   self.input_length_device, out)
 
         return out

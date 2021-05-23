@@ -47,7 +47,17 @@ class PolynomialTransformationInterface:
         event.wait()
 
     @staticmethod
-    def polynomial_transform_2d(P1, P2, images, M1, M2, input_length, out):
+    def polynomial_transform_2d(P1, P2, images, M1, M2, M3, input_length, out):
+        if len(images.shape) == 3:
+            PolynomialTransformationInterface._polynomial_transform_2d(P1, P2, images, M1, M2, M3, input_length, out)
+        elif len(images.shape) == 4:
+            PolynomialTransformationInterface._polynomial_transform_2d_multi(P1, P2, images, M1, M2, M3,
+                                                                             input_length, out)
+        else:
+            raise ValueError(f'{images.shape} is not a valid shape for 2d transformation')
+
+    @staticmethod
+    def _polynomial_transform_2d(P1, P2, images, M1, M2, M3, input_length, out):
         """ images assumed to be (N, M1, M2) cl_array.Array """
         program = PolynomialTransformationInterface.device_program_for_2d
         queue = PolynomialTransformationInterface.device_queue
@@ -58,7 +68,7 @@ class PolynomialTransformationInterface:
         event.wait()
 
     @staticmethod
-    def polynomial_transform_2d_multi(P1, P2, images, M1, M2, M3, input_length, out):
+    def _polynomial_transform_2d_multi(P1, P2, images, M1, M2, M3, input_length, out):
         """ images assumed to be (N, M1, M2, M3) cl_array.Array """
         program = PolynomialTransformationInterface.device_program_for_2d
         queue = PolynomialTransformationInterface.device_queue
