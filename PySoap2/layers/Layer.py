@@ -30,6 +30,9 @@ class Layer(abc.ABC):
             output.
             If `output_only = False` then this method is will return the pre-activated and post-activated
             output, in that order.
+
+            pre_activation_of_input should only be used when the layer is a pass-through layer, with no
+            activation function (split and concatenate layers).
         """
         pass
 
