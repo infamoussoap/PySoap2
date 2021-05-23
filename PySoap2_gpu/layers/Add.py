@@ -4,6 +4,8 @@ from PySoap2_gpu.layers.LayerBaseAttributes import LayerBaseAttributes
 
 from PySoap2.layers import Add as AddCPU
 
+from PySoap2_gpu import ActivationFunction
+
 
 class Add(AddCPU, NetworkNode, LayerBaseAttributes, Layer):
     """ Adds the inputs to this layer
@@ -21,3 +23,10 @@ class Add(AddCPU, NetworkNode, LayerBaseAttributes, Layer):
         self.device_queue = device_queue
 
         super().build()
+
+    @property
+    def activation_function_(self):
+        """ Need to overload parents activation function to use the gpu-programs """
+        if not ActivationFunction.initialized:
+            ActivationFunction(self.device_context, self.device_queue)
+        return ActivationFunction.get_activation_function(self.activation_function)
