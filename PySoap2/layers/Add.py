@@ -20,8 +20,9 @@ class Add(NetworkNode, LayerBaseAttributes, Layer):
 
     def build(self):
         """ Initialises the weight and bias units """
-        
-
+        first_output_shape = self.parents[0].output_shape
+        if any([first_output_shape != parent.output_shape for parent in self.parents]):
+            raise ValueError('Inputs to Add Layer must have the same shape.')
 
         self.input_shape = tuple(parent.output_shape for parent in self.parents)
         self.output_shape = self.input_shape[0]
