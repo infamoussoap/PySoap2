@@ -18,10 +18,16 @@ from .Flatten import Flatten
 # Split and Concatenate layers
 from .Split import Split
 from .Concatenate import Concatenate
-
 from .ValuesAtMask import ValuesAtMask
 
 # Technical Layers for the Split and Concatenate Nodes
 from .Split import SplitLeftChild
 from .Split import SplitRightChild
 from .Concatenate import ConcatenateParent
+
+# Polynomial Transformation Layers
+from .Kravchuk_1d import Kravchuk_1d
+from .Kravchuk_2d import Kravchuk_2d
+
+# Add Layers
+from .Add import Add
