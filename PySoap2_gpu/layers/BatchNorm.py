@@ -55,6 +55,7 @@ class BatchNormGrads:
 
     @staticmethod
     def dsigma2(z, dz_hat_, epsilon, mu=None, sigma=None):
+        """ epsilon is assumed to be a float, not a np.array """
         if mu is None:
             mu = ClArrayTricks.mean_across_0_axis(z)
         if sigma is None:
@@ -67,9 +68,8 @@ class BatchNormGrads:
         return c * ClArrayTricks.sum_across_0_axis(dz_hat_ * mean_corrected_z)
 
     @staticmethod
-    def dmu(z, dz_hat_, epsilon, mu=None, sigma=None):
-        if mu is None:
-            mu = ClArrayTricks.mean_across_0_axis(z)
+    def dmu(z, dz_hat_, epsilon, sigma=None):
+        """ epsilon is assumed to be a float, not a np.array """
         if sigma is None:
             sigma = ClArrayTricks.std_across_0_axis(z)
 
@@ -78,6 +78,7 @@ class BatchNormGrads:
 
     @staticmethod
     def dz(z, new_delta, gamma, epsilon, mu=None, sigma=None):
+        """ epsilon is assumed to be a float, not a np.array """
         if mu is None:
             mu = ClArrayTricks.mean_across_0_axis(z)
         if sigma is None:
@@ -86,7 +87,7 @@ class BatchNormGrads:
 
         dz_hat_ = BatchNormGrads.dz_hat(new_delta, gamma)
         dsigma2_ = BatchNormGrads.dsigma2(z, dz_hat_, epsilon, mu, sigma)
-        dmu_ = BatchNormGrads.dmu(z, dz_hat_, epsilon, mu, sigma)
+        dmu_ = BatchNormGrads.dmu(z, dz_hat_, epsilon, sigma)
 
         mean_corrected_z = Broadcast.broadcast_across_0_axis("-", z, mu)
 
