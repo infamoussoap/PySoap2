@@ -1,11 +1,14 @@
 import numpy as np
 import pyopencl as cl
 
+from pyopencl import clmath
 from pyopencl.elementwise import ElementwiseKernel
 import pyopencl.array as cl_array
 
 from .cl_math_functions_c_code import cl_array_max_source_code
 from .cl_math_functions_c_code import cl_array_sum_across_axis_source_code
+from .cl_math_functions_c_code import mean_across_axis_c_code
+from .cl_math_functions_c_code import var_across_axis_c_code
 
 
 class ClArrayTricks:
@@ -15,6 +18,8 @@ class ClArrayTricks:
     clip_cl_array_by_max_value_in_place = None
     cl_array_max_program = None
     cl_array_sum_program = None
+    cl_array_mean_program = None
+    cl_array_var_program = None
 
     device_context = None
     device_queue = None
@@ -37,6 +42,8 @@ class ClArrayTricks:
 
         ClArrayTricks.cl_array_max_program = cl.Program(device_context, cl_array_max_source_code).build()
         ClArrayTricks.cl_array_sum_program = cl.Program(device_context, cl_array_sum_across_axis_source_code).build()
+        ClArrayTricks.cl_array_mean_program = cl.Program(device_context, mean_across_axis_c_code).build()
+        ClArrayTricks.cl_array_var_program = cl.Program(device_context, var_across_axis_c_code).build()
 
         ClArrayTricks.initialized = True
 
@@ -74,7 +81,7 @@ class ClArrayTricks:
         return out_gpu
 
     @staticmethod
-    def sum_across_0_axis(arrays):
+    def sum_arrays_across_0_axis(arrays):
         """ arrays assumed to be list of cl_array each of the same shape """
         stacked_arrays = cl_array.stack(arrays, axis=0)
         N, *input_shape = stacked_arrays.shape
@@ -92,3 +99,50 @@ class ClArrayTricks:
         event.wait()
 
         return out
+
+    @staticmethod
+    def mean_across_0_axis(x_val_device):
+        queue = ClArrayTricks.device_queue
+        mean_program = ClArrayTricks.cl_array_mean_program
+
+        N, *input_shape = x_val_device.shape
+
+        input_shape = tuple(input_shape)
+        input_length = int(np.prod(input_shape))
+
+        input_length_device = cl_array.to_device(queue, np.array(input_length, dtype=np.int32))
+        N_device = cl_array.to_device(queue, np.array(N, dtype=np.int32))
+        out = cl_array.empty(queue, input_shape, dtype=np.float32)
+
+        event = mean_program.mean_across_0_axis(queue, (input_length,), None,
+                                                x_val_device.data, input_length_device.data, N_device.data, out.data)
+        event.wait()
+
+        return out
+
+    @staticmethod
+    def var_across_0_axis(x_val_device):
+        queue = ClArrayTricks.device_queue
+        var_program = ClArrayTricks.cl_array_var_program
+
+        N, *input_shape = x_val_device.shape
+
+        input_shape = tuple(input_shape)
+        input_length = int(np.prod(input_shape))
+
+        input_length_device = cl_array.to_device(queue, np.array(input_length, dtype=np.int32))
+        N_device = cl_array.to_device(queue, np.array(N, dtype=np.int32))
+        out = cl_array.empty(queue, input_shape, dtype=np.float32)
+
+        mean = ClArrayTricks.mean_across_0_axis(x_val_device)
+
+        event = var_program.var_across_0_axis(queue, (input_length,), None,
+                                              x_val_device.data, mean.data, input_length_device.data,
+                                              N_device.data, out.data)
+        event.wait()
+
+        return out
+
+    @staticmethod
+    def std_across_0_axis(x_val_device):
+        return clmath.sqrt(ClArrayTricks.var_across_0_axis(x_val_device))
