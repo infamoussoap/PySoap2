@@ -81,10 +81,12 @@ class ClArrayTricks:
         return out_gpu
 
     @staticmethod
-    def sum_arrays_across_0_axis(arrays):
-        """ arrays assumed to be list of cl_array each of the same shape """
-        stacked_arrays = cl_array.stack(arrays, axis=0)
-        N, *input_shape = stacked_arrays.shape
+    def sum_across_0_axis(array):
+        """ array assumed to be a cl_array, not a list of cl_arrays.
+
+            If you want to sum a list of cl_arrays just use the reduce method
+        """
+        N, *input_shape = array.shape
 
         input_shape = tuple(input_shape)
         input_length = int(np.prod(input_shape))
@@ -94,7 +96,7 @@ class ClArrayTricks:
         out = cl_array.empty(ClArrayTricks.device_queue, input_shape, dtype=np.float32)
 
         event = ClArrayTricks.cl_array_sum_program.sum_across_0_axis(ClArrayTricks.device_queue, (input_length,), None,
-                                                                     stacked_arrays.data, input_length_device.data,
+                                                                     array.data, input_length_device.data,
                                                                      N_device.data, out.data)
         event.wait()
 
