@@ -3,6 +3,10 @@ import pyopencl as cl
 import pyopencl.array as cl_array
 
 
+class BroadcastError(Exception):
+    pass
+
+
 class Broadcast:
     device_context = None
     device_queue = None
@@ -21,6 +25,33 @@ class Broadcast:
 
     @staticmethod
     def broadcast_across_0_axis(operation, x_device, y_device):
+        """ It is assumed that the operation to be performed is
+
+            x_device 'operation' y_device
+
+            If operation = '-', then this will return x_device - y_device
+        """
+
+        error_msg = f'Broadcasting two arrays must the last dimension equal. ' \
+                    f'In particular, x.shape={x_device.shape} not compatible y.shape={y_device.shape}.'
+        try:
+            return Broadcast._broadcast_across_0_axis(operation, x_device, y_device, error_msg)
+        except BroadcastError:
+            """ Now assumed that 
+            
+                y_device : (N, ...) cl_array.Array
+                x_device : (...) cl_array.Array
+            """
+            if operation == "-":  # These are special operation that is sensitive on the position
+                return Broadcast._broadcast_across_0_axis('+', -y_device, x_device, error_msg)
+            elif operation == '/':
+                # Special divide 
+                return Broadcast._broadcast_across_0_axis('_/', y_device, x_device, error_msg)
+            else:
+                return Broadcast._broadcast_across_0_axis(operation, y_device, x_device, error_msg)
+
+    @staticmethod
+    def _broadcast_across_0_axis(operation, x_device, y_device, error_msg):
         """ Performs broadcasting on the gpu
 
             Parameters
@@ -35,8 +66,7 @@ class Broadcast:
         N, *input_shape = x_device.shape
 
         if tuple(input_shape) != y_device.shape:
-            raise ValueError(f'Broadcasting two arrays must the last dimension equal. '
-                             f'In particular, x.shape={x_device.shape} not equal y.shape={y_device.shape}.')
+            raise BroadcastError(error_msg)
 
         input_shape = tuple(input_shape)
         input_length = int(np.prod(input_shape))
@@ -62,6 +92,8 @@ class Broadcast:
             return Broadcast.device_program.broadcast_mul_across_0_axis
         elif operation == "/":
             return Broadcast.device_program.broadcast_div_across_0_axis
+        elif operation == "_/":
+            return Broadcast.device_program._broadcast_div_across_0_axis
         else:
             raise ValueError(f"{operation} is not a valid operation. Choose from +,-,*,/.")
 
@@ -76,8 +108,6 @@ __kernel void broadcast_add_across_0_axis(__global const float *x, __global cons
     int input_length = *inputLength;
     int N = *N_;
 
-    float total = 0.0;
-
     out[j + i*input_length] = x[j + i*input_length] + y[j];
 }
 
@@ -89,8 +119,6 @@ __kernel void broadcast_sub_across_0_axis(__global const float *x, __global cons
 
     int input_length = *inputLength;
     int N = *N_;
-
-    float total = 0.0;
 
     out[j + i*input_length] = x[j + i*input_length] - y[j];
 }
@@ -104,9 +132,7 @@ __kernel void broadcast_mul_across_0_axis(__global const float *x, __global cons
     int input_length = *inputLength;
     int N = *N_;
 
-    float total = 0.0;
-
-    out[j + i*input_length] = x[j + i*input_length] * y[j];
+    out[j + i*input_length] = (float) ((double) x[j + i*input_length] * (double) y[j]);
 }
 
 __kernel void broadcast_div_across_0_axis(__global const float *x, __global const float *y, __global int *inputLength, 
@@ -118,8 +144,18 @@ __kernel void broadcast_div_across_0_axis(__global const float *x, __global cons
     int input_length = *inputLength;
     int N = *N_;
 
-    float total = 0.0;
+    out[j + i*input_length] = (float) ((double) x[j + i*input_length] / (double) y[j]);
+}
 
-    out[j + i*input_length] = x[j + i*input_length] / y[j];
+__kernel void _broadcast_div_across_0_axis(__global const float *x, __global const float *y, __global int *inputLength, 
+                                          __global int *N_, __global float *out)
+{
+    int i = get_global_id(0);
+    int j = get_global_id(1);
+
+    int input_length = *inputLength;
+    int N = *N_;
+
+    out[j + i*input_length] = (float) ((double) y[j]) / (double) x[j + i*input_length];
 }
 """
