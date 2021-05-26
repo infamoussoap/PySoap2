@@ -9,6 +9,7 @@ from .Input import Input
 # Trainable Layers
 from .Dense import Dense
 from .SoftChop import SoftChop
+from .BatchNorm import BatchNorm
 
 # Pass through layers
 from .Flatten import Flatten
