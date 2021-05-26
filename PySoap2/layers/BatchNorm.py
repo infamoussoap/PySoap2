@@ -1,4 +1,5 @@
 import numpy as np
+from functools import reduce
 
 from PySoap2.layers import Layer
 from PySoap2.layers.NetworkNode import NetworkNode
@@ -297,6 +298,7 @@ class BatchNorm(NetworkNode, LayerBaseAttributes, Layer):
             -------
             dict of str - np.array
         """
+        delta = reduce(lambda x, y: x + y, delta)
 
         z_hat = (prev_z - np.mean(prev_z, axis=0)) / np.sqrt(np.std(prev_z, axis=0) ** 2 + self.epsilon)
 
