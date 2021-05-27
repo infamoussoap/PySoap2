@@ -196,8 +196,8 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
 
         self.a1 = None
         self.a2 = None
-        self.e1 = None
-        self.e2 = None
+        self.epsilon1 = None
+        self.epsilon2 = None
 
         self.b = None
 
@@ -219,8 +219,8 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         self.a1 = cl_array.to_device(device_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float32))
         self.a2 = cl_array.to_device(device_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float32))
 
-        self.e1 = cl_array.to_device(device_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float32))
-        self.e2 = cl_array.to_device(device_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float32))
+        self.epsilon1 = cl_array.to_device(device_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float32))
+        self.epsilon2 = cl_array.to_device(device_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float32))
 
         self.built = True
 
@@ -231,14 +231,14 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         ClArrayTricks.clip_cl_array_in_place(self.a1, min_a, None)
         ClArrayTricks.clip_cl_array_in_place(self.a2, min_a, None)
 
-        ClArrayTricks.clip_cl_array_in_place(self.e1, min_e, None)
-        ClArrayTricks.clip_cl_array_in_place(self.e2, min_e, None)
+        ClArrayTricks.clip_cl_array_in_place(self.epsilon1, min_e, None)
+        ClArrayTricks.clip_cl_array_in_place(self.epsilon2, min_e, None)
 
     @check_built
     def predict(self, z, output_only=True, **kwargs):
         assert_instance_of_cl_array(z)
 
-        out = MultiSoftChop.eval(z, self.a1, self.a2, self.e1, self.e2)
+        out = MultiSoftChop.eval(z, self.a1, self.a2, self.epsilon1, self.epsilon2)
 
         if output_only:
             return out
@@ -246,7 +246,7 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
 
     @check_built
     def get_delta_backprop_(self, g_prime, new_delta, prev_z):
-        dz = MultiSoftChop.dx(prev_z, self.a1, self.a2, self.e1, self.e2)
+        dz = MultiSoftChop.dx(prev_z, self.a1, self.a2, self.epsilon1, self.epsilon2)
         summed_delta_device = reduce(lambda x, y: x + y, new_delta)
 
         out_gpu = cl_array.empty_like(prev_z)
@@ -256,20 +256,20 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
 
     @check_built
     def get_parameter_gradients_(self, delta, prev_z):
-        args = (prev_z, self.a1, self.a2, self.e1, self.e2)
+        args = (prev_z, self.a1, self.a2, self.epsilon1, self.epsilon2)
 
         dz = {'a1': MultiSoftChop.da1(*args),
               'a2': MultiSoftChop.da2(*args),
-              'e1': MultiSoftChop.de1(*args),
-              'e2': MultiSoftChop.de2(*args)}
+              'epsilon1': MultiSoftChop.de1(*args),
+              'epsilon2': MultiSoftChop.de2(*args)}
 
         N = np.array(len(prev_z)).astype(np.int32)
         N_device = cl_array.to_device(self.device_queue, N)
 
         parameter_gradients = {'a1': cl_array.empty_like(self.a1),
                                'a2': cl_array.empty_like(self.a2),
-                               'e1': cl_array.empty_like(self.e1),
-                               'e2': cl_array.empty_like(self.e2)}
+                               'epsilon1': cl_array.empty_like(self.epsilon1),
+                               'epsilon2': cl_array.empty_like(self.epsilon2)}
 
         summed_delta_device = reduce(lambda x, y: x + y, delta)
 
@@ -284,8 +284,8 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         self.a1 -= parameter_updates['a1']
         self.a2 -= parameter_updates['a2']
 
-        self.e1 -= parameter_updates['e1']
-        self.e2 -= parameter_updates['e2']
+        self.epsilon1 -= parameter_updates['epsilon1']
+        self.epsilon2 -= parameter_updates['epsilon2']
 
         self.clip_parameters()
 

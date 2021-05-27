@@ -101,8 +101,8 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
         self.activation_function = activation_function
         self.activation_kwargs = {} if activation_kwargs is None else activation_kwargs
 
-        self.W_device = None
-        self.b_device = None
+        self.W = None
+        self.b = None
 
     def build(self, device_context, device_queue):
         """ Initialises the weight and bias units """
@@ -124,8 +124,8 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
         W = np.random.uniform(low=-limit, high=limit, size=(*self.output_shape, *input_shape)).astype(np.float32)
         b = np.zeros(self.output_shape).astype(np.float32)
 
-        self.W_device = cl_array.to_device(self.device_queue, W)
-        self.b_device = cl_array.to_device(self.device_queue, b)
+        self.W = cl_array.to_device(self.device_queue, W)
+        self.b = cl_array.to_device(self.device_queue, b)
 
         self.built = True
 
@@ -137,7 +137,7 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
 
         out_device = cl_array.empty(self.device_queue, (n, *self.output_shape), dtype=np.float32)
 
-        DenseInterfaceToDevice.predict(z_device, self.W_device, self.b_device, self.input_length_device,
+        DenseInterfaceToDevice.predict(z_device, self.W, self.b, self.input_length_device,
                                        self.output_length_device, out_device)
 
         if output_only:
@@ -152,7 +152,7 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
 
         summed_delta_device = reduce(lambda x, y: x + y, new_delta)
 
-        DenseInterfaceToDevice.delta_back_prop(g_prime_device, summed_delta_device, self.W_device,
+        DenseInterfaceToDevice.delta_back_prop(g_prime_device, summed_delta_device, self.W,
                                                self.input_length_device, self.output_length_device, out_device)
 
         return out_device
@@ -166,11 +166,11 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
         N = np.array(len(z_device)).astype(np.int32)
         N_device = cl_array.to_device(self.device_queue, N)
 
-        W_grad_device = cl_array.empty(self.device_queue, self.W_device.shape, dtype=np.float32)
+        W_grad_device = cl_array.empty(self.device_queue, self.W.shape, dtype=np.float32)
         DenseInterfaceToDevice.weight_gradient(summed_delta_device, z_device, self.input_length_device,
                                                self.output_length_device, N_device, W_grad_device)
 
-        b_grad_device = cl_array.empty(self.device_queue, self.b_device.shape, dtype=np.float32)
+        b_grad_device = cl_array.empty(self.device_queue, self.b.shape, dtype=np.float32)
         DenseInterfaceToDevice.bias_gradient(summed_delta_device, self.output_length_device, N_device, b_grad_device)
 
         parameter_gradients = {'weight': W_grad_device, 'bias': b_grad_device}
@@ -178,12 +178,12 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
 
     @check_built
     def update_parameters_(self, parameter_updates):
-        self.W_device -= parameter_updates['weight']
-        self.b_device -= parameter_updates['bias']
+        self.W -= parameter_updates['weight']
+        self.b -= parameter_updates['bias']
 
     @check_built
     def get_weights(self):
-        return self.W_device, self.b_device
+        return self.W, self.b
 
     @check_built
     def summary_(self):
