@@ -16,10 +16,10 @@ def visualize_model(model):
         else:
             name = type(layer).__name__
 
-        dot.node(layer.memory_location, name)
+        dot.node(layer.id, name)
 
     for layer in model.layers_by_number_of_parents:
         for parent in layer.parents:
-            dot.edge(parent.memory_location, layer.memory_location)
+            dot.edge(parent.id, layer.id)
 
     return dot
