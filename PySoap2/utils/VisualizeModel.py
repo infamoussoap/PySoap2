@@ -1,4 +1,4 @@
-def visualize_model(model):
+def visualize_model(model, with_id=False):
     """ Visualize model as a tree
 
         Notes
@@ -14,7 +14,7 @@ def visualize_model(model):
         if type(layer).__name__ == 'Dense':
             name = f'Dense {layer.hidden_nodes}'
         else:
-            name = type(layer).__name__
+            name = layer.id if with_id else type(layer).__name__
 
         dot.node(layer.id, name)
 
