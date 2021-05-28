@@ -141,14 +141,9 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
         pass
 
     @check_built
-    def get_weights(self):
-        """ This layer has no trainable parameters, so error will be raised
-
-            Raises
-            ------
-            AttributeError
-        """
-
+    def get_weights(self, as_dict=False):
+        if as_dict:
+            return {}
         return None
 
     @check_built
@@ -321,13 +316,9 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
         pass
 
     @check_built
-    def get_weights(self):
-        """ This layer has no trainable parameters, so error will be raised
-
-            Raises
-            ------
-            AttributeError
-        """
+    def get_weights(self, as_dict=False):
+        if as_dict:
+            return {}
         return None
 
     @check_built

@@ -90,8 +90,13 @@ class Layer(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_weights(self):
+    def get_weights(self, as_dict=False):
         """ Returns the weights/filter and bias of this layer
+
+            Parameters
+            ----------
+            as_dict : bool
+                If as_dict, then the weights will be returned as a dictionary
 
             Raises
             ------

@@ -367,8 +367,10 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         self.clip_parameters()
 
     @check_built
-    def get_weights(self):
-        return np.array([self.a1, self.a2]), np.array([self.epsilon1, self.epsilon2])
+    def get_weights(self, as_dict=False):
+        if as_dict:
+            return {'a1': self.a1, 'a2': self.a2, 'epsilon1': self.epsilon1, 'epsilon2': self.epsilon2, 'b': self.b}
+        return np.array([self.a1, self.a2]), np.array([self.epsilon1, self.epsilon2]), self.b
 
     @check_built
     def summary_(self):

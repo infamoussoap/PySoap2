@@ -323,7 +323,9 @@ class Conv_2D(NetworkNode, LayerBaseAttributes, Layer):
         self.b -= parameter_updates['bias']
 
     @check_built
-    def get_weights(self):
+    def get_weights(self, as_dict=False):
+        if as_dict:
+            return {'filter': self.filter, 'b': self.b}
         return self.filter, self.b
 
     @check_built

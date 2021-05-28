@@ -319,7 +319,10 @@ class BatchNorm(NetworkNode, LayerBaseAttributes, Layer):
         self.gamma -= parameter_updates['gamma']
 
     @check_built
-    def get_weights(self):
+    def get_weights(self, as_dict=False):
+        if as_dict:
+            return {'beta': self.beta, 'gamma': self.gamma}
+
         return self.beta, self.gamma
 
     @check_built
