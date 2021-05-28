@@ -330,3 +330,5 @@ class Model:
             for key, val in simplified_full_model_dictionary.items():
                 if val is not None:
                     h.create_dataset(key, data=val)
+                else:
+                    h.create_dataset(key, data=np.array('null', 'S'))

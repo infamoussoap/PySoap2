@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 
+import inspect
+
 
 def get_attributes_of_full_model(model):
     """ The attributes of the model, the layers, and the structure of the network """
@@ -23,10 +25,34 @@ def get_attributes_of_layers(model):
         -------
         dict of str - dict
     """
-    layer_attributes = {layer.id: layer.get_layer_attributes_()
+    layer_attributes = {layer.id: get_layer_attributes_as_dict(layer)
                         for layer in model.layers_by_number_of_parents}
 
     return layer_attributes
+
+
+def get_layer_attributes_as_dict(layer):
+    layer_attributes = get_init_attributes_of_layer_as_dict(layer)
+    weight_attributes = layer.get_weights(as_dict=True)
+
+    layer_attributes.update(weight_attributes)
+
+    return layer_attributes
+
+
+def get_init_attributes_of_layer_as_dict(layer):
+    attributes = get_init_attributes_names_of_layer(layer)
+    layer_dict = layer.__dict__
+
+    return {p.name: layer_dict[p.name] for p in attributes}
+
+
+def get_init_attributes_names_of_layer(layer):
+    init_signature = inspect.signature(layer.__init__)
+    attributes = [p for p in init_signature.parameters.values()
+                  if p.name != 'self' and p.kind != p.VAR_KEYWORD and p.kind != p.VAR_POSITIONAL]
+
+    return attributes
 
 
 def get_attributes_of_network_tree(model):

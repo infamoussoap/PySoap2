@@ -19,12 +19,22 @@ def load_model(file_path):
 
     model = PySoap2.models.Model(input_layer, output_layer)
 
-    model.optimizer = PySoap2.optimizers.__dict__[model_attributes['optimizer_name']]()
+    loss_function = model_attributes['loss_function']
+    metric_function = model_attributes['metric_function'] if 'metric_function' in model_attributes else None
+    optimizer = model_attributes['optimizer_name']
+
+    # Model building randomly initializes the weights of the layers
+    # Need to reset them to the loaded weights
+    model.build(loss_function=loss_function, optimizer=optimizer, metrics=metric_function)
+
     model.optimizer.__dict__.update(model_attributes['optimizer_attributes'])
 
-    for attribute in ['loss_function', 'metric_function']:
-        if attribute in model_attributes:
-            model.__dict__[attribute] = model_attributes[attribute]
+    # Update the layer attributes to the saved attributes
+    for layer_id, layer in instances_of_layer_id.items():
+        layer_attributes = model_attributes[layer_id]
+        if layer_attributes != b'null':
+            pass
+            layer.__dict__.update(layer_attributes)
 
     return model
 
@@ -98,7 +108,7 @@ def load_layer(layer_metaclass, layer_attributes):
     init_kwargs = get_layer_init_kw_arguments(layer_metaclass, layer_attributes)
 
     layer_instance = layer_metaclass(**init_kwargs)
-    layer_instance.__dict__.update(layer_attributes)
+    # layer_instance.__dict__.update(layer_attributes)
     return layer_instance
 
 
@@ -126,7 +136,9 @@ def get_metaclass_from_id(layer_id):
         layer_id : str
             The name of the metaclass is assumed to be the
     """
-    layer_type_name = layer_id.split('_')[0]
+    key_words = layer_id.split('_')[:-1]
+    layer_type_name = '_'.join(key_words)
+
     return PySoap2.layers.__dict__[layer_type_name]
 
 
@@ -138,7 +150,9 @@ def is_valid_layer_id(layer_id):
         Perhaps using a regex to make sure it follows the correct format as well
     """
 
-    layer_type_name = layer_id.split('_')[0]
+    key_words = layer_id.split('_')[:-1]
+    layer_type_name = '_'.join(key_words)
+
     return layer_type_name in PySoap2.layers.__dict__.keys()
 
 
@@ -169,3 +183,9 @@ def unpack_recursive_hdf5(file):
         else:
             unpacked.update({key: file[key][()]})
     return unpacked
+
+
+def check_null(val):
+    if isinstance(val, str):
+        return val == 'null'
+    return False

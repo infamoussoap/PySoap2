@@ -7,8 +7,12 @@ def simplify_recursive_dict(working_dict, delimiter='/'):
     new_dict = {}
     for (key, val) in working_dict.items():
         if isinstance(val, dict):
-            temp_dict = simplify_recursive_dict(val)
-            new_dict.update({f'{key}{delimiter}{new_key}': new_val for (new_key, new_val) in temp_dict.items()})
+            if len(val) == 0:
+                new_dict.update({key: None})
+            else:
+                temp_dict = simplify_recursive_dict(val)
+                new_dict.update({f'{key}{delimiter}{new_key}': new_val
+                                 for (new_key, new_val) in temp_dict.items()})
         else:
             new_dict.update({key: val})
 
