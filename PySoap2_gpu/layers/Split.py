@@ -12,6 +12,7 @@ from .c_code.split_c_code import split_source_code
 
 from .ValueChecks import check_built
 
+
 class SplitInterfaceToDevice:
     device_context = None
     device_queue = None
@@ -107,7 +108,9 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
         pass
 
     @check_built
-    def get_weights(self):
+    def get_weights(self, as_dict=False):
+        if as_dict:
+            return {}
         return None
 
     @check_built
@@ -194,7 +197,9 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
         pass
 
     @check_built
-    def get_weights(self):
+    def get_weights(self, as_dict=False):
+        if as_dict:
+            return {}
         return None
 
     @check_built

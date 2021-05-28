@@ -182,8 +182,10 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
         self.b -= parameter_updates['bias']
 
     @check_built
-    def get_weights(self):
-        return self.W, self.b
+    def get_weights(self, as_dict=False):
+        if as_dict:
+            return {'W': self.W.get(), 'b': self.b.get()}
+        return self.W.get(), self.b.get()
 
     @check_built
     def summary_(self):

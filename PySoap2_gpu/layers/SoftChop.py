@@ -198,6 +198,7 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         self.a2 = None
         self.epsilon1 = None
         self.epsilon2 = None
+        self.bias = None
 
         self.b = None
 
@@ -221,6 +222,8 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
 
         self.epsilon1 = cl_array.to_device(device_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float32))
         self.epsilon2 = cl_array.to_device(device_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float32))
+
+        self.b = cl_array.zeros_like(self.a1)
 
         self.built = True
 
@@ -290,8 +293,15 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         self.clip_parameters()
 
     @check_built
-    def get_weights(self):
-        raise NotImplementedError
+    def get_weights(self, as_dict=False):
+        if as_dict:
+            return {'a1': self.a1.get(), 'a2': self.a2.get(),
+                    'epsilon1': self.epsilon1.get(), 'epsilon2': self.epsilon2.get(),
+                    'b': self.b.get()}
+
+        return (np.array([self.a1.get(), self.a2.get()]),
+                np.array([self.epsilon1.get(), self.epsilon2.get()]),
+                self.b.get())
 
     @check_built
     def summary_(self):

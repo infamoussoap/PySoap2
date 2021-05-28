@@ -57,8 +57,10 @@ class Input(NetworkNode, LayerBaseAttributes, Layer):
         pass
 
     @check_built
-    def get_weights(self):
-        return None, None
+    def get_weights(self, as_dict=False):
+        if as_dict:
+            return {}
+        return None
 
     @check_built
     def summary_(self):
