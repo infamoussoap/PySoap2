@@ -32,7 +32,7 @@ def get_attributes_of_layers(model):
 
 
 def get_layer_attributes_as_dict(layer):
-    layer_attributes = get_init_attributes_of_layer_as_dict(layer)
+    layer_attributes = get_init_attributes_of_cls_as_dict(layer)
     weight_attributes = layer.get_weights(as_dict=True)
 
     layer_attributes.update(weight_attributes)
@@ -40,15 +40,15 @@ def get_layer_attributes_as_dict(layer):
     return layer_attributes
 
 
-def get_init_attributes_of_layer_as_dict(layer):
-    attributes = get_init_attributes_names_of_layer(layer)
-    layer_dict = layer.__dict__
+def get_init_attributes_of_cls_as_dict(cls):
+    attributes = get_init_attributes_names_of_cls(cls)
+    cls_dict = cls.__dict__
 
-    return {p.name: layer_dict[p.name] for p in attributes}
+    return {p.name: cls_dict[p.name] for p in attributes}
 
 
-def get_init_attributes_names_of_layer(layer):
-    init_signature = inspect.signature(layer.__init__)
+def get_init_attributes_names_of_cls(cls):
+    init_signature = inspect.signature(cls.__init__)
     attributes = [p for p in init_signature.parameters.values()
                   if p.name != 'self' and p.kind != p.VAR_KEYWORD and p.kind != p.VAR_POSITIONAL]
 
@@ -111,8 +111,17 @@ def get_attributes_of_model(model):
     model_dictionary = {'input_layer_id': model.input_layer.id,
                         'output_layer_id': model.output_layer.id,
                         'optimizer_name': type(model.optimizer).__name__,
-                        'optimizer_attributes': model.optimizer.__dict__,
+                        'optimizer_attributes': get_optimizer_attributes_as_dict(model.optimizer),
                         'loss_function': model.loss_function,
                         'metric_function': model.metric_function}
 
     return model_dictionary
+
+
+def get_optimizer_attributes_as_dict(optimizer):
+    optimizer_attributes = get_init_attributes_of_cls_as_dict(optimizer)
+    parameters_attributes = optimizer.parameters_()
+
+    optimizer_attributes.update(parameters_attributes)
+
+    return optimizer_attributes

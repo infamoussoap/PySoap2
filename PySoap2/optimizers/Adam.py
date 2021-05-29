@@ -87,3 +87,6 @@ class Adam(Optimizer):
 
     def new_instance(self):
         return Adam(self.learning_rate, self.b1, self.b2, self.e)
+
+    def parameters_(self):
+        return {'m': self.m, 'v': self.v, 't': self.t}

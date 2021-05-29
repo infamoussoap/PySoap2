@@ -92,3 +92,6 @@ class Nadam(Optimizer):
 
     def new_instance(self):
         return Nadam(self.alpha, self.b1, self.b2, self.e)
+
+    def parameters_(self):
+        return {'m': self.m, 'v': self.v, 't': self.t}

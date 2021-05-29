@@ -86,3 +86,6 @@ class Adadelta(Optimizer):
 
     def new_instance(self):
         return Adadelta(self.learning_rate, self.rho, self.e)
+
+    def parameters_(self):
+        return {'dx2': self.dx2, 'v': self.v, 't': self.t}

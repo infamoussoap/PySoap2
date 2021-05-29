@@ -75,3 +75,6 @@ class SGD(Optimizer):
 
     def new_instance(self):
         return SGD(self.learning_rate, self.momentum, self.nesterov)
+
+    def parameters_(self):
+        return {'velocity': self.velocity}

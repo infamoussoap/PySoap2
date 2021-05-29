@@ -70,3 +70,6 @@ class RMSprop(Optimizer):
 
     def new_instance(self):
         return RMSprop(self.learning_rate, self.rho, self.e)
+
+    def parameters_(self):
+        return {'v': self.v}

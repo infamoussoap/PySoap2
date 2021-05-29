@@ -89,3 +89,10 @@ class Adam(Optimizer):
 
     def new_instance(self):
         return Adam(self.learning_rate, self.b1, self.b2, self.e)
+
+    def parameters_(self):
+        if self.m is None:  # If m is none, then v should also be none
+            return {'m': None, 'v': None, 't': self.t}
+        return {'m': {key: val.get() for key, val in self.m.items()},
+                'v': {key: val.get() for key, val in self.v.items()},
+                't': self.t}

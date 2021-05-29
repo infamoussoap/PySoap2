@@ -43,3 +43,19 @@ class Optimizer(abc.ABC):
         """
 
         pass
+
+    @abc.abstractmethod
+    def parameters_(self):
+        """ Returns the parameters for the given optimizer
+
+            Returns
+            -------
+            dict
+
+            Notes
+            -----
+            Some optimizers have parameters that are time dependent, and returns those parameters as a dictionary
+
+            Otherwise, return an empty dictionary
+        """
+        pass
