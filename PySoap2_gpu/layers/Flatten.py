@@ -69,6 +69,7 @@ class Flatten(NetworkNode, LayerBaseAttributes, Layer):
             parent = self.parents[0]
             post_activation = parent.activation_function_(x, grad=grad)
 
-            return self.predict(post_activation, output_only=True)
+            N = len(x)
+            return post_activation.reshape(N, -1)
 
         return reshaped_activation_function
