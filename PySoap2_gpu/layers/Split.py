@@ -41,7 +41,8 @@ class SplitInterfaceToDevice:
 
     @staticmethod
     def set_input_at_mask_as_output(input_, mask_positions, input_length, output_length, output_):
-        device_global_shape = output_.shape
+        N, *input_shape = output_.shape
+        device_global_shape = (N, int(np.prod(input_shape)))
 
         event = SplitInterfaceToDevice.device_program.set_input_at_mask_as_output(SplitInterfaceToDevice.device_queue,
                                                                                   device_global_shape, None,
