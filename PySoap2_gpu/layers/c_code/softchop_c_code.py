@@ -8,10 +8,8 @@ __kernel void delta_back_prop(__global const float *g_prime, __global const floa
 
 
 __kernel void parameter_gradient(__global const float *delta, __global const float *parameter, 
-                                 __global int *inputLength, __global int *N1, __global float *out)
+                                 const int input_length, const int N, __global float *out)
 {
-    int input_length = *inputLength;
-    int N = *N1;
     int i = get_global_id(0);
 
     float total = 0.0;

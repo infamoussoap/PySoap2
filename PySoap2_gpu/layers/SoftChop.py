@@ -179,11 +179,11 @@ class SoftChopInterfaceToDevice:
 
     @staticmethod
     def parameter_gradient(delta, parameter, input_length, N, out):
-        device_global_shape = (input_length.get(),)
+        device_global_shape = (input_length,)
         event = SoftChopInterfaceToDevice.device_program.parameter_gradient(SoftChopInterfaceToDevice.device_queue,
                                                                             device_global_shape, None,
                                                                             delta.data, parameter.data,
-                                                                            input_length.data, N.data, out.data)
+                                                                            input_length, N, out.data)
         event.wait()
 
 
@@ -266,8 +266,7 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
               'epsilon1': MultiSoftChop.de1(*args),
               'epsilon2': MultiSoftChop.de2(*args)}
 
-        N = np.array(len(prev_z)).astype(np.int32)
-        N_device = cl_array.to_device(self.device_queue, N)
+        N = np.int32(len(prev_z))
 
         parameter_gradients = {'a1': cl_array.empty_like(self.a1),
                                'a2': cl_array.empty_like(self.a2),
@@ -278,7 +277,7 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
 
         for key in parameter_gradients.keys():
             SoftChopInterfaceToDevice.parameter_gradient(summed_delta_device, dz[key], self.input_length_device,
-                                                         N_device, parameter_gradients[key])
+                                                         N, parameter_gradients[key])
 
         return parameter_gradients
 
@@ -295,8 +294,10 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
     @check_built
     def get_weights(self, as_dict=False):
         if as_dict:
-            return {'a1': self.a1.get(), 'a2': self.a2.get(),
-                    'epsilon1': self.epsilon1.get(), 'epsilon2': self.epsilon2.get(),
+            return {'a1': self.a1.get(),
+                    'a2': self.a2.get(),
+                    'epsilon1': self.epsilon1.get(),
+                    'epsilon2': self.epsilon2.get(),
                     'b': self.b.get()}
 
         return (np.array([self.a1.get(), self.a2.get()]),
