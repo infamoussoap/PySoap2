@@ -51,8 +51,8 @@ class DenseInterfaceToDevice:
 
         event = DenseInterfaceToDevice.device_program.predict(DenseInterfaceToDevice.device_queue, device_global_shape,
                                                               None,
-                                                              z.data, W.data, b.data, input_length.data,
-                                                              output_length.data, out.data)
+                                                              z.data, W.data, b.data, input_length,
+                                                              output_length, out.data)
         event.wait()
 
     @staticmethod
@@ -62,26 +62,26 @@ class DenseInterfaceToDevice:
         event = DenseInterfaceToDevice.device_program.delta_back_prop(DenseInterfaceToDevice.device_queue,
                                                                       device_global_shape, None,
                                                                       g_prime.data, new_delta.data, W.data,
-                                                                      input_length.data, output_length.data, out.data)
+                                                                      input_length, output_length, out.data)
         event.wait()
 
     @staticmethod
     def weight_gradient(delta, prev_z, input_length, output_length, N, out):
-        device_global_shape = (output_length.get(), input_length.get())  # Same shape as the weight matrix
+        device_global_shape = (output_length, input_length)  # Same shape as the weight matrix
 
         event = DenseInterfaceToDevice.device_program.weight_gradient(DenseInterfaceToDevice.device_queue,
                                                                       device_global_shape, None,
-                                                                      delta.data, prev_z.data, input_length.data,
-                                                                      output_length.data, N.data, out.data)
+                                                                      delta.data, prev_z.data, input_length,
+                                                                      output_length, N, out.data)
         event.wait()
 
     @staticmethod
     def bias_gradient(delta, output_length, N, out):
-        device_global_shape = (output_length.get(),)
+        device_global_shape = (output_length,)
 
         event = DenseInterfaceToDevice.device_program.bias_gradient(DenseInterfaceToDevice.device_queue,
                                                                     device_global_shape, None, delta.data,
-                                                                    output_length.data, N.data, out.data)
+                                                                    output_length, N, out.data)
         event.wait()
 
 
@@ -163,15 +163,14 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
 
         summed_delta_device = reduce(lambda x, y: x + y, delta_device)
 
-        N = np.array(len(z_device)).astype(np.int32)
-        N_device = cl_array.to_device(self.device_queue, N)
+        N = np.int32(len(z_device))
 
         W_grad_device = cl_array.empty(self.device_queue, self.W.shape, dtype=np.float32)
         DenseInterfaceToDevice.weight_gradient(summed_delta_device, z_device, self.input_length_device,
-                                               self.output_length_device, N_device, W_grad_device)
+                                               self.output_length_device, N, W_grad_device)
 
         b_grad_device = cl_array.empty(self.device_queue, self.b.shape, dtype=np.float32)
-        DenseInterfaceToDevice.bias_gradient(summed_delta_device, self.output_length_device, N_device, b_grad_device)
+        DenseInterfaceToDevice.bias_gradient(summed_delta_device, self.output_length_device, N, b_grad_device)
 
         parameter_gradients = {'weight': W_grad_device, 'bias': b_grad_device}
         return parameter_gradients
