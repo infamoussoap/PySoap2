@@ -35,8 +35,8 @@ class SplitInterfaceToDevice:
         event = SplitInterfaceToDevice.device_program.get_input_at_mask(SplitInterfaceToDevice.device_queue,
                                                                         device_global_shape, None,
                                                                         input_.data, mask_positions.data,
-                                                                        input_length.data,
-                                                                        output_length.data, output_.data)
+                                                                        input_length,
+                                                                        output_length, output_.data)
         event.wait()
 
     @staticmethod
@@ -47,8 +47,8 @@ class SplitInterfaceToDevice:
         event = SplitInterfaceToDevice.device_program.set_input_at_mask_as_output(SplitInterfaceToDevice.device_queue,
                                                                                   device_global_shape, None,
                                                                                   input_.data, mask_positions.data,
-                                                                                  input_length.data,
-                                                                                  output_length.data, output_.data)
+                                                                                  input_length,
+                                                                                  output_length, output_.data)
         event.wait()
 
 

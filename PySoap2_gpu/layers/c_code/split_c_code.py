@@ -1,10 +1,7 @@
 split_source_code = """
 __kernel void get_input_at_mask(__global const float *input_, __global const int *mask_positions, 
-                                __global int *inputLength, __global int *outputLength, __global float *output_)
+                                const int input_length, const int output_length, __global float *output_)
 {
-    int input_length = *inputLength;
-    int output_length = *outputLength;
-
     int i = get_global_id(0);
     int j = get_global_id(1);
 
@@ -12,12 +9,9 @@ __kernel void get_input_at_mask(__global const float *input_, __global const int
 }
 
 __kernel void set_input_at_mask_as_output(__global float *input_, __global const int *mask_positions,
-                                          __global int *inputLength, __global int *outputLength, 
+                                          const int input_length, const int output_length, 
                                           __global const float *output_)
 {
-    int input_length = *inputLength;
-    int output_length = *outputLength;
-
     int i = get_global_id(0);
     int j = get_global_id(1);
 

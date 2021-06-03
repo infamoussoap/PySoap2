@@ -45,9 +45,6 @@ class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
          """
         delta = new_delta[0]
 
-        delta_shape = delta.shape
-        delta_length = cl_array.to_device(self.device_queue, np.array(np.prod(delta_shape)).astype(np.int32))
-
         N = len(delta)
         out = cl_array.empty(self.device_queue, (N, *self.input_shape), dtype=np.float32)
 
@@ -151,8 +148,6 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
         self.input_shape = tuple(input_shape_of_concat_parents)
         self.output_shape = self._concat_shape(input_shape_of_concat_parents, self.axis)
 
-        output_length = np.array(np.prod(self.output_shape)).astype(np.int32)
-
         for concat_parent in self.parents:
             concat_parent.output_shape = self.output_shape
             concat_parent.built = True
@@ -188,13 +183,10 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
         N = len(z_device[0])
         input_ = cl_array.empty(device_queue, (N, *output_shape), dtype=np.float32)
 
-        output_length = np.prod(output_shape).astype(np.int32)
-        output_length_device = cl_array.to_device(device_queue, output_length)
-
+        output_length_device = np.int32(np.prod(output_shape))
         for array, mask_positions in zip(z_device, mask_positions_device):
             input_shape = array.shape[1:]
-            input_length = np.array(np.prod(input_shape), dtype=np.int32)
-            input_length_device = cl_array.to_device(device_queue, input_length)
+            input_length_device = np.int32(np.prod(input_shape))
 
             SplitInterfaceToDevice.set_input_at_mask_as_output(input_, mask_positions,
                                                                output_length_device,
@@ -262,13 +254,11 @@ def set_list_of_inputs_at_masks_as_outputs(device_queue, inputs_, mask_positions
     N = len(inputs_[0])
     input_ = cl_array.empty(device_queue, (N, *output_shape), dtype=np.float32)
 
-    output_length = np.prod(output_shape).astype(np.int32)
-    output_length_device = cl_array.to_device(device_queue, output_length)
+    output_length_device = np.int32(np.prod(output_shape))
 
     for array, mask_positions in zip(inputs_, mask_positions):
         input_shape = array.shape[1:]
-        input_length = np.array(np.prod(input_shape), dtype=np.int32)
-        input_length_device = cl_array.to_device(device_queue, input_length)
+        input_length_device = np.int32(np.prod(input_shape))
 
         SplitInterfaceToDevice.set_input_at_mask_as_output(input_, mask_positions,
                                                            output_length_device,
