@@ -31,9 +31,9 @@ class Kravchuk_2d(NetworkNode, LayerBaseAttributes, Layer):
 
         self.P1_device = None
         self.P2_device = None
-        self.M1_device = None
-        self.M2_device = None
-        self.M3_device = None
+        self.M1 = None
+        self.M2 = None
+        self.M3 = None
 
     def build(self, device_context, device_queue):
         """ Initialises the weight and bias units """
@@ -52,26 +52,22 @@ class Kravchuk_2d(NetworkNode, LayerBaseAttributes, Layer):
         self.input_shape = input_shape
         self.output_shape = input_shape
 
-        m1 = input_shape[0]
-        m2 = input_shape[1]
-        m3 = None if len(input_shape) == 2 else input_shape[2]
-        P1 = kravchuk_polynomials(m1 - 1, self.p).astype(np.float32)
-        P2 = kravchuk_polynomials(m2 - 1, self.p2).astype(np.float32)
+        self.M1 = np.int32(input_shape[0])
+        self.M2 = np.int32(input_shape[1])
+        self.M3 = None if len(input_shape) == 2 else np.int32(input_shape[2])
+        P1 = kravchuk_polynomials(self.M1 - 1, self.p).astype(np.float32)
+        P2 = kravchuk_polynomials(self.M2 - 1, self.p2).astype(np.float32)
 
         self.P1_device = cl_array.to_device(device_queue, P1)
         self.P2_device = cl_array.to_device(device_queue, P2)
-        self.M1_device = cl_array.to_device(device_queue, np.array(m1, dtype=np.int32))
-        self.M2_device = cl_array.to_device(device_queue, np.array(m2, dtype=np.int32))
-        if m3 is not None:
-            self.M3_device = cl_array.to_device(device_queue, np.array(m3, dtype=np.int32))
 
         self.built = True
 
     @check_built
     def predict(self, z, output_only=True, pre_activation_of_input=None):
         out = cl_array.empty_like(z)
-        PolynomialTransformationInterface.polynomial_transform_2d(self.P1_device, self.P2_device, z, self.M1_device,
-                                                                  self.M2_device, self.M3_device,
+        PolynomialTransformationInterface.polynomial_transform_2d(self.P1_device, self.P2_device, z, self.M1,
+                                                                  self.M2, self.M3,
                                                                   self.input_length_device, out)
 
         if output_only:
@@ -86,7 +82,7 @@ class Kravchuk_2d(NetworkNode, LayerBaseAttributes, Layer):
 
         # Inverse Transform
         PolynomialTransformationInterface.polynomial_transform_2d(self.P1_device.T, self.P2_device.T, delta,
-                                                                  self.M1_device, self.M2_device, self.M3_device,
+                                                                  self.M1, self.M2, self.M3,
                                                                   self.input_length_device, out)
 
         return out

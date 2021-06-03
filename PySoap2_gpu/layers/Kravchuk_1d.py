@@ -28,7 +28,7 @@ class Kravchuk_1d(NetworkNode, LayerBaseAttributes, Layer):
 
         self.p = p
         self.P1_device = None  # The kravchuk polynomial
-        self.M1_device = None
+        self.M1 = None
 
     def build(self, device_context, device_queue):
         """ Initialises the weight and bias units """
@@ -47,17 +47,16 @@ class Kravchuk_1d(NetworkNode, LayerBaseAttributes, Layer):
         self.input_shape = input_shape
         self.output_shape = input_shape
 
-        m1 = input_shape[0]
-        P1 = kravchuk_polynomials(m1 - 1, self.p).astype(np.float32)
+        self.M1 = np.int32(input_shape[0])
+        P1 = kravchuk_polynomials(self.M1 - 1, self.p).astype(np.float32)
         self.P1_device = cl_array.to_device(device_queue, P1)
-        self.M1_device = cl_array.to_device(device_queue, np.array(m1, dtype=np.int32))
 
         self.built = True
 
     @check_built
     def predict(self, z, output_only=True, pre_activation_of_input=None):
         out = cl_array.empty_like(z)
-        PolynomialTransformationInterface.polynomial_transform_1d(self.P1_device, z, self.M1_device,
+        PolynomialTransformationInterface.polynomial_transform_1d(self.P1_device, z, self.M1,
                                                                   self.input_length_device, out)
 
         if output_only:
@@ -71,7 +70,7 @@ class Kravchuk_1d(NetworkNode, LayerBaseAttributes, Layer):
         delta = reduce(lambda x, y: x + y, new_delta)
 
         # Inverse Transform
-        PolynomialTransformationInterface.polynomial_transform_1d(self.P1_device.T, delta, self.M1_device,
+        PolynomialTransformationInterface.polynomial_transform_1d(self.P1_device.T, delta, self.M1,
                                                                   self.input_length_device, out)
 
         return out

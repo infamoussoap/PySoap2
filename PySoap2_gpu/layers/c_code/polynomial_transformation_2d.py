@@ -2,15 +2,12 @@
 
 polynomial_2d_transform_c_code = """
 __kernel void polynomial_transform_2d(__global const float *P1, __global const float *P2, 
-                                      __global const float *images, __global int *M1_, __global int *M2_, 
-                                      __global int *inputLength, __global float *out)
+                                      __global const float *images, const int M1, const int M2, 
+                                      const int input_length, __global float *out)
 {
     int n = get_global_id(0);
     int i = get_global_id(1);
     int j = get_global_id(2);
-    int M1 = *M1_;
-    int M2 = *M2_;
-    int input_length = *inputLength;
 
     float total = 0.0;
     for (int x = 0; x < M1; x++)
@@ -24,13 +21,9 @@ __kernel void polynomial_transform_2d(__global const float *P1, __global const f
 }
 
 __kernel void polynomial_transform_2d_multi(__global const float *P1, __global const float *P2, 
-                                            __global const float *images, __global int *M1_, __global int *M2_,
-                                            __global int *M3_, __global int *inputLength, __global float *out)
+                                            __global const float *images, const int M1, const int M2,
+                                            const int M3, const int input_length, __global float *out)
 {
-    int M1 = *M1_;
-    int M2 = *M2_;
-    int M3 = *M3_;
-    int input_length = *inputLength;
 
     int n = get_global_id(0);
     int i = get_global_id(1);
