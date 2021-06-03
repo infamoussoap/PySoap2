@@ -75,17 +75,11 @@ class LayerBaseAttributes:
     @property
     def input_length_device(self):
         if len(self.input_shape) == 0:
-            input_length = np.array(0, dtype=np.int32)
-        else:
-            input_length = np.array(np.prod(self.input_shape), dtype=np.int32)
-
-        return cl_array.to_device(self.device_queue, input_length)
+            return np.int32(0)
+        return np.int32(np.prod(self.input_shape))
 
     @property
     def output_length_device(self):
         if len(self.output_shape) == 0:
-            output_length = np.array(0, dtype=np.int32)
-        else:
-            output_length = np.array(np.prod(self.output_shape), dtype=np.int32)
-
-        return cl_array.to_device(self.device_queue, output_length)
+            return np.int32(0)
+        return np.int32(np.prod(self.output_shape))
