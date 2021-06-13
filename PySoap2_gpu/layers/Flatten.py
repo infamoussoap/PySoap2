@@ -14,6 +14,8 @@ class Flatten(NetworkNode, LayerBaseAttributes, Layer):
         NetworkNode.__init__(self)
         LayerBaseAttributes.__init__(self)
 
+        self.activation_function = 'flatten'
+
     def build(self, device_context, device_queue):
         """ Built/initialised the layer """
         self.device_context = device_context
