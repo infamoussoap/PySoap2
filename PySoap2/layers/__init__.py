@@ -12,8 +12,9 @@ from .ElementWise import ElementWise
 from .BatchNorm import BatchNorm
 from .SoftChop import SoftChop
 
-# Flatten Layer
+# Reshaping Layers
 from .Flatten import Flatten
+from .Reshape import Reshape
 
 # Split and Concatenate layers
 from .Split import Split
