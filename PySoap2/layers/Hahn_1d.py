@@ -11,11 +11,13 @@ class Hahn_1d(Polynomial_1d):
         -----
         The input to this layer is assumed to either be 1 dimensional, or 2 dimensional data.
     """
-    def __init__(self, a=0, b=0):
+    def __init__(self, a=0, b=0, inverse=False):
         Polynomial_1d.__init__(self, None)
 
         self.a = a
         self.b = b
+
+        self.inverse = inverse
 
     def build(self):
         """ Initialises the weight and bias units """
@@ -25,6 +27,9 @@ class Hahn_1d(Polynomial_1d):
 
         n = input_shape[0]
         self.P1 = Hahn.polynomials(n - 1, self.a, self.b)
+
+        if self.inverse:
+            self.P1 = self.P1.T
 
         self.built = True
 

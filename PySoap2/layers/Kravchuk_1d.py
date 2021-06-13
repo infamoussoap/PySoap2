@@ -11,9 +11,11 @@ class Kravchuk_1d(Polynomial_1d):
         -----
         The input to this layer is assumed to either be 1 dimensional, or 2 dimensional data.
     """
-    def __init__(self, p=0.5):
+    def __init__(self, p=0.5, inverse=False):
         Polynomial_1d.__init__(self, None)
+
         self.p = p
+        self.inverse = inverse
 
     def build(self):
         """ Initialises the weight and bias units """
@@ -23,6 +25,8 @@ class Kravchuk_1d(Polynomial_1d):
 
         n = input_shape[0]
         self.P1 = Kravchuk.polynomials(n - 1, self.p)
+        if self.inverse:
+            self.P1 = self.P1.T
 
         self.built = True
 
