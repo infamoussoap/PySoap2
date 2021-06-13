@@ -11,10 +11,15 @@ from .Dense import Dense
 from .SoftChop import SoftChop
 from .BatchNorm import BatchNorm
 
-# Pass through layers
+# Reshape through layers
 from .Flatten import Flatten
+from .Reshape import Reshape
+
+# Split and Concatenate Layers
 from .Split import Split
 from .Concatenate import Concatenate
+
+# Mask Layer
 from .ValuesAtMask import ValuesAtMask
 
 # Polynomial Transformations
@@ -27,5 +32,5 @@ from .Kravchuk_2d import Kravchuk_2d
 from .Hahn_1d import Hahn_1d
 from .Hahn_2d import Hahn_2d
 
-# Add
+# Add Layer
 from .Add import Add
