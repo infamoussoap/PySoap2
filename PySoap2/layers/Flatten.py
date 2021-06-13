@@ -30,6 +30,8 @@ class Flatten(NetworkNode, LayerBaseAttributes, Layer):
         NetworkNode.__init__(self)
         LayerBaseAttributes.__init__(self)
 
+        self.activation_function = 'flatten'
+
     def build(self):
         """ Built/initialised the layer """
         input_shape = self.parents[0].output_shape
