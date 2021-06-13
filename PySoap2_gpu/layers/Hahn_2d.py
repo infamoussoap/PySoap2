@@ -3,32 +3,36 @@ import numpy as np
 import pyopencl as cl
 import pyopencl.array as cl_array
 
-from PySoap2.layers.PolynomialTransformations import Kravchuk
+from PySoap2.layers.PolynomialTransformations import Hahn
 
 from PySoap2_gpu.layers import Polynomial_2d
 
 from .ValueChecks import check_built
 
 
-class Kravchuk_2d(Polynomial_2d):
-    """ 2-d Kravchuk transform the input to this layer
+class Hahn_2d(Polynomial_2d):
+    """ 2-d Hahn transform the input to this layer
 
         Notes
         -----
         The input to this layer is assumed to either be 2 dimensional, or 3 dimensional data.
     """
-    def __init__(self, p=0.5, p2=None, inverse=False):
+
+    def __init__(self, a=0, b=0, a2=None, b2=None, inverse=False):
         Polynomial_2d.__init__(self, None, None)
 
-        self.p = p
-        self.p2 = p if p2 is None else p2
+        self.a, self.b = a, b
+
+        self.a2 = a if a2 is None else a2
+        self.b2 = b if b2 is None else b2
+
         self.inverse = inverse
 
     def build(self, device_context, device_queue):
         super().build(device_context, device_queue)
 
-        P1 = Kravchuk.polynomials(self.M1 - 1, self.p).astype(np.float32)
-        P2 = Kravchuk.polynomials(self.M2 - 1, self.p2).astype(np.float32)
+        P1 = Hahn.polynomials(self.M1 - 1, self.a, self.b).astype(np.float32)
+        P2 = Hahn.polynomials(self.M2 - 1, self.a, self.b).astype(np.float32)
 
         if self.inverse:
             P1 = P1.T
@@ -41,4 +45,4 @@ class Kravchuk_2d(Polynomial_2d):
 
     @check_built
     def summary_(self):
-        return 'Kravchuk Transformation', f'Output Shape {self.input_shape}'
+        return 'Hahn Transformation', f'Output Shape {self.input_shape}'
