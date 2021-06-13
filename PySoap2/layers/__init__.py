@@ -26,6 +26,9 @@ from .Split import SplitRightChild
 from .Concatenate import ConcatenateParent
 
 # Polynomial Transformation Layers
+from .Polynomial_1d import Polynomial_1d
+from .Polynomial_2d import Polynomial_2d
+
 from .Kravchuk_1d import Kravchuk_1d
 from .Kravchuk_2d import Kravchuk_2d
 
