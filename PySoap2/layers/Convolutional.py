@@ -1,6 +1,8 @@
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
 
+from functools import reduce
+
 from PySoap2.layers import Layer
 from PySoap2.layers.NetworkNode import NetworkNode
 from PySoap2.layers.LayerBaseAttributes import LayerBaseAttributes
@@ -208,8 +210,8 @@ class Conv_2D(NetworkNode, LayerBaseAttributes, Layer):
         # Initialise the the filter with Glorot-Uniform, a uniform distribution over [-limit, limit],
         # where limit = sqrt(6 / (fan_in + fan_out)) (fan_in is the number of input units in the weight
         # tensor and fan_out is the number of output units).
-        limit = np.sqrt(6 / (np.prod(self.single_filter_shape) + 1))
-        self.filter = np.random.uniform(low=-limit, high=limit, size=self.single_filter_shape)
+        limit = np.sqrt(6 / (np.prod(self.filter_shape) + 1))
+        self.filter = np.random.uniform(low=-limit, high=limit, size=self.filter_shape)
         self.b = np.zeros(self.filter_num)
 
         self.built = True
@@ -268,20 +270,26 @@ class Conv_2D(NetworkNode, LayerBaseAttributes, Layer):
             filters, W. But it does know the values of g'_{k-1} and delta^k, due to forward propagation
             and the backwards nature of the back propagation algorithm.
         """
+        # einsum requires g_prime to be a (N, *input_shape) np.array, but when the previous activation function
+        # is linear, g_prime will be 1 and will need to be converted to a np.array
+        if isinstance(g_prime, int):
+            N = len(new_delta[0])
+            g_prime = np.ones((N, *self.input_shape))
+
         # I don't even know how to explain this code
         # But it makes sense when you look at the math
 
         # Essentially these 2 lines returns the elements of the filter
         # that hits a given pixel position
-        eye = np.eye(np.prod(self.input_shape)).reshape((np.prod(self.input_shape), *self.input_shape))
+        input_length = int(np.prod(self.input_shape))
+        eye = np.eye(input_length).reshape((input_length, *self.input_shape))
         eye_conv = self.perform_conv(eye, self.filter, np.zeros(self.filter_num), self.stride)
 
         # Reshape
         eye_conv = eye_conv.reshape((*self.input_shape, *self.output_spatial_shape, self.filter_num))
 
         # Self-explanatory once you look at the math
-
-        delta = np.sum(np.array(new_delta), axis=0)
+        delta = reduce(lambda x, y: x + y, new_delta)
         out_delta = np.einsum("ijkl,abcjkl,iabc->iabc", delta, eye_conv, g_prime, optimize='greedy')
         return out_delta
 
@@ -305,6 +313,7 @@ class Conv_2D(NetworkNode, LayerBaseAttributes, Layer):
         """
         # This code is self-explanatory when you look at the math
         windowed = self.im2window(prev_z, self.filter_spatial_shape, self.stride)
+        delta = reduce(sum, delta)
 
         parameter_gradients = {'filter': np.einsum("abcijk,abcl->ijkl", windowed, delta, optimize="greedy"),
                                'bias': np.sum(delta, axis=(0, 1, 2))}
