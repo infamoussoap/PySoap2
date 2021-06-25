@@ -52,6 +52,8 @@ class Model(CpuBaseModel):
             ----------
             z : np.array or cl_array.Array
             output_only : bool
+            training : bool
+                Some layers behave differently during the training phase
 
             Notes
             -----
