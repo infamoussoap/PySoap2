@@ -1,7 +1,7 @@
 import numpy as np
 import random
 
-import scipy
+import scipy.ndimage
 
 from .FancyPCA import fancy_pca
 
@@ -16,8 +16,6 @@ def is_iterable(index):
 
 
 def rotate(x):
-    height, width = x.shape[:2]
-
     angle = np.random.uniform(low=-10, high=10)
     return scipy.ndimage.rotate(x, angle, reshape=False)
 
