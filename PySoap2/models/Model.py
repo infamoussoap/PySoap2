@@ -89,7 +89,7 @@ class Model:
 
         return layer_order[::-1]
 
-    def predict(self, z, output_only=True):
+    def predict(self, z, output_only=True, training=False):
         """ Perform forward propagation of the whole network
 
             Parameters
@@ -99,6 +99,8 @@ class Model:
             output_only : bool
                 If true then only the model output will be returned
                 Otherwise the pre and post activations will be returned as a dictionary
+            training : bool
+                Some layers (like the dropout layer) have different behaviour when it is training
 
             Returns
             -------
@@ -122,11 +124,12 @@ class Model:
             layer_arg = self._get_layer_predict_arguments(layer, cached_outputs, output_only=output_only)
 
             if output_only:
-                cached_outputs[layer_id] = layer.predict(layer_arg, output_only=output_only)
+                cached_outputs[layer_id] = layer.predict(layer_arg, output_only=output_only, training=training)
             else:
                 pre_activation_args, post_activation_args = layer_arg
-                cached_outputs[layer_id] = layer.predict(post_activation_args, output_only=output_only,
-                                                         pre_activation_of_input=pre_activation_args)
+                cached_outputs[layer_id] = layer.predict(post_activation_args,
+                                                         pre_activation_of_input=pre_activation_args,
+                                                         output_only=output_only, training=training)
 
         if not output_only:
             return cached_outputs
@@ -238,7 +241,7 @@ class Model:
 
     def _back_prop(self, x_train, y_train):
         """ Perform one iteration of backpropagation on the given batches """
-        predictions_of_model_layers = self.predict(x_train, output_only=False)
+        predictions_of_model_layers = self.predict(x_train, output_only=False, training=True)
 
         layer_gradients = self._get_layer_gradients(predictions_of_model_layers, y_train)
         parameter_updates = self.optimizer.step(simplify_recursive_dict(layer_gradients))
