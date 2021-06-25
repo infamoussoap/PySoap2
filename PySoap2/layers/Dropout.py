@@ -15,7 +15,7 @@ class Dropout(NetworkNode, LayerBaseAttributes, Layer):
         LayerBaseAttributes.__init__(self)
 
         self.rate = rate
-        self.predict_mask = None
+        self.mask = None
 
     def build(self):
         parent = self.parents[0]
@@ -31,19 +31,19 @@ class Dropout(NetworkNode, LayerBaseAttributes, Layer):
                 return z
             return pre_activation_of_input, z
 
-        self.predict_mask = np.random.rand(*self.output_shape) > self.rate
+        self.mask = np.random.rand(*self.output_shape) > self.rate
 
         # The inverted dropout method, where scaling is performed during training, so the
         # forward pass, during testing, does not need to be scaled.
         # see https://cs231n.github.io/neural-networks-2/
         if output_only:
-            return z * self.predict_mask / (1 - self.rate)
-        return pre_activation_of_input * self.predict_mask / (1 - self.rate), z * self.predict_mask / (1 - self.rate)
+            return z * self.mask / (1 - self.rate)
+        return pre_activation_of_input * self.mask / (1 - self.rate), z * self.mask / (1 - self.rate)
 
     @check_built
     def get_delta_backprop_(self, g_prime, new_delta, prev_z):
         delta = reduce(lambda x, y: x + y, new_delta)
-        return delta * self.predict_mask
+        return delta * self.mask
 
     @check_built
     def get_parameter_gradients_(self, delta, prev_z):
