@@ -97,7 +97,7 @@ class Dropout(NetworkNode, LayerBaseAttributes, Layer):
     @check_built
     def get_delta_backprop_(self, g_prime, new_delta, prev_z):
         delta = reduce(lambda x, y: x + y, new_delta)
-        return self._dropout(delta, self.mask, self.output_length_device) / (1 - self.rate)
+        return self._dropout(delta, self.mask, self.output_length_device)
 
     @check_built
     def get_parameter_gradients_(self, delta, prev_z):
