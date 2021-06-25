@@ -38,3 +38,6 @@ from .Hahn_2d import Hahn_2d
 
 # Add Layers
 from .Add import Add
+
+# Dropout
+from .Dropout import Dropout

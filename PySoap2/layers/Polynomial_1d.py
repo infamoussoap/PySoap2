@@ -43,7 +43,7 @@ class Polynomial_1d(NetworkNode, LayerBaseAttributes, Layer):
         self.built = True
 
     @check_built
-    def predict(self, z, output_only=True, pre_activation_of_input=None):
+    def predict(self, z, output_only=True, **kwargs):
         transformed_z = PolynomialTransform.transform_1d(z, self.P1)
 
         if output_only:

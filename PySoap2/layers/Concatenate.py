@@ -37,7 +37,7 @@ class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
         self.built = False
 
     @check_built
-    def predict(self, z, output_only=True, pre_activation_of_input=None):
+    def predict(self, z, output_only=True, pre_activation_of_input=None, **kwargs):
         """ Returns the output of this layer
 
             Parameters
@@ -190,7 +190,7 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
         self.built = True
 
     @check_built
-    def predict(self, z, output_only=True, pre_activation_of_input=None):
+    def predict(self, z, output_only=True, pre_activation_of_input=None, **kwargs):
         """ Forward propagation of this layer
 
             Parameters

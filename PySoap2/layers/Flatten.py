@@ -42,7 +42,7 @@ class Flatten(NetworkNode, LayerBaseAttributes, Layer):
         self.built = True
 
     @check_built
-    def predict(self, z, output_only=True, pre_activation_of_input=None):
+    def predict(self, z, output_only=True, pre_activation_of_input=None, **kwargs):
         """ Returns the prediction of this layer
 
             Parameters
