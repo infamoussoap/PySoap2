@@ -45,7 +45,7 @@ class Model(CpuBaseModel):
         for layer in self.layers_by_number_of_parents:
             layer.build(self.device_context, self.device_queue)
 
-    def predict(self, z, output_only=True):
+    def predict(self, z, output_only=True, training=False):
         """ Forward propagates the input
 
             Parameters
@@ -62,7 +62,7 @@ class Model(CpuBaseModel):
             z = z.astype(np.float32)
             z = cl_array.to_device(self.device_queue, z)
 
-        return super().predict(z, output_only=output_only)
+        return super().predict(z, output_only=output_only, training=training)
 
     def evaluate(self, x_test, y_test):
         """ Evaluates the model with the given loss-function and metric function
@@ -111,7 +111,7 @@ class Model(CpuBaseModel):
 
         y_train_device = cl_array.to_device(self.device_queue, y_train)
 
-        predictions_of_model_layers = self.predict(x_train, output_only=False)
+        predictions_of_model_layers = self.predict(x_train, output_only=False, training=True)
 
         layer_gradients = self._get_layer_gradients(predictions_of_model_layers, y_train_device)
         parameter_updates = self.optimizer.step(simplify_recursive_dict(layer_gradients))

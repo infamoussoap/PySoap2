@@ -39,7 +39,7 @@ class ValuesAtMask(NetworkNode, LayerBaseAttributes, Layer):
         self.built = True
 
     @check_built
-    def predict(self, z, output_only=True, pre_activation_of_input=None):
+    def predict(self, z, output_only=True, pre_activation_of_input=None, **kwargs):
         """ Forward propagate the input at the mask positions
 
             Parameters

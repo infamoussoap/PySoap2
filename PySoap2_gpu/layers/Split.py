@@ -78,7 +78,7 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
         self.built = True
 
     @check_built
-    def predict(self, z, output_only=True, pre_activation_of_input=None):
+    def predict(self, z, output_only=True, pre_activation_of_input=None, **kwargs):
         N = len(z)
         z_at_mask = cl_array.empty(self.device_queue, (N, *self.output_shape), dtype=np.float32)
 
@@ -171,7 +171,7 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
         self.built = True
 
     @check_built
-    def predict(self, z, output_only=True, pre_activation_of_input=None):
+    def predict(self, z, output_only=True, pre_activation_of_input=None, **kwargs):
         if output_only:
             return z.reshape(-1, *self.output_shape)
         return pre_activation_of_input.reshape(-1, *self.input_shape), z.reshape(-1, *self.output_shape)

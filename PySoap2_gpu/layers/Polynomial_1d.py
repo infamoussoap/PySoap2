@@ -56,7 +56,7 @@ class Polynomial_1d(NetworkNode, LayerBaseAttributes, Layer):
         self.built = True
 
     @check_built
-    def predict(self, z, output_only=True, pre_activation_of_input=None):
+    def predict(self, z, output_only=True, **kwargs):
         out = cl_array.empty_like(z)
         PolynomialTransformationInterface.polynomial_transform_1d(self.P1, z, self.M1,
                                                                   self.input_length_device, out)

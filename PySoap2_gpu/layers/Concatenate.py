@@ -165,7 +165,7 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
         self.built = True
 
     @check_built
-    def predict(self, z, output_only=True, pre_activation_of_input=None):
+    def predict(self, z, output_only=True, pre_activation_of_input=None, **kwargs):
         if output_only:
             return self._concatenate_with_parents_mask_positions(z)
 
