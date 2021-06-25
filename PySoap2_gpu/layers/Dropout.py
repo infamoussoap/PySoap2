@@ -82,10 +82,11 @@ class Dropout(NetworkNode, LayerBaseAttributes, Layer):
         # The inverted dropout method, where scaling is performed during training, so the
         # forward pass, during testing, does not need to be scaled.
         # see https://cs231n.github.io/neural-networks-2/
+
+        z_inverted_dropout = self._dropout(z, self.mask, self.output_length_device) / (1 - self.rate)
         if output_only:
-            return self._dropout(z, self.mask, self.output_length_device) / (1 - self.rate)
-        return (self._dropout(pre_activation_of_input, self.mask, self.output_length_device) / (1 - self.rate),
-                self._dropout(z, self.mask, self.output_length_device) / (1 - self.rate))
+            return z_inverted_dropout
+        return z_inverted_dropout, z_inverted_dropout
 
     @staticmethod
     def _dropout(z, mask, output_length):
