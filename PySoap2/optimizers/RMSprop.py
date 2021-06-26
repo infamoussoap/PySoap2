@@ -1,6 +1,7 @@
 import numpy as np
 
 from PySoap2.optimizers import Optimizer
+from .LearningRateSchedulers import convert_to_learning_rate_scheduler
 
 
 class RMSprop(Optimizer):
@@ -31,6 +32,8 @@ class RMSprop(Optimizer):
         self.learning_rate = learning_rate
         self.rho = rho
         self.e = e
+
+        self.learning_rate_scheduler = convert_to_learning_rate_scheduler(learning_rate)
 
         self.v = None
 
@@ -65,7 +68,8 @@ class RMSprop(Optimizer):
         self.v = {key: self.rho * v + (1 - self.rho) * g**2 if g is not None else None
                   for (key, v, g) in zip(grad_dict.keys(), self.v.values(), grad_dict.values())}
 
-        return {key: self.learning_rate * g / np.sqrt(v + self.e) if g is not None else None
+        scheduled_learning_rate = self.learning_rate_scheduler.get()
+        return {key: scheduled_learning_rate * g / np.sqrt(v + self.e) if g is not None else None
                 for (key, v, g) in zip(grad_dict.keys(), self.v.values(), grad_dict.values())}
 
     def new_instance(self):

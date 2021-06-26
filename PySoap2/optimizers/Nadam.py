@@ -1,6 +1,7 @@
 import numpy as np
 
 from PySoap2.optimizers import Optimizer
+from .LearningRateSchedulers import convert_to_learning_rate_scheduler
 
 
 class Nadam(Optimizer):
@@ -39,6 +40,8 @@ class Nadam(Optimizer):
         self.b1 = b1
         self.b2 = b2
         self.e = e
+
+        self.learning_rate_scheduler = convert_to_learning_rate_scheduler(learning_rate)
 
         self.m = None
         self.v = None
@@ -87,7 +90,8 @@ class Nadam(Optimizer):
 
         self.t += 1
 
-        return {key: self.alpha*m/np.sqrt(v + self.e) if v is not None else None
+        scheduled_learning_rate = self.learning_rate_scheduler.get()
+        return {key: scheduled_learning_rate*m/np.sqrt(v + self.e) if v is not None else None
                 for (key, m, v) in zip(self.m.keys(), m_hat.values(), v_hat.values())}
 
     def new_instance(self):

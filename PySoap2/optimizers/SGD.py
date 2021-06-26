@@ -1,4 +1,5 @@
 from PySoap2.optimizers import Optimizer
+from .LearningRateSchedulers import convert_to_learning_rate_scheduler
 
 
 class SGD(Optimizer):
@@ -18,6 +19,8 @@ class SGD(Optimizer):
         self.learning_rate = learning_rate
         self.momentum = momentum
         self.nesterov = nesterov
+
+        self.learning_rate_scheduler = convert_to_learning_rate_scheduler(learning_rate)
 
         self.velocity = None
 
@@ -60,11 +63,11 @@ class SGD(Optimizer):
 
             Obviously the output is a dictionary, so you'll have to account for that.
         """
-
+        scheduled_learning_rate = self.learning_rate_scheduler.get()
         if self.velocity is None:
             self.velocity = {key: 0 for key in grad_dict.keys()}
         elif self.momentum > 1e-8:
-            self.velocity = {key: self.momentum * v - self.learning_rate * g if g is not None else None
+            self.velocity = {key: self.momentum * v - scheduled_learning_rate * g if g is not None else None
                              for (key, v, g) in zip(grad_dict.keys(), self.velocity.values(), grad_dict.values())}
 
         gradient_updates = {}

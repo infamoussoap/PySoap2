@@ -1,7 +1,7 @@
 import numpy as np
-
 from pyopencl import clmath
 
+from PySoap2.optimizers.LearningRateSchedulers import convert_to_learning_rate_scheduler
 from .Optimizer import Optimizer
 
 
@@ -41,6 +41,8 @@ class Adam(Optimizer):
         self.b1 = float(b1)
         self.b2 = float(b2)
         self.e = float(e)
+
+        self.learning_rate_scheduler = convert_to_learning_rate_scheduler(learning_rate)
 
         self.m = None
         self.v = None
@@ -82,7 +84,8 @@ class Adam(Optimizer):
         self.v = {key: self.b2 * v + (1 - self.b2) * (g ** 2) if g is not None else None
                   for (key, v, g) in zip(grad_dict.keys(), self.v.values(), grad_dict.values())}
 
-        a = self.learning_rate * np.sqrt(1 - self.b2 ** self.t) / (1 - self.b1 ** self.t)
+        scheduled_learning_rate = self.learning_rate_scheduler.get()
+        a = scheduled_learning_rate * np.sqrt(1 - self.b2 ** self.t) / (1 - self.b1 ** self.t)
 
         return {key: a * m / (clmath.sqrt(v) + self.e) if v is not None else None
                 for (key, m, v) in zip(self.m.keys(), self.m.values(), self.v.values())}

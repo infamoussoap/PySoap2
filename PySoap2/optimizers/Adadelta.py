@@ -1,6 +1,7 @@
 import numpy as np
 
 from PySoap2.optimizers import Optimizer
+from .LearningRateSchedulers import convert_to_learning_rate_scheduler
 
 
 class Adadelta(Optimizer):
@@ -33,6 +34,8 @@ class Adadelta(Optimizer):
         self.learning_rate = learning_rate
         self.rho = rho
         self.e = e
+
+        self.learning_rate_scheduler = convert_to_learning_rate_scheduler(learning_rate)
 
         self.dx2 = None
         self.v = None
@@ -81,7 +84,8 @@ class Adadelta(Optimizer):
         self.dx2 = {key: self.rho * dx2 + (1 - self.rho) * dx**2 if dx is not None else None
                     for (key, dx, dx2) in zip(step.keys(), step.values(), self.dx2.values())}
 
-        return {key: self.learning_rate * val if val is not None else None
+        scheduled_learning_rate = self.learning_rate_scheduler.get()
+        return {key: scheduled_learning_rate * val if val is not None else None
                 for (key, val) in step.items()}
 
     def new_instance(self):

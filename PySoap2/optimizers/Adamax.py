@@ -1,6 +1,7 @@
 import numpy as np
 
 from PySoap2.optimizers import Optimizer
+from .LearningRateSchedulers import convert_to_learning_rate_scheduler
 
 
 class Adamax(Optimizer):
@@ -39,6 +40,8 @@ class Adamax(Optimizer):
         self.b1 = b1
         self.b2 = b2
         self.e = e
+
+        self.learning_rate_scheduler = convert_to_learning_rate_scheduler(learning_rate)
 
         self.m = None
         self.v = None
@@ -80,7 +83,8 @@ class Adamax(Optimizer):
         self.v = {key: np.maximum(self.b2 * v, np.abs(g)) if g is not None else None
                   for (key, v, g) in zip(grad_dict.keys(), self.v.values(), grad_dict.values())}
 
-        a = self.learning_rate / (1 - self.b1 ** self.t)
+        scheduled_learning_rate = self.learning_rate_scheduler.get()
+        a = scheduled_learning_rate / (1 - self.b1 ** self.t)
 
         return {key: a * m / (v + self.e) if v is not None else None
                 for (key, m, v) in zip(self.m.keys(), self.m.values(), self.v.values())}

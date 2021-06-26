@@ -19,3 +19,7 @@ from .Adadelta import Adadelta
 
 # Get optimiser by string
 from .get_optimizer import get_optimizer
+
+
+# Learning Rates
+from . import LearningRateSchedulers
