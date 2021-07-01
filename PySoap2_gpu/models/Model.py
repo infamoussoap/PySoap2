@@ -4,6 +4,7 @@ import pyopencl as cl
 import pyopencl.array as cl_array
 
 from PySoap2.models import Model as CpuBaseModel
+from PySoap2.models import ModelLogger
 
 from PySoap2_gpu.optimizers import Optimizer, get_optimizer
 from PySoap2_gpu.utils.dictionary_tricks import simplify_recursive_dict, unpack_to_recursive_dict
@@ -59,10 +60,7 @@ class Model(CpuBaseModel):
             -----
             If z is a np.array then it will be converted to be a cl_array.Array
         """
-
-        if not isinstance(z, cl_array.Array):
-            z = z.astype(np.float32)
-            z = cl_array.to_device(self.device_queue, z)
+        z = convert_to_clarray(self.device_queue, z, dtype=np.float32)
 
         return super().predict(z, output_only=output_only, training=training)
 
@@ -71,19 +69,15 @@ class Model(CpuBaseModel):
 
             Parameters
             ----------
-            x_test : np.array
-            y_test : np.array
+            x_test : np.array or cl_array.Array
+            y_test : np.array or cl_array.Array
         """
+        x_test = convert_to_clarray(self.device_queue, x_test, dtype=np.float32)
+        y_test = convert_to_clarray(self.device_queue, y_test, dtype=np.float32)
 
-        x_test = x_test.astype(np.float32)
-        y_test = y_test.astype(np.float32)
+        prediction = self.predict(x_test)
 
-        x_test_device = cl_array.to_device(self.device_queue, x_test)
-        y_test_device = cl_array.to_device(self.device_queue, y_test)
-
-        prediction = self.predict(x_test_device)
-
-        loss_val = self._loss_function(prediction, y_test_device)
+        loss_val = self._loss_function(prediction, y_test)
 
         if isinstance(loss_val, cl_array.Array):
             loss_val = loss_val.get()
@@ -91,7 +85,7 @@ class Model(CpuBaseModel):
         eval_str = f'{self.loss_function}: {format(loss_val, ".4f")}'
 
         if self.metric_function is not None:
-            metric_val = self._metric(prediction, y_test_device)
+            metric_val = self._metric(prediction, y_test)
             if isinstance(metric_val, cl_array.Array):
                 metric_val = metric_val.get()
 
@@ -99,23 +93,40 @@ class Model(CpuBaseModel):
 
         return eval_str
 
+    def train(self, x_train, y_train, epochs=100, batch_size=None, verbose=True, log=False,
+              x_test=None, y_test=None):
+        """ (x_train, y_train) need to be np.array for ImageAugmentation to for
+
+            (x_test, y_test) assumed to be np.array or cl_array.Array
+        """
+        if x_test is not None:
+            x_test = convert_to_clarray(self.device_queue, x_test, dtype=np.float32)
+        if y_test is not None:
+            y_test = convert_to_clarray(self.device_queue, y_test, dtype=np.float32)
+
+        # If you want to log, but didn't pass in a logger
+        if log and not isinstance(log, ModelLogger):
+            x_train_device = convert_to_clarray(self.device_queue, x_train, dtype=np.float32)
+            y_train_device = convert_to_clarray(self.device_queue, y_train, dtype=np.float32)
+            log = ModelLogger(self, x_train_device, y_train_device, x_test=x_test, y_test=y_test)
+
+        super().train(x_train, y_train, epochs=epochs, batch_size=batch_size, verbose=verbose,
+                      log=log, x_test=x_test, y_test=y_test)
+
     def _back_prop(self, x_train, y_train):
         """ Perform one iteration of backpropagation on the given batches
 
             Parameters
             ----------
-            x_train : np.array
-            y_train : np.array
+            x_train : np.array or cl_array.Array
+            y_train : np.array or cl_array.Array
         """
-
-        x_train = x_train.astype(np.float32)
-        y_train = y_train.astype(np.float32)
-
-        y_train_device = cl_array.to_device(self.device_queue, y_train)
+        x_train = convert_to_clarray(self.device_queue, x_train, dtype=np.float32)
+        y_train = convert_to_clarray(self.device_queue, y_train, dtype=np.float32)
 
         predictions_of_model_layers = self.predict(x_train, output_only=False, training=True)
 
-        layer_gradients = self._get_layer_gradients(predictions_of_model_layers, y_train_device)
+        layer_gradients = self._get_layer_gradients(predictions_of_model_layers, y_train)
         parameter_updates = self.optimizer.step(simplify_recursive_dict(layer_gradients))
         parameter_updates_by_layer = unpack_to_recursive_dict(parameter_updates)
 
@@ -125,10 +136,44 @@ class Model(CpuBaseModel):
 
     @property
     def _loss_function(self):
-        return ErrorFunction.get_error_function(self.loss_function)
+        return self._wrapped_loss_function
+
+    def _wrapped_loss_function(self, *args):
+        """ args to the loss_function needs to be cl_arrays """
+        args = [convert_to_clarray(self.device_queue, arg) for arg in args]
+        return ErrorFunction.get_error_function(self.loss_function)(*args)
 
     @property
     def _metric(self):
         if self.metric_function is not None:
-            return MetricFunction.get_metric_function(self.metric_function)
+            return self._wrapped_metric
         return None
+
+    def _wrapped_metric(self, *args):
+        args = [convert_to_clarray(self.device_queue, arg) for arg in args]
+        return MetricFunction.get_metric_function(self.metric_function)(*args)
+
+
+def convert_to_clarray(device_queue, array, dtype=np.float32):
+    """ Converts the array to cl_array.Array
+
+        Parameters
+        ----------
+        device_queue : cl.CommandQueue
+            The queue for the device to put the array on
+        array : np.array or cl_array.Array
+            The array to be converted
+        dtype : Class, optional
+            The data type for the array
+
+        Notes
+        -----
+        If array is a cl_array.Array then it will be returned
+        If array is np.array then it will be converted to the dtype and sent to the queue
+    """
+    if isinstance(array, cl_array.Array):
+        return array
+    elif isinstance(array, np.ndarray):
+        return cl_array.to_device(device_queue, array.astype(dtype))
+    else:
+        raise ValueError(f'{type(array)} not supported, only cl_array and np.ndarray allowed.')

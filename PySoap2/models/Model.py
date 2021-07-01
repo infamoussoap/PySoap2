@@ -8,6 +8,7 @@ import h5py
 from PySoap2.optimizers import Optimizer, get_optimizer
 from PySoap2 import get_error_function, get_metric_function
 
+from .Logger import ModelLogger
 from .dictionary_tricks import simplify_recursive_dict, unpack_to_recursive_dict
 from .SaveModel import get_attributes_of_full_model
 
@@ -197,7 +198,8 @@ class Model:
 
         return eval_str
 
-    def train(self, x_train, y_train, epochs=100, batch_size=None, verbose=True):
+    def train(self, x_train, y_train, epochs=100, batch_size=None, verbose=True, log=False,
+              x_test=None, y_test=None):
         """ Train the neural network by means of back propagation
             Parameters
             ----------
@@ -214,14 +216,21 @@ class Model:
                 length of the dataset, i.e. traditional gradient descent.
             verbose : bool, optional
                 If set to `True` then the model performance will be printed after each epoch
+            log : bool, optional
+                Log the training history
+            x_test : np.array, optional
+            y_test : np.array, optional
         """
+
+        model_logger = log if isinstance(log, ModelLogger) else ModelLogger(self, x_train, y_train,
+                                                                            x_test=x_test, y_test=y_test)
 
         training_length = len(x_train)
         if batch_size is None:
             batch_size = training_length
         index = list(range(training_length))
 
-        for _ in range(epochs):
+        for epoch in range(epochs):
             if verbose:
                 print(f'Training on {len(x_train)} samples')
 
@@ -236,8 +245,13 @@ class Model:
                 start, end = 0, batch_size
                 batch_x, batch_y = x_train[index[start:end]], y_train[index[start:end]]
                 evaluation = self.evaluate(batch_x, batch_y)
-                print(f'Epoch {_ + 1}/{epochs}')
+                print(f'Epoch {epoch + 1}/{epochs}')
                 print(evaluation)
+
+            if log:
+                model_logger.log_model(epoch, None)
+        if log:
+            model_logger.save()
 
     def _back_prop(self, x_train, y_train):
         """ Perform one iteration of backpropagation on the given batches """
