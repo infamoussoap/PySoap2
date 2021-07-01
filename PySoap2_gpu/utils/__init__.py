@@ -8,3 +8,5 @@ from . import cl_math_functions
 from .Broadcasting import Broadcast
 
 from PySoap2.utils import visualize_model
+from PySoap2.utils import ImageAugmentationGenerator
+
