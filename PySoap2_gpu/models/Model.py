@@ -5,6 +5,7 @@ import pyopencl.array as cl_array
 
 from PySoap2.models import Model as CpuBaseModel
 from PySoap2.models import ModelLogger
+from PySoap2.utils import ImageAugmentationGenerator
 
 from PySoap2_gpu.optimizers import Optimizer, get_optimizer
 from PySoap2_gpu.utils.dictionary_tricks import simplify_recursive_dict, unpack_to_recursive_dict
@@ -174,6 +175,21 @@ def convert_to_clarray(device_queue, array, dtype=np.float32):
     if isinstance(array, cl_array.Array):
         return array
     elif isinstance(array, np.ndarray):
+        array = convert_to_contiguous_array(array)
         return cl_array.to_device(device_queue, array.astype(dtype))
+    elif isinstance(array, ImageAugmentationGenerator):
+        images = convert_to_contiguous_array(array.images)
+        return cl_array.to_device(device_queue, images.astype(dtype))
     else:
         raise ValueError(f'{type(array)} not supported, only cl_array and np.ndarray allowed.')
+
+
+def convert_to_contiguous_array(array):
+    if not is_array_contiguous(array):
+        return np.ascontiguousarray(array)
+    return array
+
+
+def is_array_contiguous(array):
+    """ array assumed to be np.array """
+    return array.flags.forc
