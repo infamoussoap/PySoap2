@@ -250,7 +250,8 @@ class Model:
 
             if log:
                 model_logger.log_model(epoch, None)
-        if log:
+
+        if log and model_logger.auto_save:
             model_logger.save()
 
     def _back_prop(self, x_train, y_train):

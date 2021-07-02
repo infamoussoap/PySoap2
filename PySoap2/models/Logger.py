@@ -2,7 +2,8 @@ import pandas as pd
 
 
 class ModelLogger:
-    def __init__(self, model, x_train, y_train, x_test=None, y_test=None):
+    def __init__(self, model, x_train, y_train, x_test=None, y_test=None, auto_save=True):
+        """ auto_save is used by Model - If true then the logger will save after training """
         self.model = model
 
         self.x_train = x_train
@@ -10,6 +11,8 @@ class ModelLogger:
 
         self.x_test = x_test
         self.y_test = y_test
+
+        self.auto_save = auto_save
 
         self.train_history = []
         self.test_history = []
