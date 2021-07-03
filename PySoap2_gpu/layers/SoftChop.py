@@ -33,13 +33,15 @@ class MultiSoftChop:
     initialized = False
 
     def __init__(self, device_context, device_queue):
-        if not MultiSoftChop.initialized:
-            MultiSoftChop.device_context = device_context
-            MultiSoftChop.device_queue = device_queue
+        if MultiSoftChop.initialized:
+            return
 
-            MultiSoftChop.device_program = cl.Program(device_context, multi_softchop_source_code).build()
+        MultiSoftChop.device_context = device_context
+        MultiSoftChop.device_queue = device_queue
 
-            MultiSoftChop.initialized = True
+        MultiSoftChop.device_program = cl.Program(device_context, multi_softchop_source_code).build()
+
+        MultiSoftChop.initialized = True
 
     @staticmethod
     def eval(x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):

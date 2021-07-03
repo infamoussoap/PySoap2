@@ -37,13 +37,15 @@ class DenseInterfaceToDevice:
             will be bound to the class (not instances of the class).
             It will no longer be possible to re-initialize this class again.
         """
-        if not DenseInterfaceToDevice.initialized:
-            DenseInterfaceToDevice.device_context = device_context
-            DenseInterfaceToDevice.device_queue = device_queue
+        if DenseInterfaceToDevice.initialized:
+            return
 
-            DenseInterfaceToDevice.device_program = cl.Program(device_context, dense_source_code).build()
+        DenseInterfaceToDevice.device_context = device_context
+        DenseInterfaceToDevice.device_queue = device_queue
 
-            DenseInterfaceToDevice.initialized = True
+        DenseInterfaceToDevice.device_program = cl.Program(device_context, dense_source_code).build()
+
+        DenseInterfaceToDevice.initialized = True
 
     @staticmethod
     def predict(z, W, b, input_length, output_length, out):

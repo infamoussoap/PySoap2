@@ -20,6 +20,10 @@ class ClMathFunctions:
     softmax_gpu_program = None
 
     def __init__(self, device_context, device_queue):
+        # If this class is initialized, it means that the programs is already on the device
+        if ClMathFunctions.initialized:
+            return
+
         ClMathFunctions.device_context = device_context
         ClMathFunctions.device_queue = device_queue
 

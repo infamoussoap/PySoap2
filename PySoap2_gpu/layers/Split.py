@@ -21,6 +21,9 @@ class SplitInterfaceToDevice:
     initialized = False
 
     def __init__(self, device_context, device_queue):
+        if SplitInterfaceToDevice.initialized:
+            return
+
         SplitInterfaceToDevice.device_context = device_context
         SplitInterfaceToDevice.device_queue = device_queue
 

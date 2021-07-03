@@ -17,11 +17,12 @@ class ActivationFunction:
     device_queue = None
 
     def __init__(self, device_context, device_queue):
+        # If this class is initialized, it means that the programs is already on the device
+        if ActivationFunction.initialized:
+            return
+
         ActivationFunction.device_context = device_context
         ActivationFunction.device_queue = device_queue
-
-        if not ClMathFunctions.initialized:
-            ClMathFunctions(device_context, device_queue)
 
         ActivationFunction.initialized = True
 

@@ -30,13 +30,15 @@ class DropoutInterfaceToDevice:
             will be bound to the class (not instances of the class).
             It will no longer be possible to re-initialize this class again.
         """
-        if not DropoutInterfaceToDevice.initialized:
-            DropoutInterfaceToDevice.device_context = device_context
-            DropoutInterfaceToDevice.device_queue = device_queue
+        if DropoutInterfaceToDevice.initialized:
+            return
 
-            DropoutInterfaceToDevice.device_program = cl.Program(device_context, dropout_source_code).build()
+        DropoutInterfaceToDevice.device_context = device_context
+        DropoutInterfaceToDevice.device_queue = device_queue
 
-            DropoutInterfaceToDevice.initialized = True
+        DropoutInterfaceToDevice.device_program = cl.Program(device_context, dropout_source_code).build()
+
+        DropoutInterfaceToDevice.initialized = True
 
     @staticmethod
     def dropout(z, mask, output_length, out):

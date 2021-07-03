@@ -25,6 +25,10 @@ class ClArrayTricks:
     device_queue = None
 
     def __init__(self, device_context, device_queue):
+        # If this class is initialized, it means that the programs is already on the device
+        if ClArrayTricks.initialized:
+            return
+
         ClArrayTricks.device_context = device_context
         ClArrayTricks.device_queue = device_queue
 

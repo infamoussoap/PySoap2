@@ -16,6 +16,9 @@ class Broadcast:
     initialized = False
 
     def __init__(self, context, queue):
+        # If this class is initialized, it means that the programs is already on the device
+        if Broadcast.initialized:
+            return
         Broadcast.device_context = context
         Broadcast.device_queue = queue
 

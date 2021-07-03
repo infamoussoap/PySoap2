@@ -14,6 +14,9 @@ class PolynomialTransformationInterface:
     initialize = False
 
     def __init__(self, context, queue):
+        if PolynomialTransformationInterface.initialize:
+            return
+
         PolynomialTransformationInterface.device_context = context
         PolynomialTransformationInterface.device_queue = queue
 
