@@ -25,11 +25,8 @@ class BatchNormGrads:
         BatchNormGrads.device_context = context
         BatchNormGrads.device_queue = queue
 
-        if not ClArrayTricks.initialized:
-            ClArrayTricks(context, queue)
-
-        if not Broadcast.initialized:
-            Broadcast(context, queue)
+        ClArrayTricks(context, queue)
+        Broadcast(context, queue)
 
         ClArrayTricks.initialized = True
 

@@ -35,8 +35,7 @@ class Polynomial_2d(NetworkNode, LayerBaseAttributes, Layer):
         self.device_context = device_context
         self.device_queue = device_queue
 
-        if not PolynomialTransformationInterface.initialize:
-            PolynomialTransformationInterface(device_context, device_queue)
+        PolynomialTransformationInterface(device_context, device_queue)
 
         input_shape = self.parents[0].output_shape
 

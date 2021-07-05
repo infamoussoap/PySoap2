@@ -211,8 +211,7 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         self.device_queue = device_queue
         self.device_context = device_context
 
-        if not ClArrayTricks.initialized:
-            ClArrayTricks(device_context, device_queue)
+        ClArrayTricks(device_context, device_queue)
 
         SoftChopInterfaceToDevice(self.device_context, self.device_queue)
         MultiSoftChop(self.device_context, self.device_queue)

@@ -26,6 +26,9 @@ class ActivationFunction:
 
         ActivationFunction.initialized = True
 
+        ClMathFunctions(device_context, device_queue)
+        ClArrayTricks(device_context, device_queue)
+
     @staticmethod
     def get_activation_function(name):
         if name == 'relu':
@@ -73,8 +76,8 @@ class ErrorFunction:
         ErrorFunction.device_queue = device_queue
         ErrorFunction.device_context = device_context
 
-        if not ClArrayTricks.initialized:
-            ClArrayTricks(device_context, device_queue)
+        ClMathFunctions(device_context, device_queue)
+        ClArrayTricks(device_context, device_queue)
 
         ErrorFunction.initialized = True
 
