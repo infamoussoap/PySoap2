@@ -8,7 +8,7 @@ from .c_code.multi_softchop_c_code import multi_softchop_source_code
 from .c_code.softchop_c_code import softchop_source_code
 
 from PySoap2_gpu.layers import Layer
-from PySoap2_gpu.layers.NetworkNode import NetworkNode
+from PySoap2_gpu.layers import NetworkNode
 from PySoap2_gpu.layers.LayerBaseAttributes import LayerBaseAttributes
 
 from .ValueChecks import assert_instance_of_cl_array

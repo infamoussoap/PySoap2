@@ -5,7 +5,7 @@ import pyopencl as cl
 import pyopencl.array as cl_array
 
 from PySoap2_gpu.layers import Layer
-from PySoap2_gpu.layers.NetworkNode import NetworkNode
+from PySoap2_gpu.layers import NetworkNode
 from PySoap2_gpu.layers.LayerBaseAttributes import LayerBaseAttributes
 
 from .c_code.dropout_c_code import dropout_source_code

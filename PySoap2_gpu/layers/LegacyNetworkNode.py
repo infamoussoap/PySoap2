@@ -1,3 +1,6 @@
+import warnings
+
+
 class NetworkNode(object):
     def __init__(self):
         self.parents = ()
@@ -64,3 +67,38 @@ class NetworkNode(object):
         parent_node.add_child(self)
 
         return self
+
+
+class SingleParentNetworkNode(NetworkNode):
+    """ Instance of `NetworkNode` but this node can only have 1 parent, with unlimited amount of children """
+    def __init__(self):
+        NetworkNode.__init__(self)
+
+    def add_parent(self, parent):
+        # Only update parents if none exists
+        if len(self.parents) == 0:
+            self.parents = (parent,)
+            return
+
+        # Warn if the class already has a parent
+        warnings.warn(f'{type(self).__name__} is an instance of SingleParentNetworkNode, meaning it can only '
+                      'have 1 parent. But one parent was already given, and the new parent will be ignored.')
+
+    def add_parents(self, parents):
+        """ parents : tuple[NetworkNode] or list[NetworkNode] """
+        if len(parents) > 1:
+            warnings.warn(f'{type(self).__name__} is an instance of SingleParentNetworkNode, meaning it can only '
+                          'have 1 parent. But more than 1 parent was given, and only the first parent will be'
+                          'considered.')
+
+        # Only update parents if none exists
+        if len(self.parents) == 0:
+            self.parents = (parents[0],)
+            return
+
+        # Warn if the class already has a parent
+        warnings.warn(f'{type(self).__name__} is an instance of SingleParentNetworkNode, meaning it can only '
+                      'have 1 parent. But one parent was already given, and the new parent will be ignored.')
+
+    def does_parent_exists(self):
+        return len(self.parents) > 0

@@ -1,7 +1,9 @@
 # Super Classes for inheritance
 from .Layer import Layer
 from .LayerBaseAttributes import LayerBaseAttributes
-from .NetworkNode import NetworkNode
+
+# NetworkNode
+from PySoap2.layers import NetworkNode
 
 # Input Layer
 from .Input import Input

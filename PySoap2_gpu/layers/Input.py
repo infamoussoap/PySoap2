@@ -1,5 +1,5 @@
 from PySoap2_gpu.layers import Layer
-from PySoap2_gpu.layers.NetworkNode import NetworkNode
+from PySoap2_gpu.layers import NetworkNode
 from PySoap2_gpu.layers.LayerBaseAttributes import LayerBaseAttributes
 
 from .ValueChecks import assert_instance_of_cl_array
