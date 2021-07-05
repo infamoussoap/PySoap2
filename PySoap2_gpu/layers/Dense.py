@@ -93,7 +93,7 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
         For more details, check documentation in PySoap2
     """
 
-    def __init__(self, hidden_nodes, activation_function, *arg, activation_kwargs=None, **kwargs):
+    def __init__(self, hidden_nodes, activation_function, *arg, activation_kwargs=None, weight_decay=0.0, **kwargs):
         """ A fully connected layer """
         NetworkNode.__init__(self)
         LayerBaseAttributes.__init__(self)
@@ -102,6 +102,8 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
 
         self.activation_function = activation_function
         self.activation_kwargs = {} if activation_kwargs is None else activation_kwargs
+
+        self.weight_decay = weight_decay
 
         self.W = None
         self.b = None
@@ -160,7 +162,7 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
         return out_device
 
     @check_built
-    def get_parameter_gradients_(self, delta_device, z_device):
+    def get_parameter_gradients_(self, delta_device, z_device, e=1e-7):
         assert_instance_of_cl_array(z_device)
 
         summed_delta_device = reduce(lambda x, y: x + y, delta_device)
@@ -174,7 +176,11 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
         b_grad_device = cl_array.empty(self.device_queue, self.b.shape, dtype=np.float32)
         DenseInterfaceToDevice.bias_gradient(summed_delta_device, self.output_length_device, N, b_grad_device)
 
-        parameter_gradients = {'weight': W_grad_device, 'bias': b_grad_device}
+        if abs(self.weight_decay) > e:
+            parameter_gradients = {'weight': W_grad_device - self.weight_decay * self.W,
+                                   'bias': b_grad_device}
+        else:
+            parameter_gradients = {'weight': W_grad_device, 'bias': b_grad_device}
         return parameter_gradients
 
     @check_built

@@ -161,13 +161,15 @@ class SoftChopInterfaceToDevice:
     initialized = False
 
     def __init__(self, device_context, device_queue):
-        if not SoftChopInterfaceToDevice.initialized:
-            SoftChopInterfaceToDevice.device_context = device_context
-            SoftChopInterfaceToDevice.device_queue = device_queue
+        if SoftChopInterfaceToDevice.initialized:
+            return
 
-            SoftChopInterfaceToDevice.device_program = cl.Program(device_context, softchop_source_code).build()
+        SoftChopInterfaceToDevice.device_context = device_context
+        SoftChopInterfaceToDevice.device_queue = device_queue
 
-            SoftChopInterfaceToDevice.initialized = True
+        SoftChopInterfaceToDevice.device_program = cl.Program(device_context, softchop_source_code).build()
+
+        SoftChopInterfaceToDevice.initialized = True
 
     @staticmethod
     def delta_back_prop(g_prime, new_delta, dz, out):
@@ -190,11 +192,12 @@ class SoftChopInterfaceToDevice:
 
 
 class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
-    def __init__(self, include_bias=True):
+    def __init__(self, include_bias=True, weight_decay=0.0):
         NetworkNode.__init__(self)
         LayerBaseAttributes.__init__(self)
 
         self.include_bias = include_bias
+        self.weight_decay = weight_decay
 
         self.a1 = None
         self.a2 = None
@@ -260,7 +263,7 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         return out_gpu
 
     @check_built
-    def get_parameter_gradients_(self, delta, prev_z):
+    def get_parameter_gradients_(self, delta, prev_z, e=1e-7):
         args = (prev_z, self.a1, self.a2, self.epsilon1, self.epsilon2)
 
         dz = {'a1': MultiSoftChop.da1(*args),
@@ -280,6 +283,13 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         for key in parameter_gradients.keys():
             SoftChopInterfaceToDevice.parameter_gradient(summed_delta_device, dz[key], self.input_length_device,
                                                          N, parameter_gradients[key])
+
+        if abs(self.weight_decay) > e:
+            parameter_gradients['a1'] -= self.weight_decay * self.a1
+            parameter_gradients['a2'] -= self.weight_decay * self.a2
+
+            parameter_gradients['epsilon1'] -= self.weight_decay * self.epsilon1
+            parameter_gradients['epsilon2'] -= self.weight_decay * self.epsilon2
 
         return parameter_gradients
 
