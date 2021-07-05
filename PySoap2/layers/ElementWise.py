@@ -1,4 +1,5 @@
 import numpy as np
+from functools import reduce
 
 from PySoap2.layers import Layer
 from PySoap2.layers.NetworkNode import NetworkNode
@@ -27,9 +28,6 @@ class ElementWise(NetworkNode, LayerBaseAttributes, Layer):
         b : np.array (of dimension k)
             The bias unit
 
-        l1_ratio : float
-            The l1 regularisation strength on the weights
-
         built : bool
             Has the model been initialised
 
@@ -40,7 +38,7 @@ class ElementWise(NetworkNode, LayerBaseAttributes, Layer):
         and weight
     """
 
-    def __init__(self, activation_function, l1_ratio=0.0, activation_kwargs=None):
+    def __init__(self, activation_function, activation_kwargs=None, weight_decay=0.0):
         """ Initialise class
 
             Parameters
@@ -54,7 +52,7 @@ class ElementWise(NetworkNode, LayerBaseAttributes, Layer):
         self.activation_function = activation_function
         self.activation_kwargs = {} if activation_kwargs is None else activation_kwargs
 
-        self.l1_ratio = l1_ratio
+        self.weight_decay = weight_decay
 
         self.W = None
         self.b = None
@@ -125,12 +123,12 @@ class ElementWise(NetworkNode, LayerBaseAttributes, Layer):
             weights, W. But it does know the values of g'_{k-1} and delta^k, due to forward propagation
             and the backwards nature of the back propagation algorithm.
         """
-        delta = np.sum(np.array(new_delta), axis=0)
+        delta = reduce(sum, new_delta)
 
         return delta * self.W[None, ...] * g_prime
 
     @check_built
-    def get_parameter_gradients_(self, delta, prev_z):
+    def get_parameter_gradients_(self, delta, prev_z, e=1e-7):
         """ Returns the associated partial S/partial W^k, that is
             the gradient with respect to the weight matrix in the kth layer
 
@@ -140,6 +138,8 @@ class ElementWise(NetworkNode, LayerBaseAttributes, Layer):
                 Should be delta_k
             prev_z : (N, ...) np.array
                 This should be the input of this layer (z_{k-1})
+            e : float, optional
+                Cut off for machine precision 0
 
             Returns
             -------
@@ -147,8 +147,13 @@ class ElementWise(NetworkNode, LayerBaseAttributes, Layer):
                 Keys are the parameters for the softchop function, with the corresponding values their
                 gradients
         """
+        delta = reduce(sum, delta)
 
-        parameter_gradients = {'weight': np.einsum('i...,i...', delta, prev_z), 'bias': np.sum(delta, axis=0)}
+        if abs(self.weight_decay) > e:
+            parameter_gradients = {'weight': np.einsum('i...,i...', delta, prev_z) - self.weight_decay * self.W,
+                                   'bias': np.sum(delta, axis=0)}
+        else:
+            parameter_gradients = {'weight': np.einsum('i...,i...', delta, prev_z), 'bias': np.sum(delta, axis=0)}
 
         return parameter_gradients
 
