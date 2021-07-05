@@ -178,11 +178,12 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
             Has the layer been built
     """
 
-    def __init__(self, include_bias=True):
+    def __init__(self, include_bias=True, weight_decay=0.0):
         NetworkNode.__init__(self)
         LayerBaseAttributes.__init__(self)
 
         self.include_bias = include_bias
+        self.weight_decay = weight_decay
 
         # Initialising Attributes of Class
         self.a1 = None
@@ -310,7 +311,7 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         return delta * g_prime * dz
 
     @check_built
-    def get_parameter_gradients_(self, delta, prev_z):
+    def get_parameter_gradients_(self, delta, prev_z, e=1e-7):
         """ Returns the associated partial S/partial W^k, that is
             the gradient with respect to the weight matrix in the kth layer
 
@@ -320,6 +321,8 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
                 In latex, this should be delta_k
             prev_z : (N, ...) np.array
                 This should be the output, post activation, of the previous layer (z_{k-1})
+            e : float, optional
+                Cut off for machine precision zero
 
             Returns
             -------
@@ -337,11 +340,23 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
 
         delta = reduce(lambda x, y: x + y, delta)
 
-        parameter_gradients = {'a1': np.einsum('i...,i...', delta, MultiSoftChop.da1(**kwargs)),
-                               'a2': np.einsum('i...,i...', delta, MultiSoftChop.da2(**kwargs)),
-                               'epsilon1': np.einsum('i...,i...', delta, MultiSoftChop.de1(**kwargs)),
-                               'epsilon2': np.einsum('i...,i...', delta, MultiSoftChop.de2(**kwargs)),
-                               'bias': np.einsum('i...,i...', delta, MultiSoftChop.dx(**kwargs))}
+        if abs(self.weight_decay) > e:
+            parameter_gradients = {'a1': np.einsum('i...,i...', delta, MultiSoftChop.da1(**kwargs))
+                                         - self.weight_decay * self.a1,
+                                   'a2': np.einsum('i...,i...', delta, MultiSoftChop.da2(**kwargs))
+                                         - self.weight_decay * self.a2,
+                                   'epsilon1': np.einsum('i...,i...', delta, MultiSoftChop.de1(**kwargs))
+                                               - self.weight_decay * self.epsilon1,
+                                   'epsilon2': np.einsum('i...,i...', delta, MultiSoftChop.de2(**kwargs))
+                                               - self.weight_decay * self.epsilon2,
+                                   'bias': np.einsum('i...,i...', delta, MultiSoftChop.dx(**kwargs))}
+
+        else:
+            parameter_gradients = {'a1': np.einsum('i...,i...', delta, MultiSoftChop.da1(**kwargs)),
+                                   'a2': np.einsum('i...,i...', delta, MultiSoftChop.da2(**kwargs)),
+                                   'epsilon1': np.einsum('i...,i...', delta, MultiSoftChop.de1(**kwargs)),
+                                   'epsilon2': np.einsum('i...,i...', delta, MultiSoftChop.de2(**kwargs)),
+                                   'bias': np.einsum('i...,i...', delta, MultiSoftChop.dx(**kwargs))}
 
         return parameter_gradients
 

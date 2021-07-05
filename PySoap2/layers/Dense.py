@@ -33,7 +33,7 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
         It is assumed that the input to this layer is a flattened vector. As such, when passing
         a multidimensional input, use a `flatten` layer first
     """
-    def __init__(self, hidden_nodes, activation_function, *arg, activation_kwargs=None, **kwargs):
+    def __init__(self, hidden_nodes, activation_function, *arg, activation_kwargs=None, weight_decay=0.0, **kwargs):
         """ A fully connected layer
 
             Parameters
@@ -44,6 +44,8 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
                 The name of the activation function of this layer
             activation_kwargs : dict of str - :obj:, optional
                 The keyword arguments for the activation function if it has hyper-parameters
+            weight_decay : float, optional
+                Regularisation strength of the l2-norm
         """
         NetworkNode.__init__(self)
         LayerBaseAttributes.__init__(self)
@@ -52,6 +54,8 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
 
         self.activation_function = activation_function
         self.activation_kwargs = {} if activation_kwargs is None else activation_kwargs
+
+        self.weight_decay = weight_decay
 
         self.W = None
         self.b = None
@@ -132,7 +136,7 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
         return g_prime*(delta @ self.W)
 
     @check_built
-    def get_parameter_gradients_(self, delta, prev_z):
+    def get_parameter_gradients_(self, delta, prev_z, e=1e-7):
         """ Returns the associated partial S/partial W^k, that is
             the gradient with respect to the weight matrix in the kth layer
 
@@ -142,6 +146,8 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
                 In latex, this should be delta_k
             prev_z : (N, j) np.array
                 This should be the output, post activation, of the previous layer (z_{k-1})
+            e : float, optional
+                Cut off for machine precision zero
 
             Returns
             -------
@@ -150,7 +156,11 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
                 gradients
         """
         delta = reduce(lambda x, y: x + y, delta)
-        parameter_gradients = {'weight': delta.T @ prev_z, 'bias': np.sum(delta, axis=0)}
+        if abs(self.weight_decay) > e:
+            parameter_gradients = {'weight': delta.T @ prev_z - self.weight_decay * self.W,
+                                   'bias': np.sum(delta, axis=0)}
+        else:
+            parameter_gradients = {'weight': delta.T @ prev_z, 'bias': np.sum(delta, axis=0)}
 
         return parameter_gradients
 
