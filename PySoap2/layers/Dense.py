@@ -157,7 +157,7 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
         """
         delta = reduce(lambda x, y: x + y, delta)
         if abs(self.weight_decay) > e:
-            parameter_gradients = {'weight': delta.T @ prev_z - self.weight_decay * self.W,
+            parameter_gradients = {'weight': delta.T @ prev_z + self.weight_decay * self.W,
                                    'bias': np.sum(delta, axis=0)}
         else:
             parameter_gradients = {'weight': delta.T @ prev_z, 'bias': np.sum(delta, axis=0)}

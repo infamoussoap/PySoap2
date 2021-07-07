@@ -342,13 +342,13 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
 
         if abs(self.weight_decay) > e:
             parameter_gradients = {'a1': np.einsum('i...,i...', delta, MultiSoftChop.da1(**kwargs))
-                                         - self.weight_decay * self.a1,
+                                         + self.weight_decay * self.a1,
                                    'a2': np.einsum('i...,i...', delta, MultiSoftChop.da2(**kwargs))
-                                         - self.weight_decay * self.a2,
+                                         + self.weight_decay * self.a2,
                                    'epsilon1': np.einsum('i...,i...', delta, MultiSoftChop.de1(**kwargs))
-                                               - self.weight_decay * self.epsilon1,
+                                               + self.weight_decay * self.epsilon1,
                                    'epsilon2': np.einsum('i...,i...', delta, MultiSoftChop.de2(**kwargs))
-                                               - self.weight_decay * self.epsilon2,
+                                               + self.weight_decay * self.epsilon2,
                                    'bias': np.einsum('i...,i...', delta, MultiSoftChop.dx(**kwargs))}
 
         else:

@@ -284,11 +284,11 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
                                                          N, parameter_gradients[key])
 
         if abs(self.weight_decay) > e:
-            parameter_gradients['a1'] -= self.weight_decay * self.a1
-            parameter_gradients['a2'] -= self.weight_decay * self.a2
+            parameter_gradients['a1'] += self.weight_decay * self.a1
+            parameter_gradients['a2'] += self.weight_decay * self.a2
 
-            parameter_gradients['epsilon1'] -= self.weight_decay * self.epsilon1
-            parameter_gradients['epsilon2'] -= self.weight_decay * self.epsilon2
+            parameter_gradients['epsilon1'] += self.weight_decay * self.epsilon1
+            parameter_gradients['epsilon2'] += self.weight_decay * self.epsilon2
 
         return parameter_gradients
 

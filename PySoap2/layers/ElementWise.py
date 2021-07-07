@@ -150,7 +150,7 @@ class ElementWise(NetworkNode, LayerBaseAttributes, Layer):
         delta = reduce(sum, delta)
 
         if abs(self.weight_decay) > e:
-            parameter_gradients = {'weight': np.einsum('i...,i...', delta, prev_z) - self.weight_decay * self.W,
+            parameter_gradients = {'weight': np.einsum('i...,i...', delta, prev_z) + self.weight_decay * self.W,
                                    'bias': np.sum(delta, axis=0)}
         else:
             parameter_gradients = {'weight': np.einsum('i...,i...', delta, prev_z), 'bias': np.sum(delta, axis=0)}

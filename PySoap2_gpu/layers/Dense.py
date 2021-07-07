@@ -177,7 +177,7 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
         DenseInterfaceToDevice.bias_gradient(summed_delta_device, self.output_length_device, N, b_grad_device)
 
         if abs(self.weight_decay) > e:
-            parameter_gradients = {'weight': W_grad_device - self.weight_decay * self.W,
+            parameter_gradients = {'weight': W_grad_device + self.weight_decay * self.W,
                                    'bias': b_grad_device}
         else:
             parameter_gradients = {'weight': W_grad_device, 'bias': b_grad_device}
