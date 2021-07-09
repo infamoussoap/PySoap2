@@ -83,7 +83,7 @@ __kernel void softchop_da2(__global const float *x, __global const float *a1, __
 
     float sig2_minus = SIGMOID(-(x0 + a2[j])/epsilon2[j]);
 
-    out[index] =  -x0 * (1 - sig1) * sig2 * sig2_minus;
+    out[index] =  -x0 * (1 - sig1) * sig2 * sig2_minus / epsilon2[j];
 }
 
 __kernel void softchop_de1(__global const float *x, __global const float *a1, __global const float *a2,

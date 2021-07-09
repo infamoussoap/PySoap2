@@ -126,7 +126,7 @@ class MultiSoftChop:
 
         sig2_minus = MultiSoftChop._sigmoid(-(x + a2) / epsilon2)
 
-        return -x * (1 - sig1) * sig2 * sig2_minus
+        return -x * (1 - sig1) * sig2 * sig2_minus / epsilon2
 
     @staticmethod
     def de1(x, a1, a2, epsilon1, epsilon2):
