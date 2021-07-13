@@ -1,7 +1,7 @@
 import abc
 
 
-class Optimizer(abc.ABC):
+class GPUOptimizer(abc.ABC):
     """ Abstract class to be used when creating layers for the `sequential` class
     """
 

@@ -7,7 +7,7 @@ from PySoap2.models import Model as CpuBaseModel
 from PySoap2.models import ModelLogger
 from PySoap2.utils import ImageAugmentationGenerator
 
-from PySoap2_gpu.optimizers import Optimizer, get_optimizer
+from PySoap2_gpu.optimizers import GPUOptimizer, get_optimizer
 from PySoap2_gpu.utils.dictionary_tricks import simplify_recursive_dict, unpack_to_recursive_dict
 
 from PySoap2_gpu.functions import ErrorFunction, MetricFunction
@@ -34,12 +34,12 @@ class Model(CpuBaseModel):
             MetricFunction(self.device_context, self.device_queue)
 
     def build(self, loss_function, optimizer, metrics=None):
-        if isinstance(optimizer, Optimizer):
+        if isinstance(optimizer, GPUOptimizer):
             self.optimizer = optimizer
         elif isinstance(optimizer, str):
             self.optimizer = get_optimizer(optimizer)
         else:
-            raise ValueError("optimizer must be an instance of Optimizer or str")
+            raise ValueError("optimizer must be an instance of GPUOptimizer or str")
 
         self.loss_function = loss_function
         self.metric_function = metrics

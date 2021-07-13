@@ -2,10 +2,10 @@ import numpy as np
 from pyopencl import clmath
 
 from PySoap2.optimizers.LearningRateSchedulers import convert_to_learning_rate_scheduler
-from .Optimizer import Optimizer
+from .Optimizer import GPUOptimizer
 
 
-class Adam(Optimizer):
+class Adam(GPUOptimizer):
     """ Adam optimiser
 
         Attributes

@@ -1,11 +1,11 @@
 import numpy as np
 from pyopencl import clmath
 
-from PySoap2.optimizers import Optimizer
+from .Optimizer import GPUOptimizer
 from PySoap2.optimizers.LearningRateSchedulers import convert_to_learning_rate_scheduler
 
 
-class RMSprop(Optimizer):
+class RMSprop(GPUOptimizer):
     """ Adam optimiser
 
         Attributes

@@ -1,7 +1,7 @@
 # Optimizer Abstract class
-from .Optimizer import Optimizer
+from .Optimizer import GPUOptimizer
 
-from PySoap2.optimizers import SGD
+from .SGD import SGD
 from .Adam import Adam
 from .RMSprop import RMSprop
 
