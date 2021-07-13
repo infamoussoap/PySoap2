@@ -293,8 +293,9 @@ class Model:
         if self.loss_function == 'cross_entropy':
             cached_delta[output_id] = [cached_output[output_id] - y_train]
         else:
-            cached_delta[output_id] = [self._loss_function(cached_output[output_id], y_train,
-                                                          grad=True)]
+            ds_dz = self._loss_function(cached_output[output_id], y_train, grad=True)
+            g_prime = self.output_layer.activation_function_(cached_pre_activation[output_id], grad=True)
+            cached_delta[output_id] = [ds_dz * g_prime]
 
         # output_layer assumed to have the least amount of children
         for layer in self.layers_by_number_of_children[1:]:
