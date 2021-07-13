@@ -107,11 +107,11 @@ def get_error_function(name):
             If `name` has not been implemented
     """
     if name == 'mse':
-        def mse(predictions, targets, grad = False):
+        def mse(predictions, targets, grad=False):
             if grad:
-                return 2*(predictions - targets)
-            N = predictions.shape[0]
-            return np.sum(((predictions - targets)**2)/2)/N
+                N = len(predictions)
+                return (predictions - targets) / N
+            return np.mean((predictions - targets)**2)/2
         return mse
     elif name == 'cross_entropy':
         def cross_entropy(predictions, targets, epsilon=1e-12, grad=False):
@@ -137,8 +137,7 @@ def get_error_function(name):
             if grad:
                 return -targets/predictions + (1 - targets)/(1 - predictions)
 
-            N = predictions.shape[0]
-            ce = -np.sum(targets*np.log(predictions+1e-9))/N
+            ce = -np.sum(targets*np.log(predictions+1e-9))
             return ce
         return cross_entropy
     else:
