@@ -173,7 +173,7 @@ def convert_to_clarray(device_queue, array, dtype=np.float32):
         If array is np.array then it will be converted to the dtype and sent to the queue
     """
     if isinstance(array, cl_array.Array):
-        return array
+        return array.astype(dtype)
     elif isinstance(array, np.ndarray):
         array = convert_to_contiguous_array(array)
         return cl_array.to_device(device_queue, array.astype(dtype))
