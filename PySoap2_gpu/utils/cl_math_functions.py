@@ -21,6 +21,10 @@ class ClMathFunctions:
 
     def __init__(self, device_context, device_queue):
         # If this class is initialized, it means that the programs is already on the device
+
+        if not ClArrayTricks.initialized:
+            ClArrayTricks(device_context, device_queue)
+
         if ClMathFunctions.initialized:
             return
 
@@ -45,9 +49,6 @@ class ClMathFunctions:
 
         ClMathFunctions.initialized = True
 
-        if not ClArrayTricks.initialized:
-            ClArrayTricks(self.device_context, self.device_queue)
-
     @staticmethod
     def relu(x_gpu):
         out_gpu = cl_array.empty_like(x_gpu)
@@ -68,7 +69,7 @@ class ClMathFunctions:
 
     @staticmethod
     def softmax(x_gpu):
-        input_length_gpu = cl_array.to_device(ClMathFunctions.device_queue, np.array(x_gpu.shape[-1], dtype=np.int32))
+        input_length = np.int32(x_gpu.shape[-1])
         max_val_gpu = ClArrayTricks.max_across_last_axis(x_gpu)
 
         softmax_val = cl_array.empty_like(x_gpu)
@@ -78,7 +79,7 @@ class ClMathFunctions:
         global_shape = (global_shape_row, global_shape_col)
 
         event = ClMathFunctions.softmax_gpu_program.softmax(ClMathFunctions.device_queue, global_shape, None,
-                                                            x_gpu.data, max_val_gpu.data, input_length_gpu.data,
+                                                            x_gpu.data, max_val_gpu.data, input_length,
                                                             softmax_val.data)
         event.wait()
 

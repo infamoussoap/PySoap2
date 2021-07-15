@@ -5,10 +5,10 @@ from pyopencl import clmath
 from pyopencl.elementwise import ElementwiseKernel
 import pyopencl.array as cl_array
 
-from .cl_math_functions_c_code import cl_array_max_source_code
-from .cl_math_functions_c_code import cl_array_sum_across_axis_source_code
-from .cl_math_functions_c_code import mean_across_axis_c_code
-from .cl_math_functions_c_code import var_across_axis_c_code
+from .cl_array_tricks_c_code import cl_array_max_source_code
+from .cl_array_tricks_c_code import cl_array_sum_across_axis_source_code
+from .cl_array_tricks_c_code import mean_across_axis_c_code
+from .cl_array_tricks_c_code import var_across_axis_c_code
 
 
 class ClArrayTricks:
@@ -61,24 +61,24 @@ class ClArrayTricks:
 
     @staticmethod
     def max_across_last_axis(x_gpu):
-        last_axis_length = cl_array.to_device(ClArrayTricks.device_queue, np.array(x_gpu.shape[-1], dtype=np.int32))
+        last_axis_length = np.int32(x_gpu.shape[-1])
         out_gpu = cl_array.empty(ClArrayTricks.device_queue, x_gpu.shape[:-1], dtype=np.float32)
 
         event = ClArrayTricks.cl_array_max_program.max_across_last_axis(ClArrayTricks.device_queue,
                                                                         (np.prod(out_gpu.shape),), None,
-                                                                        x_gpu.data, last_axis_length.data, out_gpu.data)
+                                                                        x_gpu.data, last_axis_length, out_gpu.data)
         event.wait()
 
         return out_gpu
 
     @staticmethod
     def arg_max_across_last_axis(x_gpu):
-        last_axis_length = cl_array.to_device(ClArrayTricks.device_queue, np.array(x_gpu.shape[-1], dtype=np.int32))
+        last_axis_length = np.int32(x_gpu.shape[-1])
         out_gpu = cl_array.empty(ClArrayTricks.device_queue, x_gpu.shape[:-1], dtype=np.int32)
 
         event = ClArrayTricks.cl_array_max_program.arg_max_across_last_axis(ClArrayTricks.device_queue,
                                                                             (np.prod(out_gpu.shape),), None,
-                                                                            x_gpu.data, last_axis_length.data,
+                                                                            x_gpu.data, last_axis_length,
                                                                             out_gpu.data)
         event.wait()
 
@@ -93,15 +93,13 @@ class ClArrayTricks:
         N, *input_shape = array.shape
 
         input_shape = tuple(input_shape)
-        input_length = int(np.prod(input_shape))
+        input_length = np.int32(np.prod(input_shape))
+        N = np.int32(N)
 
-        input_length_device = cl_array.to_device(ClArrayTricks.device_queue, np.array(input_length, dtype=np.int32))
-        N_device = cl_array.to_device(ClArrayTricks.device_queue, np.array(N, dtype=np.int32))
         out = cl_array.empty(ClArrayTricks.device_queue, input_shape, dtype=np.float32)
 
         event = ClArrayTricks.cl_array_sum_program.sum_across_0_axis(ClArrayTricks.device_queue, (input_length,), None,
-                                                                     array.data, input_length_device.data,
-                                                                     N_device.data, out.data)
+                                                                     array.data, input_length, N, out.data)
         event.wait()
 
         return out
@@ -114,14 +112,13 @@ class ClArrayTricks:
         N, *input_shape = x_val_device.shape
 
         input_shape = tuple(input_shape)
-        input_length = int(np.prod(input_shape))
+        input_length = np.int32(np.prod(input_shape))
+        N = np.int32(N)
 
-        input_length_device = cl_array.to_device(queue, np.array(input_length, dtype=np.int32))
-        N_device = cl_array.to_device(queue, np.array(N, dtype=np.int32))
         out = cl_array.empty(queue, input_shape, dtype=np.float32)
 
         event = mean_program.mean_across_0_axis(queue, (input_length,), None,
-                                                x_val_device.data, input_length_device.data, N_device.data, out.data)
+                                                x_val_device.data, input_length, N, out.data)
         event.wait()
 
         return out
@@ -134,17 +131,15 @@ class ClArrayTricks:
         N, *input_shape = x_val_device.shape
 
         input_shape = tuple(input_shape)
-        input_length = int(np.prod(input_shape))
+        input_length = np.int32(np.prod(input_shape))
+        N = np.int32(N)
 
-        input_length_device = cl_array.to_device(queue, np.array(input_length, dtype=np.int32))
-        N_device = cl_array.to_device(queue, np.array(N, dtype=np.int32))
         out = cl_array.empty(queue, input_shape, dtype=np.float32)
 
         mean = ClArrayTricks.mean_across_0_axis(x_val_device)
 
         event = var_program.var_across_0_axis(queue, (input_length,), None,
-                                              x_val_device.data, mean.data, input_length_device.data,
-                                              N_device.data, out.data)
+                                              x_val_device.data, mean.data, input_length, N, out.data)
         event.wait()
 
         return out

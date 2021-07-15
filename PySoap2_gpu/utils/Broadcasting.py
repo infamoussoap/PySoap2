@@ -72,16 +72,14 @@ class Broadcast:
             raise BroadcastError(error_msg)
 
         input_shape = tuple(input_shape)
-        input_length = int(np.prod(input_shape))
+        input_length = np.int32(np.prod(input_shape))
+        N = np.int32(N)
 
-        input_length_device = cl_array.to_device(Broadcast.device_queue, np.array(input_length, dtype=np.int32))
-        N_device = cl_array.to_device(Broadcast.device_queue, np.array(N, dtype=np.int32))
         out = cl_array.empty_like(x_device)
 
         broadcast_program = Broadcast._get_broadcast_program(operation)
         event = broadcast_program(Broadcast.device_queue, (N, input_length), None,
-                                  x_device.data, y_device.data, input_length_device.data,
-                                  N_device.data, out.data)
+                                  x_device.data, y_device.data, input_length, N, out.data)
         event.wait()
         return out
 
@@ -102,62 +100,47 @@ class Broadcast:
 
 
 broadcast_across_axis_c_code = """
-__kernel void broadcast_add_across_0_axis(__global const float *x, __global const float *y, __global int *inputLength, 
-                                          __global int *N_, __global float *out)
+__kernel void broadcast_add_across_0_axis(__global const float *x, __global const float *y, const int input_length, 
+                                          const int N, __global float *out)
 {
     int i = get_global_id(0);
     int j = get_global_id(1);
-
-    int input_length = *inputLength;
-    int N = *N_;
 
     out[j + i*input_length] = x[j + i*input_length] + y[j];
 }
 
-__kernel void broadcast_sub_across_0_axis(__global const float *x, __global const float *y, __global int *inputLength, 
-                                          __global int *N_, __global float *out)
+__kernel void broadcast_sub_across_0_axis(__global const float *x, __global const float *y, const int input_length, 
+                                          const int N, __global float *out)
 {
     int i = get_global_id(0);
     int j = get_global_id(1);
-
-    int input_length = *inputLength;
-    int N = *N_;
 
     out[j + i*input_length] = x[j + i*input_length] - y[j];
 }
 
-__kernel void broadcast_mul_across_0_axis(__global const float *x, __global const float *y, __global int *inputLength, 
-                                          __global int *N_, __global float *out)
+__kernel void broadcast_mul_across_0_axis(__global const float *x, __global const float *y, const int input_length, 
+                                          const int N, __global float *out)
 {
     int i = get_global_id(0);
     int j = get_global_id(1);
-
-    int input_length = *inputLength;
-    int N = *N_;
 
     out[j + i*input_length] = (float) ((double) x[j + i*input_length] * (double) y[j]);
 }
 
-__kernel void broadcast_div_across_0_axis(__global const float *x, __global const float *y, __global int *inputLength, 
-                                          __global int *N_, __global float *out)
+__kernel void broadcast_div_across_0_axis(__global const float *x, __global const float *y, const int input_length, 
+                                          const int N, __global float *out)
 {
     int i = get_global_id(0);
     int j = get_global_id(1);
-
-    int input_length = *inputLength;
-    int N = *N_;
 
     out[j + i*input_length] = (float) ((double) x[j + i*input_length] / (double) y[j]);
 }
 
-__kernel void _broadcast_div_across_0_axis(__global const float *x, __global const float *y, __global int *inputLength, 
-                                          __global int *N_, __global float *out)
+__kernel void _broadcast_div_across_0_axis(__global const float *x, __global const float *y, const int input_length, 
+                                           const int N, __global float *out)
 {
     int i = get_global_id(0);
     int j = get_global_id(1);
-
-    int input_length = *inputLength;
-    int N = *N_;
 
     out[j + i*input_length] = (float) ((double) y[j]) / (double) x[j + i*input_length];
 }
