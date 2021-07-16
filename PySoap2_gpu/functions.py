@@ -61,7 +61,12 @@ class ActivationFunction:
                 return sigmoid_val
 
             return sigmoid
-
+        elif name == 'log_softmax':
+            def log_softmax(x_device, grad=False):
+                if grad:
+                    return 1 - ClMathFunctions.softmax(x_device)
+                return ClMathFunctions.log_softmax(x_device)
+            return log_softmax
         else:
             raise Exception(f'{name} is not a defined function.')
 
