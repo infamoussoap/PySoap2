@@ -1,7 +1,8 @@
 import warnings
+from PySoap2.layers import NetworkNode as CPUNetworkNode
 
 
-class NetworkNode(object):
+class GPUNetworkNode(object):
     def __init__(self):
         self.parents = ()
         self.children = ()
@@ -55,24 +56,25 @@ class NetworkNode(object):
             ValueError
                 If `parent_node` is a tuple, or
                 If it is not an instance of NetworkNode
-         """
-        if isinstance(parent_node, tuple):
+        """
+        if isinstance(parent_node, GPUNetworkNode):
+            self.add_parent(parent_node)
+            parent_node.add_child(self)
+            return self
+        elif isinstance(parent_node, (tuple, list)):
             raise ValueError('Call assumes a single object as the parent. '
                              'Overload __call__ if you wish to initialise with tuple')
-
-        if not isinstance(parent_node, NetworkNode):
+        elif isinstance(parent_node, CPUNetworkNode):
+            raise ValueError(f'Call argument is an instance of a CPU layer, but {type(self).__name__} '
+                             'is an instance of GPU layer.')
+        else:
             raise ValueError('Call argument must inherit from NetworkNode')
 
-        self.add_parent(parent_node)
-        parent_node.add_child(self)
 
-        return self
-
-
-class SingleParentNetworkNode(NetworkNode):
+class SingleParentNetworkNode(GPUNetworkNode):
     """ Instance of `NetworkNode` but this node can only have 1 parent, with unlimited amount of children """
     def __init__(self):
-        NetworkNode.__init__(self)
+        GPUNetworkNode.__init__(self)
 
     def add_parent(self, parent):
         # Only update parents if none exists
