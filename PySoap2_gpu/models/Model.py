@@ -139,10 +139,10 @@ class Model(CpuBaseModel):
     def _loss_function(self):
         return self._wrapped_loss_function
 
-    def _wrapped_loss_function(self, *args):
+    def _wrapped_loss_function(self, *args, grad=False):
         """ args to the loss_function needs to be cl_arrays """
         args = [convert_to_clarray(self.device_queue, arg) for arg in args]
-        return ErrorFunction.get_error_function(self.loss_function)(*args)
+        return ErrorFunction.get_error_function(self.loss_function)(*args, grad=grad)
 
     @property
     def _metric(self):
