@@ -1,6 +1,6 @@
 softmax_source_code = """
-__kernel void softmax(__global const float *x, __global const float *max_val_across_prediction, 
-                      const int input_length, __global float *out)
+__kernel void softmax(__global const double *x, __global const double *max_val_across_prediction, 
+                      const int input_length, __global double *out)
 {
     int i = get_global_id(0);
     int j = get_global_id(1);
@@ -18,8 +18,8 @@ __kernel void softmax(__global const float *x, __global const float *max_val_acr
 """
 
 log_softmax_source_code = """
-__kernel void log_softmax(__global const float *z, __global const float *max_across_last_axis,
-                          const int input_length, __global float *out)
+__kernel void log_softmax(__global const double *z, __global const double *max_across_last_axis,
+                          const int input_length, __global double *out)
 {
     int i = get_global_id(0);
     int j = get_global_id(1);
@@ -32,6 +32,6 @@ __kernel void log_softmax(__global const float *z, __global const float *max_acr
     for(int k = 0; k < input_length; k++){
         exp_sum += exp(z[n + k] - max_val);
     }
-    out[n + j] = (float) ((double) z[n + j] - max_val - log(exp_sum));
+    out[n + j] = z[n + j] - max_val - log(exp_sum);
 }
 """
