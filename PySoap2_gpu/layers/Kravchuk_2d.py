@@ -27,8 +27,8 @@ class Kravchuk_2d(Polynomial_2d):
     def build(self, device_context, device_queue):
         super().build(device_context, device_queue)
 
-        P1 = Kravchuk.polynomials(self.M1 - 1, self.p).astype(np.float32)
-        P2 = Kravchuk.polynomials(self.M2 - 1, self.p2).astype(np.float32)
+        P1 = Kravchuk.polynomials(self.M1 - 1, self.p).astype(np.float64)
+        P2 = Kravchuk.polynomials(self.M2 - 1, self.p2).astype(np.float64)
 
         if self.inverse:
             P1 = P1.T

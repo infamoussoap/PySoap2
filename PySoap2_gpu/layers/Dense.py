@@ -125,8 +125,8 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
         # where limit = sqrt(6 / (fan_in + fan_out)) (fan_in is the number of input units in the weight
         # tensor and fan_out is the number of output units).
         limit = np.sqrt(6 / (np.prod(self.input_shape) + np.prod(self.output_shape)))
-        W = np.random.uniform(low=-limit, high=limit, size=(*self.output_shape, *input_shape)).astype(np.float32)
-        b = np.zeros(self.output_shape).astype(np.float32)
+        W = np.random.uniform(low=-limit, high=limit, size=(*self.output_shape, *input_shape)).astype(np.float64)
+        b = np.zeros(self.output_shape).astype(np.float64)
 
         self.W = cl_array.to_device(self.device_queue, W)
         self.b = cl_array.to_device(self.device_queue, b)
@@ -139,7 +139,7 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
 
         n = len(z_device)
 
-        out_device = cl_array.empty(self.device_queue, (n, *self.output_shape), dtype=np.float32)
+        out_device = cl_array.empty(self.device_queue, (n, *self.output_shape), dtype=np.float64)
 
         DenseInterfaceToDevice.predict(z_device, self.W, self.b, self.input_length_device,
                                        self.output_length_device, out_device)
@@ -152,7 +152,7 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
     def get_delta_backprop_(self, g_prime_device, new_delta, *args):
         assert_instance_of_cl_array(g_prime_device)
 
-        out_device = cl_array.empty(self.device_queue, g_prime_device.shape, dtype=np.float32)
+        out_device = cl_array.empty(self.device_queue, g_prime_device.shape, dtype=np.float64)
 
         summed_delta_device = reduce(lambda x, y: x + y, new_delta)
 
@@ -169,11 +169,11 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
 
         N = np.int32(len(z_device))
 
-        W_grad_device = cl_array.empty(self.device_queue, self.W.shape, dtype=np.float32)
+        W_grad_device = cl_array.empty(self.device_queue, self.W.shape, dtype=np.float64)
         DenseInterfaceToDevice.weight_gradient(summed_delta_device, z_device, self.input_length_device,
                                                self.output_length_device, N, W_grad_device)
 
-        b_grad_device = cl_array.empty(self.device_queue, self.b.shape, dtype=np.float32)
+        b_grad_device = cl_array.empty(self.device_queue, self.b.shape, dtype=np.float64)
         DenseInterfaceToDevice.bias_gradient(summed_delta_device, self.output_length_device, N, b_grad_device)
 
         if abs(self.weight_decay) > e:

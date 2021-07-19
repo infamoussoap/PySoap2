@@ -61,7 +61,7 @@ class Model(CpuBaseModel):
             -----
             If z is a np.array then it will be converted to be a cl_array.Array
         """
-        z = convert_to_clarray(self.device_queue, z, dtype=np.float32)
+        z = convert_to_clarray(self.device_queue, z, dtype=np.float64)
 
         return super().predict(z, output_only=output_only, training=training)
 
@@ -73,8 +73,8 @@ class Model(CpuBaseModel):
             x_test : np.array or cl_array.Array
             y_test : np.array or cl_array.Array
         """
-        x_test = convert_to_clarray(self.device_queue, x_test, dtype=np.float32)
-        y_test = convert_to_clarray(self.device_queue, y_test, dtype=np.float32)
+        x_test = convert_to_clarray(self.device_queue, x_test, dtype=np.float64)
+        y_test = convert_to_clarray(self.device_queue, y_test, dtype=np.float64)
 
         prediction = self.predict(x_test)
 
@@ -101,14 +101,14 @@ class Model(CpuBaseModel):
             (x_test, y_test) assumed to be np.array or cl_array.Array
         """
         if x_test is not None:
-            x_test = convert_to_clarray(self.device_queue, x_test, dtype=np.float32)
+            x_test = convert_to_clarray(self.device_queue, x_test, dtype=np.float64)
         if y_test is not None:
-            y_test = convert_to_clarray(self.device_queue, y_test, dtype=np.float32)
+            y_test = convert_to_clarray(self.device_queue, y_test, dtype=np.float64)
 
         # If you want to log, but didn't pass in a logger
         if log and not isinstance(log, ModelLogger):
-            x_train_device = convert_to_clarray(self.device_queue, x_train, dtype=np.float32)
-            y_train_device = convert_to_clarray(self.device_queue, y_train, dtype=np.float32)
+            x_train_device = convert_to_clarray(self.device_queue, x_train, dtype=np.float64)
+            y_train_device = convert_to_clarray(self.device_queue, y_train, dtype=np.float64)
             log = ModelLogger(self, x_train_device, y_train_device, x_test=x_test, y_test=y_test)
 
         super().train(x_train, y_train, epochs=epochs, batch_size=batch_size, verbose=verbose,
@@ -122,8 +122,8 @@ class Model(CpuBaseModel):
             x_train : np.array or cl_array.Array
             y_train : np.array or cl_array.Array
         """
-        x_train = convert_to_clarray(self.device_queue, x_train, dtype=np.float32)
-        y_train = convert_to_clarray(self.device_queue, y_train, dtype=np.float32)
+        x_train = convert_to_clarray(self.device_queue, x_train, dtype=np.float64)
+        y_train = convert_to_clarray(self.device_queue, y_train, dtype=np.float64)
 
         predictions_of_model_layers = self.predict(x_train, output_only=False, training=True)
 
@@ -155,7 +155,7 @@ class Model(CpuBaseModel):
         return MetricFunction.get_metric_function(self.metric_function)(*args)
 
 
-def convert_to_clarray(device_queue, array, dtype=np.float32):
+def convert_to_clarray(device_queue, array, dtype=np.float64):
     """ Converts the array to cl_array.Array
 
         Parameters

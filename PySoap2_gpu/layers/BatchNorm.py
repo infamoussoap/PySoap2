@@ -115,8 +115,8 @@ class BatchNorm(NetworkNode, LayerBaseAttributes, Layer):
         self.input_shape = self.parents[0].output_shape  # It is assumed there is only one parent for this class
         self.output_shape = self.input_shape
 
-        self.gamma = cl_array.zeros(device_queue, self.input_shape, np.float32) + 1
-        self.beta = cl_array.zeros(device_queue, self.input_shape, np.float32)
+        self.gamma = cl_array.zeros(device_queue, self.input_shape, np.float64) + 1
+        self.beta = cl_array.zeros(device_queue, self.input_shape, np.float64)
 
         self.built = True
 

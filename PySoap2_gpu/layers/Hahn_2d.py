@@ -31,8 +31,8 @@ class Hahn_2d(Polynomial_2d):
     def build(self, device_context, device_queue):
         super().build(device_context, device_queue)
 
-        P1 = Hahn.polynomials(self.M1 - 1, self.a, self.b).astype(np.float32)
-        P2 = Hahn.polynomials(self.M2 - 1, self.a2, self.b2).astype(np.float32)
+        P1 = Hahn.polynomials(self.M1 - 1, self.a, self.b).astype(np.float64)
+        P2 = Hahn.polynomials(self.M2 - 1, self.a2, self.b2).astype(np.float64)
 
         if self.inverse:
             P1 = P1.T
