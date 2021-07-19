@@ -132,7 +132,7 @@ class MetricFunction:
                 target_labels = ClArrayTricks.arg_max_across_last_axis(target)
 
                 # N = len(predictions)
-                # return cl_array.sum((predicted_labels == target_labels)).astype(np.float32)/N
+                # return cl_array.sum((predicted_labels == target_labels)).astype(np.float64)/N
                 return np.mean((predicted_labels == target_labels).get())
 
             return accuracy

@@ -221,11 +221,11 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         self.input_shape = input_shape
         self.output_shape = input_shape
 
-        self.a1 = cl_array.to_device(device_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float32))
-        self.a2 = cl_array.to_device(device_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float32))
+        self.a1 = cl_array.to_device(device_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float64))
+        self.a2 = cl_array.to_device(device_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float64))
 
-        self.epsilon1 = cl_array.to_device(device_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float32))
-        self.epsilon2 = cl_array.to_device(device_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float32))
+        self.epsilon1 = cl_array.to_device(device_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float64))
+        self.epsilon2 = cl_array.to_device(device_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float64))
 
         self.b = cl_array.zeros_like(self.a1)
 

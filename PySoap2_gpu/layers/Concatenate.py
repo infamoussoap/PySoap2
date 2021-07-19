@@ -46,7 +46,7 @@ class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
         delta = new_delta[0]
 
         N = len(delta)
-        out = cl_array.empty(self.device_queue, (N, *self.input_shape), dtype=np.float32)
+        out = cl_array.empty(self.device_queue, (N, *self.input_shape), dtype=np.float64)
 
         SplitInterfaceToDevice.get_input_at_mask(delta, self.mask_positions_device, self.output_length_device,
                                                  self.input_length_device, out)
@@ -181,7 +181,7 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
     @staticmethod
     def concatenate_with_mask_positions(device_queue, z_device, mask_positions_device, output_shape):
         N = len(z_device[0])
-        input_ = cl_array.empty(device_queue, (N, *output_shape), dtype=np.float32)
+        input_ = cl_array.empty(device_queue, (N, *output_shape), dtype=np.float64)
 
         output_length_device = np.int32(np.prod(output_shape))
         for array, mask_positions in zip(z_device, mask_positions_device):
@@ -252,7 +252,7 @@ def set_list_of_inputs_at_masks_as_outputs(device_queue, inputs_, mask_positions
     """
 
     N = len(inputs_[0])
-    input_ = cl_array.empty(device_queue, (N, *output_shape), dtype=np.float32)
+    input_ = cl_array.empty(device_queue, (N, *output_shape), dtype=np.float64)
 
     output_length_device = np.int32(np.prod(output_shape))
 

@@ -59,14 +59,14 @@ class ValuesAtMask(NetworkNode, LayerBaseAttributes, Layer):
         """
 
         N = len(z)
-        z_at_mask = cl_array.empty(self.device_queue, (N, *self.output_shape), dtype=np.float32)
+        z_at_mask = cl_array.empty(self.device_queue, (N, *self.output_shape), dtype=np.float64)
         SplitInterfaceToDevice.get_input_at_mask(z, self.mask_positions_device, self.input_length_device,
                                                  self.output_length_device, z_at_mask)
 
         if output_only:
             return z_at_mask
 
-        pre_activation_of_input_at_mask = cl_array.empty(self.device_queue, (N, *self.output_shape), dtype=np.float32)
+        pre_activation_of_input_at_mask = cl_array.empty(self.device_queue, (N, *self.output_shape), dtype=np.float64)
         SplitInterfaceToDevice.get_input_at_mask(pre_activation_of_input, self.mask_positions_device,
                                                  self.input_length_device, self.output_length_device,
                                                  pre_activation_of_input_at_mask)
@@ -96,7 +96,7 @@ class ValuesAtMask(NetworkNode, LayerBaseAttributes, Layer):
         delta = reduce(lambda x, y: x + y, new_delta)
         N = len(delta)
 
-        buffered_delta = cl_array.zeros(self.device_queue, (N, *self.input_shape), dtype=np.float32)
+        buffered_delta = cl_array.zeros(self.device_queue, (N, *self.input_shape), dtype=np.float64)
 
         SplitInterfaceToDevice.set_input_at_mask_as_output(buffered_delta, self.mask_positions_device,
                                                            self.input_length_device, self.output_length_device,

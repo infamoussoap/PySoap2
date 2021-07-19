@@ -33,14 +33,14 @@ class ClMathFunctions:
         ClMathFunctions.device_context = device_context
         ClMathFunctions.device_queue = device_queue
 
-        ClMathFunctions.relu_program = ElementwiseKernel(device_context, "float *x, float *out",
+        ClMathFunctions.relu_program = ElementwiseKernel(device_context, "double *x, double *out",
                                                          "out[i] = x[i] > 0 ? x[i] : 0.0", "relu")
 
-        ClMathFunctions.relu_grad_program = ElementwiseKernel(device_context, "float *x, float *out",
+        ClMathFunctions.relu_grad_program = ElementwiseKernel(device_context, "double *x, double *out",
                                                               "out[i] = x[i] > 0 ? 1.0 : 0.0", "relu")
 
         ClMathFunctions.sigmoid_program = ElementwiseKernel(device_context,
-                                                            "float *x, float *out",
+                                                            "double *x, double *out",
                                                             "out[i] = SIGMOID(x[i])",
                                                             "sigmoid",
                                                             preamble='#define SIGMOID(x) x > 0 ? '
