@@ -45,9 +45,6 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
         self.input_shape = input_shape
         self.output_shape = (np.sum(self.mask),)
 
-        if self.input_shape != self.mask.shape:
-            raise ValueError(f'Mask shape {self.mask.shape} is not the same as input shape {self.input_shape}.')
-
         self.built = True
 
     @check_built
@@ -236,6 +233,9 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
 
         self.input_shape = input_shape
         self.output_shape = input_shape
+
+        if self.input_shape != self.mask.shape:
+            raise ValueError(f'Mask shape {self.mask.shape} is not the same as input shape {self.input_shape}.')
 
         self.built = True
 
