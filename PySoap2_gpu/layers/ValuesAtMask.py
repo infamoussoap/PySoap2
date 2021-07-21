@@ -36,6 +36,9 @@ class ValuesAtMask(NetworkNode, LayerBaseAttributes, Layer):
         if not SplitInterfaceToDevice.initialized:
             SplitInterfaceToDevice(self.device_context, self.device_queue)
 
+        if self.input_shape != self.mask.shape:
+            raise ValueError(f'Mask shape {self.mask.shape} is not the same as input shape {self.input_shape}.')
+
         self.built = True
 
     @check_built
