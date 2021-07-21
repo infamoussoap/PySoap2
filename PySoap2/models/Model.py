@@ -222,6 +222,10 @@ class Model:
             y_test : np.array, optional
         """
 
+        if len(y_train.shape) == 1:
+            raise ValueError('y_train needs to be 2-dimensional or higher, but is 1-dimensional. Instead use'
+                             'y_train.reshape(-1, 1) to make it 2-dimensional.')
+
         model_logger = log if isinstance(log, ModelLogger) else ModelLogger(self, x_train, y_train,
                                                                             x_test=x_test, y_test=y_test)
 
@@ -249,7 +253,7 @@ class Model:
                 print(evaluation)
 
             if log:
-                model_logger.log_model(epoch, None)
+                model_logger.log_model(epoch + 1, None)
 
         if log and model_logger.auto_save:
             model_logger.save()
