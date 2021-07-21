@@ -186,6 +186,10 @@ class Model:
             str
                 The error
         """
+        if len(y_test.shape) == 1:
+            raise ValueError('y_test needs to be 2-dimensional or higher, but is 1-dimensional. Instead use'
+                             'y_test.reshape(-1, 1) to make it 2-dimensional.')
+
         prediction = self.predict(x_test)
 
         loss_val = self._loss_function(prediction, y_test)
