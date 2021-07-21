@@ -67,6 +67,10 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
         self.output_shape = (self.hidden_nodes, )
         self.input_shape = input_shape
 
+        if len(self.input_shape) > 1:
+            raise ValueError('Input shape to Dense layer must be 1-dimensional, but is '
+                             f'{len(self.input_shape)}-dimensional.')
+
         # Initialise the the weight with Glorot-Uniform, a uniform distribution over [-limit, limit],
         # where limit = sqrt(6 / (fan_in + fan_out)) (fan_in is the number of input units in the weight
         # tensor and fan_out is the number of output units).
