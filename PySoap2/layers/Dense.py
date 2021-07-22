@@ -136,7 +136,7 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
             np.array
                 Returns delta of the previous layer, delta^{k-1}
         """
-        delta = np.sum(np.array(incoming_deltas), axis=0)
+        delta = reduce(lambda x, y: x + y, incoming_deltas)
         return g_prime*(delta @ self.W)
 
     @check_built
