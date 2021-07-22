@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 import functools
 import random
 
@@ -7,6 +6,7 @@ import h5py
 
 from PySoap2.optimizers import Optimizer, get_optimizer
 from PySoap2 import get_error_function, get_metric_function
+from PySoap2.layers import Layer
 
 from .Logger import ModelLogger
 from .dictionary_tricks import simplify_recursive_dict, unpack_to_recursive_dict
@@ -14,14 +14,15 @@ from .SaveModel import get_attributes_of_full_model
 
 
 def _validate_model(model):
-    start_layer, end_layer = model.input_layer, model.output_layer
+    start_layer, end_layers = model.input_layer, model.output_layers
 
-    if start_layer is None and end_layer is None:
+    if start_layer is None and end_layers is None:
         return True
 
-    """ Checks to see if there is a valid that connects the input layer to the output layer """
-    if _no_valid_path(start_layer, end_layer):
-        raise ValueError('No path from the input layer to the output layer')
+    """ Checks to see if there is a valid that connects the input layer to the output layer(s) """
+    for end_layer in end_layers:
+        if _no_valid_path(start_layer, end_layer):
+            raise ValueError('No path from the input layer to the output layer')
 
     if _start_to_end_is_different_as_end_to_start(model):
         raise ValueError('Model has branches that do not connect to the output layer. Either remove'
@@ -44,39 +45,66 @@ def _start_to_end_is_different_as_end_to_start(model):
 
 
 class Model:
-
-    def __init__(self, input_layer, output_layer):
+    def __init__(self, input_layer, output_layers):
 
         self.input_layer = input_layer
-        self.output_layer = output_layer
+        try:
+            self.output_layers = as_list_of_data_type(output_layers, Layer)
+        except ValueError:
+            raise ValueError("Output layer must be an instance of Layer or a tuple/list of Layer.")
+
+        self.output_length = len(self.output_layers)
 
         _validate_model(self)
 
         self.optimizer = None
-
-        self.loss_function = None
-        self.metric_function = None
+        self.loss_functions = None
+        self.metric_functions = None
 
     def build(self, loss_function, optimizer, metrics=None):
-        """ Build the layers in the tree network, and save attributes of Model """
-        if isinstance(optimizer, Optimizer):
-            self.optimizer = optimizer
-        elif isinstance(optimizer, str):
-            self.optimizer = get_optimizer(optimizer)
-        else:
-            raise ValueError("optimizer must be an instance of Optimizer or str")
+        """ Build the layers in the tree network, and save attributes of Model
 
-        self.loss_function = loss_function
-        self.metric_function = metrics
+            Parameters
+            ----------
+            loss_function : str or list[str]
+            optimizer : str or :obj:Optimizer
+            metrics : None or str or list[str], optional
+        """
+        self._set_optimizer(optimizer)
+        self._set_loss_functions(loss_function)
+        self._set_metric_functions(metrics)
 
         for layer in self.layers_by_number_of_parents:
             layer.build()
+
+    def _set_optimizer(self, optimizer):
+        if isinstance(optimizer, Optimizer):
+            self.optimizer = optimizer
+            return
+        elif isinstance(optimizer, str):
+            self.optimizer = get_optimizer(optimizer)
+            return
+        raise ValueError("optimizer must be an instance of Optimizer or str")
+
+    def _set_loss_functions(self, loss_function):
+        if isinstance(loss_function, str):
+            self.loss_functions = [loss_function] * self.output_length
+        else:
+            self.loss_functions = as_list_of_data_type(loss_function, str)
+
+    def _set_metric_functions(self, metrics):
+        if metrics is None:
+            self.metric_functions = [None] * self.output_length
+        elif isinstance(metrics, str):
+            self.metric_functions = [metrics] * self.output_length
+        else:
+            self.metric_functions = as_list_of_data_type(metrics, str)
 
     @property
     @functools.lru_cache()
     def layers_by_number_of_parents(self):
         """ Returns a list by order of the nodes with the least amount of parents to the most parents """
-        current_layers = [self.output_layer]  # Terminal node will have the most parents
+        current_layers = list(self.output_layers)  # Terminal node will have the most parents
         layer_order = []
 
         while len(current_layers) > 0:
@@ -91,6 +119,16 @@ class Model:
         return layer_order[::-1]
 
     def predict(self, z, output_only=True, training=False):
+        outputs = self._predict_as_list(z, output_only=output_only, training=training)
+
+        if not output_only:
+            return outputs
+
+        if self.output_length == 1:
+            return outputs[0]
+        return outputs
+
+    def _predict_as_list(self, z, output_only=True, training=False):
         """ Perform forward propagation of the whole network
 
             Parameters
@@ -105,12 +143,12 @@ class Model:
 
             Returns
             -------
-            (N, *output_shape) np.array
+            list[np.ndarray]
                 This is returned in output_only=True
 
             or
 
-            dict of str - (np.array, np.array)
+            dict of str - (np.ndarray, np.ndarray)
                 This is returned in output_only=False
                 The str keys are the layers id, i.e. their unique identifier. The associated value
                 will be a tuple of the pre and post activations.
@@ -121,7 +159,6 @@ class Model:
 
         for layer in self.layers_by_number_of_parents[1:]:  # Input is assumed to have the least number of parents
             layer_id = layer.id
-
             layer_arg = self._get_layer_predict_arguments(layer, cached_outputs, output_only=output_only)
 
             if output_only:
@@ -134,7 +171,7 @@ class Model:
 
         if not output_only:
             return cached_outputs
-        return cached_outputs[self.output_layer.id]
+        return [cached_outputs[output_layer.id] for output_layer in self.output_layers]
 
     @staticmethod
     def _get_layer_predict_arguments(layer, cached_outputs, output_only=True):
@@ -179,26 +216,26 @@ class Model:
             x_test : np.array
                 X_test is assumed to be a list of all the inputs to be forward propagated. In particular
                 it is assumed that the first index of X_test is the index that inputs is accessed by
-            y_test : np.array
+            y_test : np.array or list[np.array] or tuple[np.array]
                 y_test is the associated list of outputs to the list of inputs X_test.
             Returns
             -------
             str
                 The error
         """
-        if len(y_test.shape) == 1:
-            raise ValueError('y_test needs to be 2-dimensional or higher, but is 1-dimensional. Instead use'
-                             'y_test.reshape(-1, 1) to make it 2-dimensional.')
+        y_test_as_list = as_list_of_data_type(y_test, np.ndarray)
 
-        prediction = self.predict(x_test)
+        predictions = self._predict_as_list(x_test, output_only=True, training=False)
+        loss_vals = self._loss_function_as_list(predictions, y_test_as_list)
 
-        loss_val = self._loss_function(prediction, y_test)
+        eval_str = f'total loss : {format(np.sum(loss_vals), ".4f")}'
+        for (loss_function_name, val) in zip(self.loss_functions, loss_vals):
+            eval_str += f' - {loss_function_name}_loss : {format(val, ".4f")}'
 
-        eval_str = f'{self.loss_function}: {format(loss_val, ".4f")}'
-
-        if self.metric_function is not None:
-            metric_val = self._metric(prediction, y_test)
-            eval_str += f' - {self.metric_function}: {format(metric_val, ".4f")}'
+        metric_vals = self._metric_as_list(predictions, y_test_as_list)
+        for (metric_function_name, val) in zip(self.metric_functions, metric_vals):
+            if metric_function_name is not None:
+                eval_str += f' - {metric_function_name} : {format(val, ".4f")}'
 
         return eval_str
 
@@ -210,9 +247,11 @@ class Model:
             x_train : np.array
                 x_train is assumed to be a list of all the inputs to be forward propagated. In particular
                 it is assumed that the first index of x_train is the index that inputs is accessed by
-            y_train : np.array
+            y_train : np.array or list[np.array] or tuple[np.array]
                 y_train is the associated list of outputs to the list of inputs x_train. More specifically,
                 the neural network will be trained to find the map x_train -> y_train
+
+                y_train should be a list or tuple if the network has multiple outputs
             epochs : :obj:`int`, optional
                 Number of times the neural network will see the entire dataset
             batch_size : :obj:`int`, optional
@@ -225,12 +264,8 @@ class Model:
             x_test : np.array, optional
             y_test : np.array, optional
         """
-
-        if len(y_train.shape) == 1:
-            raise ValueError('y_train needs to be 2-dimensional or higher, but is 1-dimensional. Instead use'
-                             'y_train.reshape(-1, 1) to make it 2-dimensional.')
-
-        model_logger = log if isinstance(log, ModelLogger) else ModelLogger(self, x_train, y_train,
+        y_train_as_list = as_list_of_data_type(y_train, np.ndarray)
+        model_logger = log if isinstance(log, ModelLogger) else ModelLogger(self, x_train, y_train_as_list,
                                                                             x_test=x_test, y_test=y_test)
 
         training_length = len(x_train)
@@ -245,13 +280,13 @@ class Model:
             random.shuffle(index)
             for i in range(np.ceil(training_length / batch_size).astype(int)):
                 start, end = i * batch_size, (i + 1) * batch_size
-                batch_x, batch_y = x_train[index[start:end]], y_train[index[start:end]]
+                batch_x, batch_y = x_train[index[start:end]], [y[index[start:end]] for y in y_train_as_list]
 
                 self._back_prop(batch_x, batch_y)
 
             if verbose:
                 start, end = 0, batch_size
-                batch_x, batch_y = x_train[index[start:end]], y_train[index[start:end]]
+                batch_x, batch_y = x_train[index[start:end]], [y[index[start:end]] for y in y_train_as_list]
                 evaluation = self.evaluate(batch_x, batch_y)
                 print(f'Epoch {epoch + 1}/{epochs}')
                 print(evaluation)
@@ -262,11 +297,19 @@ class Model:
         if log and model_logger.auto_save:
             model_logger.save()
 
-    def _back_prop(self, x_train, y_train):
-        """ Perform one iteration of backpropagation on the given batches """
-        predictions_of_model_layers = self.predict(x_train, output_only=False, training=True)
+    def _back_prop(self, x_train, y_train_as_list):
+        """ Perform one iteration of backpropagation on the given batches
 
-        layer_gradients = self._get_layer_gradients(predictions_of_model_layers, y_train)
+            Parameters
+            ----------
+            x_train : np.ndarray
+            y_train_as_list : list[np.ndarray]
+                It is assumed that y_train is a list of np.ndarray, and should be pre-processed before it is
+                passed into this method
+        """
+        predictions_of_model_layers = self._predict_as_list(x_train, output_only=False, training=True)
+
+        layer_gradients = self._get_layer_gradients(predictions_of_model_layers, y_train_as_list)
         parameter_updates = self.optimizer.step(simplify_recursive_dict(layer_gradients))
         parameter_updates_by_layer = unpack_to_recursive_dict(parameter_updates)
 
@@ -274,11 +317,11 @@ class Model:
             if layer.id in parameter_updates_by_layer:
                 layer.update_parameters_(parameter_updates_by_layer[layer.id])
 
-    def _get_layer_gradients(self, predictions_of_model_layers, y_train):
+    def _get_layer_gradients(self, predictions_of_model_layers, y_train_as_list):
         """ Returns the gradients for each layer as a dictionary """
         cached_pre_activation = {key: val[0] for (key, val) in predictions_of_model_layers.items()}
         cached_output = {key: val[1] for (key, val) in predictions_of_model_layers.items()}
-        cached_delta = self._get_layer_deltas(y_train, cached_pre_activation, cached_output)
+        cached_delta = self._get_layer_deltas(y_train_as_list, cached_pre_activation, cached_output)
 
         grad_dict = {}
         for layer in self.layers_by_number_of_parents[1:]:
@@ -290,29 +333,39 @@ class Model:
 
         return grad_dict
 
-    def _get_layer_deltas(self, y_train, cached_pre_activation, cached_output):
+    def _get_layer_deltas(self, y_train_as_list, cached_pre_activation, cached_output):
         """ Returns the delta^k for all the layers """
 
         cached_delta = {}
 
-        output_id = self.output_layer.id
+        delta_for_output_layers = self._get_delta_for_output_layers(y_train_as_list, cached_pre_activation,
+                                                                    cached_output)
+        cached_delta.update(delta_for_output_layers)
 
-        # This is for numerical stability
-        if self.loss_function == 'cross_entropy':
-            cached_delta[output_id] = [cached_output[output_id] - y_train]
-        else:
-            ds_dz = self._loss_function(cached_output[output_id], y_train, grad=True)
-            g_prime = self.output_layer.activation_function_(cached_pre_activation[output_id], grad=True)
-            cached_delta[output_id] = [ds_dz * g_prime]
-
-        # output_layer assumed to have the least amount of children
-        for layer in self.layers_by_number_of_children[1:]:
+        # output layers assumed to have the least amount of children and can be skipped
+        for layer in self.layers_by_number_of_children[self.output_length:]:
             g_prime = layer.activation_function_(cached_pre_activation[layer.id], grad=True)
             z = cached_output[layer.id]
 
             cached_delta[layer.id] = [child.get_delta_backprop_(g_prime, cached_delta[child.id], z)
                                       for child in layer.children]
 
+        return cached_delta
+
+    def _get_delta_for_output_layers(self, y_train_as_list, cached_pre_activation, cached_output):
+        cached_delta = {}
+        for (output_layer, loss_name, y_train) in zip(self.output_layers, self.loss_functions, y_train_as_list):
+            output_id = output_layer.id
+
+            # This is for numerical stability
+            if loss_name == "cross_entropy":
+                cached_delta[output_id] = [cached_output[output_id] - y_train]
+            else:
+                loss_function = get_error_function(loss_name)
+
+                ds_dz = loss_function(cached_output[output_id], y_train, grad=True)
+                g_prime = output_layer.activation_function_(cached_pre_activation[output_id], grad=True)
+                cached_delta[output_id] = [ds_dz * g_prime]
         return cached_delta
 
     @property
@@ -333,15 +386,25 @@ class Model:
 
         return layer_order[::-1]
 
-    @property
-    def _loss_function(self):
-        return get_error_function(self.loss_function)
+    def _loss_function(self, predictions, targets, grad=False):
+        loss = self._loss_function_as_list(predictions, targets, grad=grad)
+        if self.output_length == 1:
+            return loss[0]
+        return loss
 
-    @property
-    def _metric(self):
-        if self.metric_function is not None:
-            return get_metric_function(self.metric_function)
-        return None
+    def _loss_function_as_list(self, predictions, targets, grad=False):
+        return [get_error_function(name)(prediction, target, grad=grad)
+                for (name, prediction, target) in zip(self.loss_functions, predictions, targets)]
+
+    def _metric(self, predictions, targets):
+        metric_vals = self._metric_as_list(predictions, targets)
+        if self.output_length == 1:
+            return metric_vals[0]
+        return metric_vals
+
+    def _metric_as_list(self, predictions, targets):
+        return [None if name is None else get_metric_function(name)(prediction, target)
+                for (name, prediction, target) in zip(self.metric_functions, predictions, targets)]
 
     def save_model(self, file_path):
         """ Save the self into file_path
@@ -359,3 +422,11 @@ class Model:
                     h.create_dataset(key, data=val)
                 else:
                     h.create_dataset(key, data=np.array('null', 'S'))
+
+
+def as_list_of_data_type(val, data_type):
+    if isinstance(val, data_type):
+        return [val]
+    elif all([isinstance(v, data_type) for v in val]):
+        return val
+    raise ValueError(f'Input needs to be an instance of {data_type}, or a list of {data_type}')
