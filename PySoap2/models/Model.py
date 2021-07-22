@@ -48,11 +48,7 @@ class Model:
     def __init__(self, input_layer, output_layers):
 
         self.input_layer = input_layer
-        try:
-            self.output_layers = as_list_of_data_type(output_layers, Layer)
-        except ValueError:
-            raise ValueError("Output layer must be an instance of Layer or a tuple/list of Layer.")
-
+        self.output_layers = as_list_of_data_type(output_layers, Layer, 'output_layers')
         self.output_length = len(self.output_layers)
 
         _validate_model(self)
@@ -90,15 +86,17 @@ class Model:
         if isinstance(loss_function, str):
             self.loss_functions = [loss_function] * self.output_length
         else:
-            self.loss_functions = as_list_of_data_type(loss_function, str)
+            self.loss_functions = as_list_of_data_type(loss_function, str, 'loss_function')
 
     def _set_metric_functions(self, metrics):
         if metrics is None:
             self.metric_functions = [None] * self.output_length
         elif isinstance(metrics, str):
             self.metric_functions = [metrics] * self.output_length
+        elif all([metric is None or isinstance(metric, str) for metric in metrics]):
+            self.metric_functions = metrics
         else:
-            self.metric_functions = as_list_of_data_type(metrics, str)
+            raise ValueError('metrics need to be None, or string, or a list of None/str.')
 
     @property
     @functools.lru_cache()
@@ -118,17 +116,45 @@ class Model:
 
         return layer_order[::-1]
 
-    def predict(self, z, output_only=True, training=False):
-        outputs = self._predict_as_list(z, output_only=output_only, training=training)
+    def predict(self, z):
+        """ Perform forward propagation of the whole network
 
-        if not output_only:
-            return outputs
+            Parameters
+            ----------
+            z : (N, *input_shape) np.array
+                The Input
+
+            Returns
+            -------
+            list[np.ndarray] or np.ndarray
+                Returns a list of np.ndarray if there is multiple outputs, otherwise it will return the single
+                np.ndarray
+        """
+
+        cached_layer_outputs = self._get_outputs_of_layers(z, output_only=True, training=False)
 
         if self.output_length == 1:
-            return outputs[0]
-        return outputs
+            return cached_layer_outputs[self.output_layers[0]]
+        return [cached_layer_outputs[layer] for layer in self.output_layers]
 
-    def _predict_as_list(self, z, output_only=True, training=False):
+    def _predict_as_list(self, z):
+        """ Perform forward propagation of the whole network
+
+            Parameters
+            ----------
+            z : (N, *input_shape) np.array
+                The Input
+
+            Returns
+            -------
+            list[np.ndarray]
+                Will always return a list of np.ndarray even if there is only 1 output
+
+        """
+        cached_outputs = self._get_outputs_of_layers(z, output_only=True, training=False)
+        return [cached_outputs[output_layer.id] for output_layer in self.output_layers]
+
+    def _get_outputs_of_layers(self, z, output_only=True, training=False):
         """ Perform forward propagation of the whole network
 
             Parameters
@@ -136,20 +162,20 @@ class Model:
             z : (N, *input_shape) np.array
                 The Input
             output_only : bool
-                If true then only the model output will be returned
-                Otherwise the pre and post activations will be returned as a dictionary
+                If true then only the outputs (i.e. post-activations) of the layers will be returned
+                Otherwise the pre and post activations will be returned
             training : bool
                 Some layers (like the dropout layer) have different behaviour when it is training
 
             Returns
             -------
-            list[np.ndarray]
-                This is returned in output_only=True
-
-            or
+            dict of str - np.ndarray
+                This is returned if output_only=True
+                The str keys are the layers id, i.e. their unique identifier. The associated value
+                will be the post-activations.
 
             dict of str - (np.ndarray, np.ndarray)
-                This is returned in output_only=False
+                This is returned if output_only=False
                 The str keys are the layers id, i.e. their unique identifier. The associated value
                 will be a tuple of the pre and post activations.
         """
@@ -168,10 +194,7 @@ class Model:
                 cached_outputs[layer_id] = layer.predict(post_activation_args,
                                                          pre_activation_of_input=pre_activation_args,
                                                          output_only=output_only, training=training)
-
-        if not output_only:
-            return cached_outputs
-        return [cached_outputs[output_layer.id] for output_layer in self.output_layers]
+        return cached_outputs
 
     @staticmethod
     def _get_layer_predict_arguments(layer, cached_outputs, output_only=True):
@@ -211,6 +234,7 @@ class Model:
 
     def evaluate(self, x_test, y_test):
         """ Return the MSE of the model prediction
+
             Parameters
             ----------
             x_test : np.array
@@ -218,14 +242,16 @@ class Model:
                 it is assumed that the first index of X_test is the index that inputs is accessed by
             y_test : np.array or list[np.array] or tuple[np.array]
                 y_test is the associated list of outputs to the list of inputs X_test.
+
             Returns
             -------
             str
                 The error
         """
-        y_test_as_list = as_list_of_data_type(y_test, np.ndarray)
+        y_test_as_list = as_list_of_data_type(y_test, np.ndarray, 'y_test')
+        check_valid_targets_length(y_test_as_list, self.output_length)
 
-        predictions = self._predict_as_list(x_test, output_only=True, training=False)
+        predictions = self._predict_as_list(x_test)
         loss_vals = self._loss_function_as_list(predictions, y_test_as_list)
 
         eval_str = f'total loss : {format(np.sum(loss_vals), ".4f")}'
@@ -264,7 +290,8 @@ class Model:
             x_test : np.array, optional
             y_test : np.array, optional
         """
-        y_train_as_list = as_list_of_data_type(y_train, np.ndarray)
+        y_train_as_list = as_list_of_data_type(y_train, np.ndarray, 'y_train')
+        check_valid_targets_length(y_train_as_list, self.output_length)
         model_logger = log if isinstance(log, ModelLogger) else ModelLogger(self, x_train, y_train_as_list,
                                                                             x_test=x_test, y_test=y_test)
 
@@ -307,7 +334,7 @@ class Model:
                 It is assumed that y_train is a list of np.ndarray, and should be pre-processed before it is
                 passed into this method
         """
-        predictions_of_model_layers = self._predict_as_list(x_train, output_only=False, training=True)
+        predictions_of_model_layers = self._get_outputs_of_layers(x_train, output_only=False, training=True)
 
         layer_gradients = self._get_layer_gradients(predictions_of_model_layers, y_train_as_list)
         parameter_updates = self.optimizer.step(simplify_recursive_dict(layer_gradients))
@@ -424,9 +451,15 @@ class Model:
                     h.create_dataset(key, data=np.array('null', 'S'))
 
 
-def as_list_of_data_type(val, data_type):
+def as_list_of_data_type(val, data_type, data_name):
     if isinstance(val, data_type):
         return [val]
     elif all([isinstance(v, data_type) for v in val]):
         return val
-    raise ValueError(f'Input needs to be an instance of {data_type}, or a list of {data_type}')
+    raise ValueError(f'{data_name} needs to be an instance of {data_type.__name__}, or a list of'
+                     f' {data_type.__name__}')
+
+
+def check_valid_targets_length(targets_as_list, output_length):
+    if len(targets_as_list) != output_length:
+        raise ValueError(f'Expecting {output_length} targets, but got {len(targets_as_list)}')
