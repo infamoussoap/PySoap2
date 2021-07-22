@@ -82,9 +82,6 @@ class Model(CpuBaseModel):
             x_test : np.array or cl_array.Array
             y_test : np.array or cl_array.Array
         """
-        if len(y_test.shape) == 1:
-            raise ValueError('y_test needs to be 2-dimensional or higher, but is 1-dimensional. Instead use'
-                             'y_test.reshape(-1, 1) to make it 2-dimensional.')
 
         x_test = convert_to_clarray(self.device_queue, x_test, dtype=np.float64)
         y_test = convert_to_clarray(self.device_queue, y_test, dtype=np.float64)
