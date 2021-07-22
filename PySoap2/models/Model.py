@@ -12,36 +12,9 @@ from .Logger import ModelLogger
 from .dictionary_tricks import simplify_recursive_dict, unpack_to_recursive_dict
 from .SaveModel import get_attributes_of_full_model
 
-
-def _validate_model(model):
-    start_layer, end_layers = model.input_layer, model.output_layers
-
-    if start_layer is None and end_layers is None:
-        return True
-
-    """ Checks to see if there is a valid that connects the input layer to the output layer(s) """
-    for end_layer in end_layers:
-        if _no_valid_path(start_layer, end_layer):
-            raise ValueError('No path from the input layer to the output layer')
-
-    if _start_to_end_is_different_as_end_to_start(model):
-        raise ValueError('Model has branches that do not connect to the output layer. Either remove'
-                         ' these connections or use the Concatenate Layer to combine them.')
-
-
-def _no_valid_path(start_layer, end_layer):
-    if len(start_layer.children) == 0:
-        return start_layer != end_layer
-    if end_layer in start_layer.children:
-        return False
-    return all([_no_valid_path(child, end_layer) for child in start_layer.children])
-
-
-def _start_to_end_is_different_as_end_to_start(model):
-    """ Checks if the nodes encountered when starting from the input the the output
-        is the same as the nodes encountered when starting from the output to the input
-    """
-    return len(model.layers_by_number_of_parents) != len(model.layers_by_number_of_children)
+from .ValueChecks import as_list_of_data_type
+from .ValueChecks import check_valid_targets_length
+from .ValueChecks import validate_model
 
 
 class Model:
@@ -51,7 +24,7 @@ class Model:
         self.output_layers = as_list_of_data_type(output_layers, Layer, 'output_layers')
         self.output_length = len(self.output_layers)
 
-        _validate_model(self)
+        validate_model(self)
 
         self.optimizer = None
         self.loss_functions = None
@@ -249,7 +222,7 @@ class Model:
                 The error
         """
         y_test_as_list = as_list_of_data_type(y_test, np.ndarray, 'y_test')
-        check_valid_targets_length(y_test_as_list, self.output_length)
+        check_valid_targets_length(y_test_as_list, self.output_length, 'y_test')
 
         predictions = self._predict_as_list(x_test)
         loss_vals = self._loss_function_as_list(predictions, y_test_as_list)
@@ -291,9 +264,15 @@ class Model:
             y_test : np.array, optional
         """
         y_train_as_list = as_list_of_data_type(y_train, np.ndarray, 'y_train')
-        check_valid_targets_length(y_train_as_list, self.output_length)
+        check_valid_targets_length(y_train_as_list, self.output_length, 'y_train')
+        if y_test is not None:
+            y_test_as_list = as_list_of_data_type(y_test, np.ndarray, 'y_test')
+            check_valid_targets_length(y_test_as_list, self.output_length, 'y_test')
+        else:
+            y_test_as_list = None
+
         model_logger = log if isinstance(log, ModelLogger) else ModelLogger(self, x_train, y_train_as_list,
-                                                                            x_test=x_test, y_test=y_test)
+                                                                            x_test=x_test, y_test=y_test_as_list)
 
         training_length = len(x_train)
         if batch_size is None:
@@ -449,17 +428,3 @@ class Model:
                     h.create_dataset(key, data=val)
                 else:
                     h.create_dataset(key, data=np.array('null', 'S'))
-
-
-def as_list_of_data_type(val, data_type, data_name):
-    if isinstance(val, data_type):
-        return [val]
-    elif all([isinstance(v, data_type) for v in val]):
-        return val
-    raise ValueError(f'{data_name} needs to be an instance of {data_type.__name__}, or a list of'
-                     f' {data_type.__name__}')
-
-
-def check_valid_targets_length(targets_as_list, output_length):
-    if len(targets_as_list) != output_length:
-        raise ValueError(f'Expecting {output_length} targets, but got {len(targets_as_list)}')
