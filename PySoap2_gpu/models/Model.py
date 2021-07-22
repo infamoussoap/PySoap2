@@ -12,6 +12,9 @@ from PySoap2_gpu.utils.dictionary_tricks import simplify_recursive_dict, unpack_
 
 from PySoap2_gpu.functions import ErrorFunction, MetricFunction
 
+from PySoap2.models.ValueChecks import as_list_of_data_type
+from PySoap2.models.ValueChecks import check_valid_targets_length
+
 
 class Model(CpuBaseModel):
     def __init__(self, input_layer, output_layer, device_context=None, device_queue=None):
@@ -33,19 +36,25 @@ class Model(CpuBaseModel):
         if not MetricFunction.initialized:
             MetricFunction(self.device_context, self.device_queue)
 
-    def build(self, loss_function, optimizer, metrics=None):
+        self.optimizer = None
+        self.loss_functions = None
+        self.metric_functions = None
+
+    def build(self, loss_functions, optimizer, metrics=None):
+        self._set_optimizer(optimizer)
+        self._set_loss_functions(loss_functions)
+        self._set_metric_functions(metrics)
+
+        for layer in self.layers_by_number_of_parents:
+            layer.build(self.device_context, self.device_queue)
+
+    def _set_optimizer(self, optimizer):
         if isinstance(optimizer, GPUOptimizer):
             self.optimizer = optimizer
         elif isinstance(optimizer, str):
             self.optimizer = get_optimizer(optimizer)
         else:
-            raise ValueError("optimizer must be an instance of GPUOptimizer or str")
-
-        self.loss_function = loss_function
-        self.metric_function = metrics
-
-        for layer in self.layers_by_number_of_parents:
-            layer.build(self.device_context, self.device_queue)
+            raise ValueError("Optimizer must be instance of GPUOptimizer or str")
 
     def predict(self, z, output_only=True, training=False):
         """ Forward propagates the input
@@ -63,7 +72,7 @@ class Model(CpuBaseModel):
         """
         z = convert_to_clarray(self.device_queue, z, dtype=np.float64)
 
-        return super().predict(z, output_only=output_only, training=training)
+        return super().predict(z)
 
     def evaluate(self, x_test, y_test):
         """ Evaluates the model with the given loss-function and metric function
