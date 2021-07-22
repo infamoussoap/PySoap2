@@ -67,6 +67,7 @@ class Model:
         elif isinstance(metrics, str):
             self.metric_functions = [metrics] * self.output_length
         elif all([metric is None or isinstance(metric, str) for metric in metrics]):
+            check_valid_targets_length(metrics, self.output_length, 'metrics')
             self.metric_functions = metrics
         else:
             raise ValueError('metrics need to be None, or string, or a list of None/str.')
