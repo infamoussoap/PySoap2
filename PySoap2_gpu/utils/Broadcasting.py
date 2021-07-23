@@ -2,6 +2,8 @@ import numpy as np
 import pyopencl as cl
 import pyopencl.array as cl_array
 
+from PySoap2_gpu.Exceptions import check_for_valid_context
+
 
 class BroadcastError(Exception):
     pass
@@ -34,6 +36,7 @@ class Broadcast:
 
             If operation = '-', then this will return x_device - y_device
         """
+        check_for_valid_context(Broadcast.device_context, x_device, y_device)
 
         error_msg = f'Broadcasting two arrays must the last dimension equal. ' \
                     f'In particular, x.shape={x_device.shape} not compatible y.shape={y_device.shape}.'

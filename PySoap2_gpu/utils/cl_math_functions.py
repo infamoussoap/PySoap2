@@ -8,6 +8,8 @@ from .cl_math_functions_c_code import softmax_source_code
 from .cl_math_functions_c_code import log_softmax_source_code
 from .cl_array_tricks import ClArrayTricks
 
+from PySoap2_gpu.Exceptions import check_for_valid_context
+
 
 class ClMathFunctions:
     initialized = False
@@ -54,24 +56,32 @@ class ClMathFunctions:
 
     @staticmethod
     def relu(x_gpu):
+        check_for_valid_context(ClMathFunctions.device_context, x_gpu)
+
         out_gpu = cl_array.empty_like(x_gpu)
         ClMathFunctions.relu_program(x_gpu, out_gpu)
         return out_gpu
 
     @staticmethod
     def relu_grad(x_gpu):
+        check_for_valid_context(ClMathFunctions.device_context, x_gpu)
+
         out_gpu = cl_array.empty_like(x_gpu)
         ClMathFunctions.relu_grad_program(x_gpu, out_gpu)
         return out_gpu
 
     @staticmethod
     def sigmoid(x_gpu):
+        check_for_valid_context(ClMathFunctions.device_context, x_gpu)
+
         out_gpu = cl_array.empty_like(x_gpu)
         ClMathFunctions.sigmoid_program(x_gpu, out_gpu)
         return out_gpu
 
     @staticmethod
     def softmax(x_gpu):
+        check_for_valid_context(ClMathFunctions.device_context, x_gpu)
+
         input_length = np.int32(x_gpu.shape[-1])
         max_val_gpu = ClArrayTricks.max_across_last_axis(x_gpu)
 
@@ -90,6 +100,8 @@ class ClMathFunctions:
 
     @staticmethod
     def log_softmax(x_device):
+        check_for_valid_context(ClMathFunctions.device_context, x_device)
+
         """ x_device assumed to be (n, m) cl_array """
         max_across_last_axis = ClArrayTricks.max_across_last_axis(x_device)
         input_length = np.int32(x_device.shape[-1])

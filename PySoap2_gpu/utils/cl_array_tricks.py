@@ -10,6 +10,8 @@ from .cl_array_tricks_c_code import cl_array_sum_across_axis_source_code
 from .cl_array_tricks_c_code import mean_across_axis_c_code
 from .cl_array_tricks_c_code import var_across_axis_c_code
 
+from PySoap2_gpu.Exceptions import check_for_valid_context
+
 
 class ClArrayTricks:
     initialized = False
@@ -53,6 +55,8 @@ class ClArrayTricks:
 
     @staticmethod
     def clip_cl_array_in_place(array, min_val, max_val):
+        check_for_valid_context(ClArrayTricks.device_context, array)
+
         if min_val is not None:
             ClArrayTricks.clip_cl_array_by_min_value_in_place(array, min_val)
 
@@ -61,6 +65,8 @@ class ClArrayTricks:
 
     @staticmethod
     def max_across_last_axis(x_gpu):
+        check_for_valid_context(ClArrayTricks.device_context, x_gpu)
+
         last_axis_length = np.int32(x_gpu.shape[-1])
         out_gpu = cl_array.empty(ClArrayTricks.device_queue, x_gpu.shape[:-1], dtype=np.float64)
 
@@ -73,6 +79,8 @@ class ClArrayTricks:
 
     @staticmethod
     def arg_max_across_last_axis(x_gpu):
+        check_for_valid_context(ClArrayTricks.device_context, x_gpu)
+
         last_axis_length = np.int32(x_gpu.shape[-1])
         out_gpu = cl_array.empty(ClArrayTricks.device_queue, x_gpu.shape[:-1], dtype=np.int32)
 
@@ -90,6 +98,8 @@ class ClArrayTricks:
 
             If you want to sum a list of cl_arrays just use the reduce method
         """
+        check_for_valid_context(ClArrayTricks.device_context, array)
+
         N, *input_shape = array.shape
 
         input_shape = tuple(input_shape)
@@ -106,6 +116,8 @@ class ClArrayTricks:
 
     @staticmethod
     def mean_across_0_axis(x_val_device):
+        check_for_valid_context(ClArrayTricks.device_context, x_val_device)
+
         queue = ClArrayTricks.device_queue
         mean_program = ClArrayTricks.cl_array_mean_program
 
@@ -125,6 +137,8 @@ class ClArrayTricks:
 
     @staticmethod
     def var_across_0_axis(x_val_device):
+        check_for_valid_context(ClArrayTricks.device_context, x_val_device)
+
         queue = ClArrayTricks.device_queue
         var_program = ClArrayTricks.cl_array_var_program
 
@@ -146,4 +160,5 @@ class ClArrayTricks:
 
     @staticmethod
     def std_across_0_axis(x_val_device):
+        check_for_valid_context(ClArrayTricks.device_context, x_val_device)
         return clmath.sqrt(ClArrayTricks.var_across_0_axis(x_val_device))
