@@ -72,24 +72,6 @@ class Model:
         else:
             raise ValueError('metrics need to be None, or string, or a list of None/str.')
 
-    @property
-    @functools.lru_cache()
-    def layers_by_number_of_parents(self):
-        """ Returns a list by order of the nodes with the least amount of parents to the most parents """
-        current_layers = list(self.output_layers)  # Terminal node will have the most parents
-        layer_order = []
-
-        while len(current_layers) > 0:
-            for layer in current_layers:
-                if layer in layer_order:
-                    layer_order.remove(layer)
-                layer_order.append(layer)
-
-            parents_of_current_layers = [layer.parents for layer in current_layers]
-            current_layers = set(functools.reduce(lambda x, y: x + y, parents_of_current_layers))
-
-        return layer_order[::-1]
-
     def predict(self, z):
         """ Perform forward propagation of the whole network
 
@@ -429,7 +411,25 @@ class Model:
     @functools.lru_cache()
     def layers_by_number_of_children(self):
         """ Returns a list by order of the nodes with the least amount of children to the most children """
-        current_layers = [self.input_layer]  # Input node will have the most children
+        current_layers = self.output_layers.copy()  # Terminal nodes will have the least children
+        layer_order = []
+
+        while len(current_layers) > 0:
+            for layer in current_layers:
+                if layer in layer_order:
+                    layer_order.remove(layer)
+                layer_order.append(layer)
+
+            parents_of_current_layers = [layer.parents for layer in current_layers]
+            current_layers = set(functools.reduce(lambda x, y: x + y, parents_of_current_layers))
+
+        return layer_order
+
+    @property
+    @functools.lru_cache()
+    def layers_by_number_of_parents(self):
+        """ Returns a list by order of the nodes with the least amount of parents to the most parents """
+        current_layers = [self.input_layer]  # Input node will have the least parents
         layer_order = []
 
         while len(current_layers) > 0:
@@ -441,7 +441,7 @@ class Model:
             children_of_current_layers = [layer.children for layer in current_layers]
             current_layers = set(functools.reduce(lambda x, y: x + y, children_of_current_layers))
 
-        return layer_order[::-1]
+        return layer_order
 
     def _loss_function(self, predictions, targets, grad=False):
         loss = self._loss_function_as_list(predictions, targets, grad=grad)
