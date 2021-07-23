@@ -7,18 +7,31 @@ from PySoap2.models import Model as CpuBaseModel
 from PySoap2.models import ModelLogger
 from PySoap2.utils import ImageAugmentationGenerator
 
+from PySoap2_gpu.layers import Layer
+
 from PySoap2_gpu.optimizers import GPUOptimizer, get_optimizer
 from PySoap2_gpu.utils.dictionary_tricks import simplify_recursive_dict, unpack_to_recursive_dict
 
 from PySoap2_gpu.functions import ErrorFunction, MetricFunction
 
-from PySoap2.models.ValueChecks import as_list_of_data_type
+from .ValueChecks import as_list_of_data_types
+from .ValueChecks import as_list_of_clarrays
+from .ValueChecks import convert_to_clarray
 from PySoap2.models.ValueChecks import check_valid_targets_length
+from PySoap2.models.ValueChecks import validate_model
 
 
 class Model(CpuBaseModel):
-    def __init__(self, input_layer, output_layer, device_context=None, device_queue=None):
-        CpuBaseModel.__init__(self, input_layer, output_layer)
+    def __init__(self, input_layer, output_layers, device_context=None, device_queue=None):
+        self.input_layer = input_layer
+        self.output_layers = as_list_of_data_types(output_layers, Layer, 'output_layers')
+        self.output_length = len(self.output_layers)
+
+        validate_model(self)
+
+        self.optimizer = None
+        self.loss_functions = None
+        self.metric_functions = None
 
         if device_queue is None and device_context is None:
             platform = cl.get_platforms()[0]
@@ -36,13 +49,9 @@ class Model(CpuBaseModel):
         if not MetricFunction.initialized:
             MetricFunction(self.device_context, self.device_queue)
 
-        self.optimizer = None
-        self.loss_functions = None
-        self.metric_functions = None
-
-    def build(self, loss_functions, optimizer, metrics=None):
+    def build(self, loss_function, optimizer, metrics=None):
         self._set_optimizer(optimizer)
-        self._set_loss_functions(loss_functions)
+        self._set_loss_functions(loss_function)
         self._set_metric_functions(metrics)
 
         for layer in self.layers_by_number_of_parents:
@@ -71,7 +80,6 @@ class Model(CpuBaseModel):
             If z is a np.array then it will be converted to be a cl_array.Array
         """
         z = convert_to_clarray(self.device_queue, z, dtype=np.float64)
-
         return super().predict(z)
 
     def evaluate(self, x_test, y_test):
@@ -84,22 +92,35 @@ class Model(CpuBaseModel):
         """
 
         x_test = convert_to_clarray(self.device_queue, x_test, dtype=np.float64)
-        y_test = convert_to_clarray(self.device_queue, y_test, dtype=np.float64)
+        y_test_as_list = as_list_of_clarrays(self.device_queue, y_test, 'y_test', dtype=np.float64)
+        check_valid_targets_length(y_test_as_list, self.output_length, 'y_test')
 
-        prediction = self.predict(x_test)
-        loss_val = self._loss_function(prediction, y_test)
+        return self._evaluate(x_test, y_test_as_list)
 
-        if isinstance(loss_val, cl_array.Array):
-            loss_val = loss_val.get()
+    def _evaluate(self, x_test, y_test_as_list):
+        """ Evaluates the model
 
-        eval_str = f'{self.loss_function}: {format(loss_val, ".4f")}'
+            Parameters
+            ----------
+            x_test : cl_array.Array
+            y_test_as_list : list[cl_array.Array]
 
-        if self.metric_function is not None:
-            metric_val = self._metric(prediction, y_test)
-            if isinstance(metric_val, cl_array.Array):
-                metric_val = metric_val.get()
+            Returns
+            -------
+            str
+        """
+        predictions = self._predict_as_list(x_test)
+        loss_vals = self._loss_function_as_list(predictions, y_test_as_list, grad=False)
+        total_loss = sum(val.get() for val in loss_vals)
 
-            eval_str += f' - {self.metric_function}: {format(metric_val, ".4f")}'
+        eval_str = f"total loss : {format(total_loss, '.4f')}"
+        for (loss_function_name, val) in zip(self.loss_functions, loss_vals):
+            eval_str += f" - {loss_function_name}_loss : {format(val.get(), '.4f')}"
+
+        metric_vals = self._metric_as_list(predictions, y_test_as_list)
+        for (metric_function_name, val) in zip(self.metric_functions, metric_vals):
+            if metric_function_name is not None:
+                eval_str += f" - {metric_function_name} : {format(val, '.4f')}"
 
         return eval_str
 
@@ -112,16 +133,21 @@ class Model(CpuBaseModel):
         if x_test is not None:
             x_test = convert_to_clarray(self.device_queue, x_test, dtype=np.float64)
         if y_test is not None:
-            y_test = convert_to_clarray(self.device_queue, y_test, dtype=np.float64)
+            y_test = as_list_of_clarrays(self.device_queue, y_test, 'y_test', dtype=np.float64)
+            check_valid_targets_length(y_test, self.output_length, 'y_test')
 
         # If you want to log, but didn't pass in a logger
         if log and not isinstance(log, ModelLogger):
             x_train_device = convert_to_clarray(self.device_queue, x_train, dtype=np.float64)
-            y_train_device = convert_to_clarray(self.device_queue, y_train, dtype=np.float64)
+            y_train_device = as_list_of_clarrays(self.device_queue, y_train, 'y_train', dtype=np.float64)
+            check_valid_targets_length(y_train_device, self.output_length, 'y_train')
+
             log = ModelLogger(self, x_train_device, y_train_device, x_test=x_test, y_test=y_test)
 
-        super().train(x_train, y_train, epochs=epochs, batch_size=batch_size, verbose=verbose,
-                      log=log, x_test=x_test, y_test=y_test)
+        if not isinstance(x_train, (np.ndarray, ImageAugmentationGenerator)):
+            raise ValueError("x_train needs to be an instance of np.ndarray or ImageAugmentationGenerator")
+        y_train_as_list = as_list_of_data_types(y_train, np.ndarray, 'y_train')
+        super()._train(x_train, y_train_as_list, epochs, batch_size, verbose, log)
 
     def _back_prop(self, x_train, y_train):
         """ Perform one iteration of backpropagation on the given batches
@@ -132,9 +158,9 @@ class Model(CpuBaseModel):
             y_train : np.array or cl_array.Array
         """
         x_train = convert_to_clarray(self.device_queue, x_train, dtype=np.float64)
-        y_train = convert_to_clarray(self.device_queue, y_train, dtype=np.float64)
+        y_train = as_list_of_clarrays(self.device_queue, y_train, 'y_train', dtype=np.float64)
 
-        predictions_of_model_layers = self.predict(x_train, output_only=False, training=True)
+        predictions_of_model_layers = self._get_outputs_of_layers(x_train, output_only=False, training=True)
 
         layer_gradients = self._get_layer_gradients(predictions_of_model_layers, y_train)
         parameter_updates = self.optimizer.step(simplify_recursive_dict(layer_gradients))
@@ -144,61 +170,31 @@ class Model(CpuBaseModel):
             if layer.id in parameter_updates_by_layer:
                 layer.update_parameters_(parameter_updates_by_layer[layer.id])
 
-    @property
-    def _loss_function(self):
-        return self._wrapped_loss_function
+    def _loss_function(self, predictions, targets, grad=False):
+        loss = self._loss_function_as_list(predictions, targets, grad=grad)
+        if self.output_length == 1:
+            return loss[0]
+        return loss
 
-    def _wrapped_loss_function(self, *args, grad=False):
-        """ args to the loss_function needs to be cl_arrays """
-        args = [convert_to_clarray(self.device_queue, arg) for arg in args]
-        return ErrorFunction.get_error_function(self.loss_function)(*args, grad=grad)
+    def _loss_function_as_list(self, predictions, targets, grad=False):
+        predictions = as_list_of_clarrays(self.device_queue, predictions, 'predictions', dtype=np.float64)
+        targets = as_list_of_clarrays(self.device_queue, targets, 'targets', dtype=np.float64)
 
-    @property
-    def _metric(self):
-        if self.metric_function is not None:
-            return self._wrapped_metric
-        return None
+        return [ErrorFunction.get_error_function(name)(prediction, target, grad=grad)
+                for (name, prediction, target) in zip(self.loss_functions, predictions, targets)]
 
-    def _wrapped_metric(self, *args):
-        args = [convert_to_clarray(self.device_queue, arg) for arg in args]
-        return MetricFunction.get_metric_function(self.metric_function)(*args)
+    def _metric(self, predictions, targets):
+        metric_vals = self._metric_as_list(predictions, targets)
+        if self.metric_functions is None:
+            return None
 
+        if self.output_length == 1:
+            return metric_vals[0]
+        return metric_vals
 
-def convert_to_clarray(device_queue, array, dtype=np.float64):
-    """ Converts the array to cl_array.Array
+    def _metric_as_list(self, predictions, targets):
+        predictions = as_list_of_clarrays(self.device_queue, predictions, 'predictions', dtype=np.float64)
+        targets = as_list_of_clarrays(self.device_queue, targets, 'targets', dtype=np.float64)
 
-        Parameters
-        ----------
-        device_queue : cl.CommandQueue
-            The queue for the device to put the array on
-        array : np.array or cl_array.Array
-            The array to be converted
-        dtype : Class, optional
-            The data type for the array
-
-        Notes
-        -----
-        If array is a cl_array.Array then it will be returned
-        If array is np.array then it will be converted to the dtype and sent to the queue
-    """
-    if isinstance(array, cl_array.Array):
-        return array.astype(dtype)
-    elif isinstance(array, np.ndarray):
-        array = convert_to_contiguous_array(array)
-        return cl_array.to_device(device_queue, array.astype(dtype))
-    elif isinstance(array, ImageAugmentationGenerator):
-        images = convert_to_contiguous_array(array.images)
-        return cl_array.to_device(device_queue, images.astype(dtype))
-    else:
-        raise ValueError(f'{type(array)} not supported, only cl_array and np.ndarray allowed.')
-
-
-def convert_to_contiguous_array(array):
-    if not is_array_contiguous(array):
-        return np.ascontiguousarray(array)
-    return array
-
-
-def is_array_contiguous(array):
-    """ array assumed to be np.array """
-    return array.flags.forc
+        return [None if name is None else MetricFunction.get_metric_function(name)(prediction, target)
+                for (name, prediction, target) in zip(self.metric_functions, predictions, targets)]
