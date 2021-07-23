@@ -35,12 +35,12 @@ class ModelLogger:
         self.model = model
 
         self.x_train = x_train
-        self.y_train_as_list = as_list_of_data_type(y_train, np.ndarray, 'y_train')
+        self.y_train_as_list = y_train if isinstance(y_train, list) else [y_train]
         check_valid_targets_length(self.y_train_as_list, model.output_length, 'y_train')
 
         self.x_test = x_test
         if y_test is not None:
-            self.y_test_as_list = as_list_of_data_type(y_test, np.ndarray, 'y_test')
+            self.y_test_as_list = y_test if isinstance(y_test, list) else [y_test]
             check_valid_targets_length(self.y_train_as_list, model.output_length, 'y_test')
         else:
             self.y_test_as_list = None
