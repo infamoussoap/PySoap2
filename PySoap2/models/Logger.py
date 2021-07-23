@@ -63,9 +63,9 @@ class ModelLogger:
 
     def log_train_score(self, epoch, batch_number=None):
         """ Log the current training score of the model """
-        predictions = self.model._predict_as_list(self.x_train)
-        loss = self.model._loss_function_as_list(predictions, self.y_train_as_list)
-        metric = self.model._metric_as_list(predictions, self.y_train_as_list)
+        predictions = self.model.predict(self.x_train)
+        loss = self.model._loss_function(predictions, self.y_train_as_list)
+        metric = self.model._metric(predictions, self.y_train_as_list)
 
         self.train_history.append(ModelEvalLog(epoch, batch_number, loss, metric))
 
@@ -74,8 +74,8 @@ class ModelLogger:
         if self.x_test is None or self.y_test_as_list is None:  # Do nothing
             return None
 
-        predictions = self.model._predict_as_list(self.x_test)
-        loss = self.model._loss_function_as_list(predictions, self.y_test_as_list)
+        predictions = self.model.predict(self.x_test)
+        loss = self.model._loss_function(predictions, self.y_test_as_list)
         metric = self.model._metric(predictions, self.y_test_as_list)
 
         self.test_history.append(ModelEvalLog(epoch, batch_number, loss, metric))
@@ -183,9 +183,9 @@ class ModelEvalLog(Log):
         self.epoch = epoch
         self.batch_number = batch_number
 
-        self.loss_vals = loss_vals
-        self.total_loss = sum(loss_vals)
-        self.metrics = metrics
+        self.loss_vals = loss_vals if isinstance(loss_vals, list) else [loss_vals]
+        self.total_loss = [sum(loss_vals)]
+        self.metrics = metrics if isinstance(metrics, list) else [metrics]
 
         self.other = kwargs
 
@@ -198,7 +198,7 @@ class ModelEvalLog(Log):
         return prefix + super().__str__()
 
     def as_dataframe(self):
-        combined_loss_and_metric = [self.total_loss] + self.loss_vals + self.metrics
+        combined_loss_and_metric = self.total_loss + self.loss_vals + self.metrics
         df = pd.DataFrame(combined_loss_and_metric + [str(self.other)], columns=[self.epoch]).T
         df.index.name = 'Epoch'
 
