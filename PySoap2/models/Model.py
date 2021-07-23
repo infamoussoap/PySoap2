@@ -108,8 +108,8 @@ class Model:
         cached_layer_outputs = self._get_outputs_of_layers(z, output_only=True, training=False)
 
         if self.output_length == 1:
-            return cached_layer_outputs[self.output_layers[0]]
-        return [cached_layer_outputs[layer] for layer in self.output_layers]
+            return cached_layer_outputs[self.output_layers[0].id]
+        return [cached_layer_outputs[layer.id] for layer in self.output_layers]
 
     def _predict_as_list(self, z):
         """ Perform forward propagation of the whole network
@@ -290,8 +290,11 @@ class Model:
         else:
             y_test_as_list = None
 
-        model_logger = log if isinstance(log, ModelLogger) else ModelLogger(self, x_train, y_train_as_list,
-                                                                            x_test=x_test, y_test=y_test_as_list)
+        if log:
+            model_logger = log if isinstance(log, ModelLogger) else ModelLogger(self, x_train, y_train_as_list,
+                                                                                x_test=x_test, y_test=y_test_as_list)
+        else:
+            model_logger = False
 
         self._train(x_train, y_train_as_list, epochs, batch_size, verbose, model_logger)
 
