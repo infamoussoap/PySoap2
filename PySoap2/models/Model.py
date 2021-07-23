@@ -242,6 +242,7 @@ class Model:
     def train(self, x_train, y_train, epochs=100, batch_size=None, verbose=True, log=False,
               x_test=None, y_test=None):
         """ Train the neural network by means of back propagation
+
             Parameters
             ----------
             x_train : np.array
@@ -250,16 +251,15 @@ class Model:
             y_train : np.array or list[np.array] or tuple[np.array]
                 y_train is the associated list of outputs to the list of inputs x_train. More specifically,
                 the neural network will be trained to find the map x_train -> y_train
-
                 y_train should be a list or tuple if the network has multiple outputs
-            epochs : :obj:`int`, optional
+            epochs : int, optional
                 Number of times the neural network will see the entire dataset
-            batch_size : :obj:`int`, optional
+            batch_size : int, optional
                 The batch size for gradient descent. If not defined then `batch_size` is set to the
                 length of the dataset, i.e. traditional gradient descent.
             verbose : bool, optional
                 If set to `True` then the model performance will be printed after each epoch
-            log : bool, optional
+            log : bool, or ModelLogger optional
                 Log the training history
             x_test : np.array, optional
             y_test : np.array, optional
@@ -274,6 +274,35 @@ class Model:
 
         model_logger = log if isinstance(log, ModelLogger) else ModelLogger(self, x_train, y_train_as_list,
                                                                             x_test=x_test, y_test=y_test_as_list)
+
+        self._train(x_train, y_train_as_list, epochs, batch_size, verbose, model_logger)
+
+    def _train(self, x_train, y_train_as_list, epochs, batch_size, verbose, model_logger):
+        """ Train the neural network by means of back propagation
+
+            Parameters
+            ----------
+            x_train : :obj:
+                x_train is assumed to be a list of all the inputs to be forward propagated. In particular
+                it is assumed that the first index of x_train is the index that inputs is accessed by
+            y_train_as_list : list[:obj:]
+                y_train should be a list or tuple if the network has multiple outputs
+            epochs : int
+                Number of times the neural network will see the entire dataset
+            batch_size : int
+                The batch size for gradient descent. If not defined then `batch_size` is set to the
+                length of the dataset, i.e. traditional gradient descent.
+            verbose : bool, optional
+                If set to `True` then the model performance will be printed after each epoch
+            model_logger : ModelLogger
+                Log the training history
+
+            Notes
+            -----
+            The difference between this method and the train method is that the train method adds the extra code
+            to clean the inputs of x_train, y_train_as_list, and model_logger. While this method makes stronger
+            assumptions on these inputs.
+        """
 
         training_length = len(x_train)
         if batch_size is None:
@@ -298,10 +327,10 @@ class Model:
                 print(f'Epoch {epoch + 1}/{epochs}')
                 print(evaluation)
 
-            if log:
+            if model_logger:
                 model_logger.log_model(epoch + 1, None)
 
-        if log and model_logger.auto_save:
+        if model_logger and model_logger.auto_save:
             model_logger.save()
 
     def _back_prop(self, x_train, y_train_as_list):
