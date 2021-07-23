@@ -111,11 +111,11 @@ class Model(CpuBaseModel):
         """
         predictions = self._predict_as_list(x_test)
         loss_vals = self._loss_function_as_list(predictions, y_test_as_list, grad=False)
-        total_loss = sum(val.get() for val in loss_vals)
+        total_loss = sum([val for val in loss_vals])
 
         eval_str = f"total loss : {format(total_loss, '.4f')}"
         for (loss_function_name, val) in zip(self.loss_functions, loss_vals):
-            eval_str += f" - {loss_function_name}_loss : {format(val.get(), '.4f')}"
+            eval_str += f" - {loss_function_name}_loss : {format(val, '.4f')}"
 
         metric_vals = self._metric_as_list(predictions, y_test_as_list)
         for (metric_function_name, val) in zip(self.metric_functions, metric_vals):
@@ -180,7 +180,7 @@ class Model(CpuBaseModel):
         predictions = as_list_of_clarrays(self.device_queue, predictions, 'predictions', dtype=np.float64)
         targets = as_list_of_clarrays(self.device_queue, targets, 'targets', dtype=np.float64)
 
-        return [ErrorFunction.get_error_function(name)(prediction, target, grad=grad)
+        return [ErrorFunction.get_error_function(name)(prediction, target, grad=grad).get()
                 for (name, prediction, target) in zip(self.loss_functions, predictions, targets)]
 
     def _metric(self, predictions, targets):
