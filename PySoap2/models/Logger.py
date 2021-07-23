@@ -1,4 +1,8 @@
+import numpy as np
 import pandas as pd
+
+from .ValueChecks import as_list_of_data_type
+from .ValueChecks import check_valid_targets_length
 
 
 class ModelLogger:
@@ -31,10 +35,15 @@ class ModelLogger:
         self.model = model
 
         self.x_train = x_train
-        self.y_train = y_train
+        self.y_train_as_list = as_list_of_data_type(y_train, np.ndarray, 'y_train')
+        check_valid_targets_length(self.y_train_as_list, model.output_length, 'y_train')
 
         self.x_test = x_test
-        self.y_test = y_test
+        if y_test is not None:
+            self.y_test_as_list = as_list_of_data_type(y_test, np.ndarray, 'y_test')
+            check_valid_targets_length(self.y_train_as_list, model.output_length, 'y_test')
+        else:
+            self.y_test_as_list = None
 
         self.auto_save = auto_save
 
@@ -54,20 +63,20 @@ class ModelLogger:
 
     def log_train_score(self, epoch, batch_number=None):
         """ Log the current training score of the model """
-        prediction = self.model.predict(self.x_train)
-        loss = self.model._loss_function(prediction, self.y_train)
-        metric = None if self.model._metric is None else self.model._metric(prediction, self.y_train)
+        predictions = self.model.predict(self.x_train)
+        loss = self.model._loss_function(predictions, self.y_train_as_list)
+        metric = self.model._metric(predictions, self.y_train_as_list)
 
         self.train_history.append(ModelEvalLog(epoch, batch_number, loss, metric))
 
     def log_test_score(self, epoch, batch_number=None):
         """ Log the current testing score of the model """
-        if self.x_test is None or self.y_test is None:  # Do nothing
+        if self.x_test is None or self.y_test_as_list is None:  # Do nothing
             return None
 
-        prediction = self.model.predict(self.x_test)
-        loss = self.model._loss_function(prediction, self.y_test)
-        metric = None if self.model._metric is None else self.model._metric(prediction, self.y_test)
+        predictions = self.model.predict(self.x_test)
+        loss = self.model._loss_function(predictions, self.y_test_as_list)
+        metric = self.model._metric(predictions, self.y_test_as_list)
 
         self.test_history.append(ModelEvalLog(epoch, batch_number, loss, metric))
 
@@ -99,10 +108,13 @@ class ModelLogger:
             it allows quicker saving of the training history
         """
         if len(self.train_history) == 0:
-            return ModelEvalLog(None, None, None, None).as_dataframe()
+            return pd.DataFrame()
 
-        history = [log.as_dataframe() for log in self.train_history]
-        return pd.concat(history)
+        history = pd.concat([log.as_dataframe() for log in self.train_history])
+        history.columns = ['Total Loss'] + self.model.loss_functions + self.model.metric_functions + ['Other']
+
+        non_none_columns = [col is not None for col in history.columns]
+        return history.loc[:, non_none_columns]
 
     @property
     def test_history_as_df(self):
@@ -114,10 +126,13 @@ class ModelLogger:
             it allows quicker saving of the testing history
         """
         if len(self.test_history) == 0:
-            return ModelEvalLog(None, None, None, None).as_dataframe()
+            return pd.DataFrame()
 
-        history = [log.as_dataframe() for log in self.test_history]
-        return pd.concat(history)
+        history = pd.concat([log.as_dataframe() for log in self.test_history])
+        history.columns = ['Total Loss'] + self.model.loss_functions + self.model.metric_functions + ['Other']
+
+        non_none_columns = [col is not None for col in history.columns]
+        return history.loc[:, non_none_columns]
 
 
 class Log:
@@ -144,15 +159,15 @@ class ModelEvalLog(Log):
         batch_number : int or None
             The current batch number, within the epoch. If the batch number
             isn't being counted, then set this to None
-        loss : float
+        loss_vals : list[float] or None
             The loss on the dataset
-        metric : float
+        metrics : list[float] or none
             The metric on the dataset
         other : dict of str - :obj:
             Other keyword arguments, this should be used if there
             is something else that you want to be saved
     """
-    def __init__(self, epoch, batch_number, loss, metric, **kwargs):
+    def __init__(self, epoch, batch_number, loss_vals, metrics, **kwargs):
         """ Initialise the Log
 
             Notes
@@ -163,13 +178,14 @@ class ModelEvalLog(Log):
             If you want to save other attributes/features, then use keyword
             arguments to save it.
         """
-        super().__init__(loss=loss, metric=metric, **kwargs)
+        super().__init__(loss_vals=loss_vals, metrics=metrics, **kwargs)
 
         self.epoch = epoch
         self.batch_number = batch_number
 
-        self.loss = loss
-        self.metric = metric
+        self.loss_vals = loss_vals if isinstance(loss_vals, list) else [loss_vals]
+        self.total_loss = [sum(loss_vals)]
+        self.metrics = metrics if isinstance(metrics, list) else [metrics]
 
         self.other = kwargs
 
@@ -182,9 +198,8 @@ class ModelEvalLog(Log):
         return prefix + super().__str__()
 
     def as_dataframe(self):
-        df = pd.DataFrame([self.loss, self.metric, str(self.other)],
-                          index=['Loss', 'Metric', 'Other'], columns=[self.epoch]).T
-
+        combined_loss_and_metric = self.total_loss + self.loss_vals + self.metrics
+        df = pd.DataFrame(combined_loss_and_metric + [str(self.other)], columns=[self.epoch]).T
         df.index.name = 'Epoch'
 
         return df
