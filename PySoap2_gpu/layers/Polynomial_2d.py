@@ -92,4 +92,4 @@ class Polynomial_2d(NetworkNode, LayerBaseAttributes, Layer):
 
     @check_built
     def summary_(self):
-        return 'Kravchuk Transformation', f'Output Shape {self.input_shape}'
+        return 'Polynomial Transformation', f'Output Shape {self.input_shape}'
