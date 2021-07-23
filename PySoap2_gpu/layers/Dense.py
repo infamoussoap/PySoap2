@@ -12,6 +12,8 @@ from .c_code.dense_c_code import dense_source_code
 from .ValueChecks import assert_instance_of_cl_array
 from .ValueChecks import check_built
 
+from PySoap2_gpu.Exceptions import check_for_valid_context
+
 
 class DenseInterfaceToDevice:
     """ The interface between the compiled pyopencl-c code with python
@@ -49,8 +51,9 @@ class DenseInterfaceToDevice:
 
     @staticmethod
     def predict(z, W, b, input_length, output_length, out):
-        device_global_shape = out.shape
+        check_for_valid_context(DenseInterfaceToDevice.device_context, z, W, b, out)
 
+        device_global_shape = out.shape
         event = DenseInterfaceToDevice.device_program.predict(DenseInterfaceToDevice.device_queue, device_global_shape,
                                                               None,
                                                               z.data, W.data, b.data, input_length,
@@ -59,8 +62,9 @@ class DenseInterfaceToDevice:
 
     @staticmethod
     def delta_back_prop(g_prime, new_delta, W, input_length, output_length, out):
-        device_global_shape = g_prime.shape
+        check_for_valid_context(DenseInterfaceToDevice.device_context, g_prime, new_delta, W, out)
 
+        device_global_shape = g_prime.shape
         event = DenseInterfaceToDevice.device_program.delta_back_prop(DenseInterfaceToDevice.device_queue,
                                                                       device_global_shape, None,
                                                                       g_prime.data, new_delta.data, W.data,
@@ -69,8 +73,9 @@ class DenseInterfaceToDevice:
 
     @staticmethod
     def weight_gradient(delta, prev_z, input_length, output_length, N, out):
-        device_global_shape = (output_length, input_length)  # Same shape as the weight matrix
+        check_for_valid_context(DenseInterfaceToDevice.device_context, delta, prev_z, out)
 
+        device_global_shape = (output_length, input_length)  # Same shape as the weight matrix
         event = DenseInterfaceToDevice.device_program.weight_gradient(DenseInterfaceToDevice.device_queue,
                                                                       device_global_shape, None,
                                                                       delta.data, prev_z.data, input_length,
@@ -79,8 +84,9 @@ class DenseInterfaceToDevice:
 
     @staticmethod
     def bias_gradient(delta, output_length, N, out):
-        device_global_shape = (output_length,)
+        check_for_valid_context(DenseInterfaceToDevice.device_context, delta, out)
 
+        device_global_shape = (output_length,)
         event = DenseInterfaceToDevice.device_program.bias_gradient(DenseInterfaceToDevice.device_queue,
                                                                     device_global_shape, None, delta.data,
                                                                     output_length, N, out.data)

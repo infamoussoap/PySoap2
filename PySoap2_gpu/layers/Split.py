@@ -12,6 +12,8 @@ from .c_code.split_c_code import split_source_code
 
 from .ValueChecks import check_built
 
+from PySoap2_gpu.Exceptions import check_for_valid_context
+
 
 class SplitInterfaceToDevice:
     device_context = None
@@ -33,8 +35,9 @@ class SplitInterfaceToDevice:
 
     @staticmethod
     def get_input_at_mask(input_, mask_positions, input_length, output_length, output_):
-        device_global_shape = output_.shape
+        check_for_valid_context(SplitInterfaceToDevice.device_context, input_, mask_positions, output_)
 
+        device_global_shape = output_.shape
         event = SplitInterfaceToDevice.device_program.get_input_at_mask(SplitInterfaceToDevice.device_queue,
                                                                         device_global_shape, None,
                                                                         input_.data, mask_positions.data,
@@ -44,6 +47,8 @@ class SplitInterfaceToDevice:
 
     @staticmethod
     def set_input_at_mask_as_output(input_, mask_positions, input_length, output_length, output_):
+        check_for_valid_context(SplitInterfaceToDevice.device_context, input_, mask_positions, output_)
+
         N, *input_shape = output_.shape
         device_global_shape = (N, int(np.prod(input_shape)))
 

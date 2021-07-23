@@ -12,6 +12,8 @@ from .c_code.dropout_c_code import dropout_source_code
 from .ValueChecks import assert_instance_of_cl_array
 from .ValueChecks import check_built
 
+from PySoap2_gpu.Exceptions import check_for_valid_context
+
 
 class DropoutInterfaceToDevice:
     device_context = None
@@ -42,8 +44,9 @@ class DropoutInterfaceToDevice:
 
     @staticmethod
     def dropout(z, mask, output_length, out):
-        device_global_shape = (len(z), output_length)
+        check_for_valid_context(DropoutInterfaceToDevice.device_context, z, mask, out)
 
+        device_global_shape = (len(z), output_length)
         event = DropoutInterfaceToDevice.device_program.dropout(DropoutInterfaceToDevice.device_queue,
                                                                 device_global_shape, None,
                                                                 z.data, mask.data, output_length, out.data)

@@ -15,6 +15,7 @@ from .ValueChecks import assert_instance_of_cl_array
 from .ValueChecks import check_built
 
 from PySoap2_gpu.utils import ClArrayTricks
+from PySoap2_gpu.Exceptions import check_for_valid_context
 
 
 class MultiSoftChop:
@@ -45,6 +46,9 @@ class MultiSoftChop:
 
     @staticmethod
     def eval(x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):
+        check_for_valid_context(MultiSoftChop.device_context, x_device, a1_device, a2_device,
+                                epsilon1_device, epsilon2_device)
+
         out_device = cl_array.empty_like(x_device)
 
         input_length = np.array(np.prod(a1_device.shape)).astype(np.int32)
@@ -63,6 +67,9 @@ class MultiSoftChop:
 
     @staticmethod
     def dx(x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):
+        check_for_valid_context(MultiSoftChop.device_context, x_device, a1_device, a2_device,
+                                epsilon1_device, epsilon2_device)
+
         out_device = cl_array.empty_like(x_device)
 
         input_length = np.array(np.prod(a1_device.shape)).astype(np.int32)
@@ -81,6 +88,9 @@ class MultiSoftChop:
 
     @staticmethod
     def da1(x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):
+        check_for_valid_context(MultiSoftChop.device_context, x_device, a1_device, a2_device,
+                                epsilon1_device, epsilon2_device)
+
         out_device = cl_array.empty_like(x_device)
 
         input_length = np.array(np.prod(a1_device.shape)).astype(np.int32)
@@ -99,6 +109,9 @@ class MultiSoftChop:
 
     @staticmethod
     def da2(x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):
+        check_for_valid_context(MultiSoftChop.device_context, x_device, a1_device, a2_device,
+                                epsilon1_device, epsilon2_device)
+
         out_device = cl_array.empty_like(x_device)
 
         input_length = np.array(np.prod(a1_device.shape)).astype(np.int32)
@@ -117,6 +130,9 @@ class MultiSoftChop:
 
     @staticmethod
     def de1(x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):
+        check_for_valid_context(MultiSoftChop.device_context, x_device, a1_device, a2_device,
+                                epsilon1_device, epsilon2_device)
+
         out_device = cl_array.empty_like(x_device)
 
         input_length = np.array(np.prod(a1_device.shape)).astype(np.int32)
@@ -135,6 +151,9 @@ class MultiSoftChop:
 
     @staticmethod
     def de2(x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):
+        check_for_valid_context(MultiSoftChop.device_context, x_device, a1_device, a2_device,
+                                epsilon1_device, epsilon2_device)
+
         out_device = cl_array.empty_like(x_device)
 
         input_length = np.array(np.prod(a1_device.shape)).astype(np.int32)
@@ -173,8 +192,10 @@ class SoftChopInterfaceToDevice:
 
     @staticmethod
     def delta_back_prop(g_prime, new_delta, dz, out):
-        device_global_shape = (int(np.prod(g_prime.shape)),)
+        check_for_valid_context(SoftChopInterfaceToDevice.device_context,
+                                g_prime, new_delta, dz, out)
 
+        device_global_shape = (int(np.prod(g_prime.shape)),)
         event = SoftChopInterfaceToDevice.device_program.delta_back_prop(SoftChopInterfaceToDevice.device_queue,
                                                                          device_global_shape, None,
                                                                          g_prime.data, new_delta.data, dz.data,
@@ -183,6 +204,9 @@ class SoftChopInterfaceToDevice:
 
     @staticmethod
     def parameter_gradient(delta, parameter, input_length, N, out):
+        check_for_valid_context(SoftChopInterfaceToDevice.device_context,
+                                delta, parameter, out)
+
         device_global_shape = (input_length,)
         event = SoftChopInterfaceToDevice.device_program.parameter_gradient(SoftChopInterfaceToDevice.device_queue,
                                                                             device_global_shape, None,
