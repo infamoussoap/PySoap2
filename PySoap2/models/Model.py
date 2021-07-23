@@ -225,6 +225,24 @@ class Model:
         y_test_as_list = as_list_of_data_type(y_test, np.ndarray, 'y_test')
         check_valid_targets_length(y_test_as_list, self.output_length, 'y_test')
 
+        return self._evaluate(x_test, y_test_as_list)
+
+    def _evaluate(self, x_test, y_test_as_list):
+        """ Return the MSE of the model prediction
+
+            Parameters
+            ----------
+            x_test : :obj:
+                X_test is assumed to be a list of all the inputs to be forward propagated. In particular
+                it is assumed that the first index of X_test is the index that inputs is accessed by
+            y_test_as_list : list[:obj:]
+                y_test is the associated list of outputs to the list of inputs X_test.
+
+            Returns
+            -------
+            str
+                The error
+        """
         predictions = self._predict_as_list(x_test)
         loss_vals = self._loss_function_as_list(predictions, y_test_as_list)
 
@@ -323,7 +341,7 @@ class Model:
             if verbose:
                 start, end = 0, batch_size
                 batch_x, batch_y = x_train[index[start:end]], [y[index[start:end]] for y in y_train_as_list]
-                evaluation = self.evaluate(batch_x, batch_y)
+                evaluation = self._evaluate(batch_x, batch_y)
                 print(f'Epoch {epoch + 1}/{epochs}')
                 print(evaluation)
 
