@@ -3,6 +3,8 @@ import pyopencl as cl
 from ..c_code.polynomial_transformation_1d import polynomial_1d_transform_c_code
 from ..c_code.polynomial_transformation_2d import polynomial_2d_transform_c_code
 
+from PySoap2_gpu.Exceptions import check_for_valid_context
+
 
 class PolynomialTransformationInterface:
     device_context = None
@@ -30,27 +32,36 @@ class PolynomialTransformationInterface:
     @staticmethod
     def polynomial_transform_1d(P1, images, M1, input_length, out):
         """ images assumed to be (N, M1) cl_array.Array """
+        check_for_valid_context(PolynomialTransformationInterface.device_context,
+                                P1, images, out)
+
         program = PolynomialTransformationInterface.device_program_for_1d
         queue = PolynomialTransformationInterface.device_queue
 
         event = program.polynomial_transform_1d(queue, out.shape, None,
-                                                P1.data, images.data, M1.data,
-                                                input_length.data, out.data)
+                                                P1.data, images.data, M1,
+                                                input_length, out.data)
         event.wait()
 
     @staticmethod
     def polynomial_transform_1d_multi(P1, images, M1, M2, input_length, out):
         """ images assumed to be (N, M1, M2) cl_array.Array """
+        check_for_valid_context(PolynomialTransformationInterface.device_context,
+                                P1, images, out)
+
         program = PolynomialTransformationInterface.device_program_for_1d
         queue = PolynomialTransformationInterface.device_queue
 
         event = program.polynomial_transform_1d_multi(queue, images.shape, None,
-                                                      P1.data, images.data, M1.data,
-                                                      M2.data, input_length.data, out.data)
+                                                      P1.data, images.data, M1,
+                                                      M2, input_length, out.data)
         event.wait()
 
     @staticmethod
     def polynomial_transform_2d(P1, P2, images, M1, M2, M3, input_length, out):
+        check_for_valid_context(PolynomialTransformationInterface.device_context,
+                                P1, P2, images, out)
+
         if len(images.shape) == 3:
             PolynomialTransformationInterface._polynomial_transform_2d(P1, P2, images, M1, M2, M3, input_length, out)
         elif len(images.shape) == 4:
@@ -66,8 +77,8 @@ class PolynomialTransformationInterface:
         queue = PolynomialTransformationInterface.device_queue
 
         event = program.polynomial_transform_2d(queue, out.shape, None,
-                                                P1.data, P2.data, images.data, M1.data,
-                                                M2.data, input_length.data, out.data)
+                                                P1.data, P2.data, images.data, M1,
+                                                M2, input_length, out.data)
         event.wait()
 
     @staticmethod
@@ -82,6 +93,6 @@ class PolynomialTransformationInterface:
         global_shape = (n, m1, m2 * m3)
 
         event = program.polynomial_transform_2d_multi(queue, global_shape, None,
-                                                      P1.data, P2.data, images.data, M1.data,
-                                                      M2.data, M3.data, input_length.data, out.data)
+                                                      P1.data, P2.data, images.data, M1,
+                                                      M2, M3, input_length, out.data)
         event.wait()
