@@ -12,7 +12,7 @@ from PySoap2_gpu.layers import Layer
 from PySoap2_gpu.optimizers import GPUOptimizer, get_optimizer
 from PySoap2_gpu.utils.dictionary_tricks import simplify_recursive_dict, unpack_to_recursive_dict
 
-from PySoap2_gpu.functions import ErrorFunction, MetricFunction
+from PySoap2_gpu.Functions.functions import ErrorFunction, MetricFunction
 
 from .ValueChecks import as_list_of_data_types
 from .ValueChecks import as_list_of_clarrays
