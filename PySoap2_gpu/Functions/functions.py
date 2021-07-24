@@ -45,6 +45,9 @@ class ErrorFunction:
     device_queue = None
 
     def __init__(self, device_context, device_queue):
+        if ErrorFunction.initialized:
+            return
+        
         ErrorFunction.device_queue = device_queue
         ErrorFunction.device_context = device_context
 
@@ -68,11 +71,13 @@ class MetricFunction:
     device_queue = None
 
     def __init__(self, device_context, device_queue):
+        if MetricFunction.initialized:
+            return
+
         MetricFunction.device_queue = device_queue
         MetricFunction.device_context = device_context
 
-        if not ClArrayTricks.initialized:
-            ClArrayTricks(device_context, device_queue)
+        ClArrayTricks(device_context, device_queue)
 
         MetricFunction.initialized = True
 
