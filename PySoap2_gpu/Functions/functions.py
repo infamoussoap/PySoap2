@@ -1,8 +1,3 @@
-import numpy as np
-
-import pyopencl.array as cl_array
-from pyopencl import clmath
-
 from PySoap2_gpu.utils import ClMathFunctions
 from PySoap2_gpu.utils import ClArrayTricks
 
