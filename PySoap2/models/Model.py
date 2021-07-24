@@ -397,7 +397,7 @@ class Model:
             output_id = output_layer.id
 
             # This is for numerical stability
-            if loss_name == "cross_entropy":
+            if (loss_name == "cross_entropy") and (output_layer.activation_function == "softmax"):
                 cached_delta[output_id] = [cached_output[output_id] - y_train]
             else:
                 loss_function = get_error_function(loss_name)
