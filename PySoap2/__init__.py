@@ -1,7 +1,7 @@
 # Activation and Cost Functions
-from PySoap2.functions import get_activation_function
-from PySoap2.functions import get_error_function
-from PySoap2.functions import get_metric_function
+from PySoap2.Functions.functions import get_activation_function
+from PySoap2.Functions.functions import get_error_function
+from PySoap2.Functions.functions import get_metric_function
 
 # Network Layers
 import PySoap2.layers as layers
