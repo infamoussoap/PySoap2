@@ -184,7 +184,7 @@ class ModelEvalLog(Log):
         self.batch_number = batch_number
 
         self.loss_vals = loss_vals if isinstance(loss_vals, list) else [loss_vals]
-        self.total_loss = [sum(loss_vals)]
+        self.total_loss = [sum(self.loss_vals)]
         self.metrics = metrics if isinstance(metrics, list) else [metrics]
 
         self.other = kwargs
