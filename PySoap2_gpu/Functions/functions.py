@@ -47,7 +47,7 @@ class ErrorFunction:
     def __init__(self, device_context, device_queue):
         if ErrorFunction.initialized:
             return
-        
+
         ErrorFunction.device_queue = device_queue
         ErrorFunction.device_context = device_context
 
