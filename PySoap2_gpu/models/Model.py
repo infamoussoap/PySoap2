@@ -196,5 +196,5 @@ class Model(CpuBaseModel):
         predictions = as_list_of_clarrays(self.device_queue, predictions, 'predictions', dtype=np.float64)
         targets = as_list_of_clarrays(self.device_queue, targets, 'targets', dtype=np.float64)
 
-        return [None if name is None else MetricFunction.get_metric_function(name)(prediction, target)
+        return [None if name is None else MetricFunction.get_metric_function(name)(prediction, target).get()
                 for (name, prediction, target) in zip(self.metric_functions, predictions, targets)]
