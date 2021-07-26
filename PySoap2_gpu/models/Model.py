@@ -170,6 +170,26 @@ class Model(CpuBaseModel):
             if layer.id in parameter_updates_by_layer:
                 layer.update_parameters_(parameter_updates_by_layer[layer.id])
 
+    def _get_delta_for_output_layers(self, y_train_as_list, cached_pre_activation, cached_output):
+        """ Notes
+            -----
+            Need to override the super class to use pyopencl implementation of error function
+        """
+        cached_delta = {}
+        for (output_layer, loss_name, y_train) in zip(self.output_layers, self.loss_functions, y_train_as_list):
+            output_id = output_layer.id
+
+            # This is for numerical stability
+            if (loss_name == "cross_entropy") and (output_layer.activation_function == "softmax"):
+                cached_delta[output_id] = [cached_output[output_id] - y_train]
+            else:
+                loss_function = ErrorFunction.get_error_function(loss_name)
+
+                ds_dz = loss_function(cached_output[output_id], y_train, grad=True)
+                g_prime = output_layer.activation_function_(cached_pre_activation[output_id], grad=True)
+                cached_delta[output_id] = [ds_dz * g_prime]
+        return cached_delta
+
     def _loss_function(self, predictions, targets, grad=False):
         loss = self._loss_function_as_list(predictions, targets, grad=grad)
         if self.output_length == 1:
