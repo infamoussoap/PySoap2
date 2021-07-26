@@ -4,6 +4,17 @@ from PySoap2_gpu.utils import ClArrayTricks
 
 
 def accuracy(predictions, target):
+    """ Accuracy of the predictions
+
+        Parameters
+        ----------
+        predictions : (n, ...) cl_array.Array
+        target : (n, ...) cl_array.Array
+
+        Returns
+        -------
+        cl_array.Array
+    """
     N = len(target)
 
     if len(target.shape) == 2 and target.shape[1] == 1:
