@@ -35,6 +35,11 @@ class Broadcast:
             x_device 'operation' y_device
 
             If operation = '-', then this will return x_device - y_device
+
+            Parameters
+            ----------
+            x_device : (N, ...) cl_array.Array (or (...))
+            y_device : (...) cl_array.Array (or (N, ...))
         """
         check_for_valid_context(Broadcast.device_context, x_device, y_device)
 
@@ -45,8 +50,8 @@ class Broadcast:
         except BroadcastError:
             """ Now assumed that 
             
-                y_device : (N, ...) cl_array.Array
                 x_device : (...) cl_array.Array
+                y_device : (N, ...) cl_array.Array
             """
             if operation == "-":  # These are special operation that is sensitive on the position
                 return Broadcast._broadcast_across_0_axis('+', -y_device, x_device, error_msg)
