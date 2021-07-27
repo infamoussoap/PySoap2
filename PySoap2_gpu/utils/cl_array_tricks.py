@@ -13,6 +13,29 @@ from .cl_array_tricks_c_code import var_across_axis_c_code
 from PySoap2_gpu.Exceptions import check_for_valid_context
 
 
+def take(array, indices):
+    """ Returns [array[indices[0]], array[indices[1]], ..., array[indices[n]]]
+
+        Parameters
+        ----------
+        array : cl_array.Array or np.ndarray
+        indices : list[int]
+    """
+    try:
+        sub_array = [array[i] for i in indices]
+    except TypeError:
+        raise TypeError("array must be subscriptable")
+    except IndexError as e:
+        raise IndexError("indices out of range for array") from e
+
+    if isinstance(sub_array[0], cl_array.Array):
+        return cl_array.stack(sub_array, axis=0)
+    elif isinstance(array[0], np.ndarray):
+        return np.stack(sub_array, axis=0)
+
+    raise ValueError("take only works when array is np.ndarray or cl_array.Array")
+
+
 class ClArrayTricks:
     initialized = False
 
