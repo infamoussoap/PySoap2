@@ -1,16 +1,17 @@
 import numpy as np
+import random
 
 import pyopencl as cl
 import pyopencl.array as cl_array
 
 from PySoap2.models import Model as CpuBaseModel
 from PySoap2.models import ModelLogger
-from PySoap2.utils import ImageAugmentationGenerator
 
 from PySoap2_gpu.layers import Layer
 
 from PySoap2_gpu.optimizers import GPUOptimizer, get_optimizer
 from PySoap2_gpu.utils.dictionary_tricks import simplify_recursive_dict, unpack_to_recursive_dict
+from PySoap2_gpu.utils.cl_array_tricks import take
 
 from PySoap2_gpu.Functions.functions import ErrorFunction, MetricFunction
 
@@ -82,6 +83,24 @@ class Model(CpuBaseModel):
         z = convert_to_clarray(self.device_queue, z, dtype=np.float64)
         return super().predict(z)
 
+    def _predict_as_list(self, z):
+        """ Perform forward propagation of the whole network
+
+            Parameters
+            ----------
+            z : (N, *input_shape) np.array
+                The Input
+
+            Returns
+            -------
+            list[cl_array.Array]
+                Will always return a list of np.ndarray even if there is only 1 output
+
+        """
+        z = convert_to_clarray(self.device_queue, z, dtype=np.float64)
+        cached_outputs = self._get_outputs_of_layers(z, output_only=True, training=False)
+        return [cached_outputs[output_layer.id] for output_layer in self.output_layers]
+
     def evaluate(self, x_test, y_test):
         """ Evaluates the model with the given loss-function and metric function
 
@@ -144,10 +163,67 @@ class Model(CpuBaseModel):
 
             log = ModelLogger(self, x_train_device, y_train_device, x_test=x_test, y_test=y_test)
 
-        if not isinstance(x_train, (np.ndarray, ImageAugmentationGenerator)):
-            raise ValueError("x_train needs to be an instance of np.ndarray or ImageAugmentationGenerator")
-        y_train_as_list = as_list_of_data_types(y_train, np.ndarray, 'y_train')
-        super()._train(x_train, y_train_as_list, epochs, batch_size, verbose, log)
+        y_train_as_list = as_list_of_data_types(y_train, (np.ndarray, cl_array.Array), 'y_train')
+        self._train(x_train, y_train_as_list, epochs, batch_size, verbose, log)
+
+    def _train(self, x_train, y_train_as_list, epochs, batch_size, verbose, model_logger):
+        """ Train the neural network by means of back propagation
+
+            Parameters
+            ----------
+            x_train : :obj:
+                x_train is assumed to be a list of all the inputs to be forward propagated. In particular
+                it is assumed that the first index of x_train is the index that inputs is accessed by
+            y_train_as_list : list[:obj:]
+                y_train should be a list or tuple if the network has multiple outputs
+            epochs : int
+                Number of times the neural network will see the entire dataset
+            batch_size : int
+                The batch size for gradient descent. If not defined then `batch_size` is set to the
+                length of the dataset, i.e. traditional gradient descent.
+            verbose : bool, optional
+                If set to `True` then the model performance will be printed after each epoch
+            model_logger : ModelLogger
+                Log the training history
+
+            Notes
+            -----
+            The difference between this method and the train method is that the train method adds the extra code
+            to clean the inputs of x_train, y_train_as_list, and model_logger. While this method makes stronger
+            assumptions on these inputs.
+        """
+
+        training_length = len(x_train)
+        if batch_size is None:
+            batch_size = training_length
+        index = list(range(training_length))
+
+        for epoch in range(epochs):
+            if verbose:
+                print(f'Training on {len(x_train)} samples')
+
+            random.shuffle(index)
+            for i in range(np.ceil(training_length / batch_size).astype(int)):
+                start, end = i * batch_size, (i + 1) * batch_size
+                indices = index[start:end]
+
+                batch_x, batch_y = take(x_train, indices), [take(y, indices) for y in y_train_as_list]
+                self._back_prop(batch_x, batch_y)
+
+            if verbose:
+                start, end = 0, batch_size
+                indices = index[start:end]
+
+                batch_x, batch_y = take(x_train, indices), [take(y, indices) for y in y_train_as_list]
+                evaluation = self._evaluate(batch_x, batch_y)
+                print(f'Epoch {epoch + 1}/{epochs}')
+                print(evaluation)
+
+            if model_logger:
+                model_logger.log_model(epoch + 1, None)
+
+        if model_logger and model_logger.auto_save:
+            model_logger.save()
 
     def _back_prop(self, x_train, y_train):
         """ Perform one iteration of backpropagation on the given batches
@@ -218,3 +294,5 @@ class Model(CpuBaseModel):
 
         return [None if name is None else MetricFunction.get_metric_function(name)(prediction, target).get()
                 for (name, prediction, target) in zip(self.metric_functions, predictions, targets)]
+
+
