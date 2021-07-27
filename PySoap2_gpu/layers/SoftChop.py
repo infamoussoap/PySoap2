@@ -15,6 +15,7 @@ from .ValueChecks import assert_instance_of_cl_array
 from .ValueChecks import check_built
 
 from PySoap2_gpu.utils import ClArrayTricks
+from PySoap2_gpu.utils import Broadcast
 from PySoap2_gpu.Exceptions import check_for_valid_context
 
 
@@ -227,15 +228,14 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         self.a2 = None
         self.epsilon1 = None
         self.epsilon2 = None
-        self.bias = None
-
-        self.b = None
+        self.b = None  # Bias unit
 
     def build(self, device_context, device_queue):
         self.device_queue = device_queue
         self.device_context = device_context
 
         ClArrayTricks(device_context, device_queue)
+        Broadcast(device_context, device_queue)
 
         SoftChopInterfaceToDevice(self.device_context, self.device_queue)
         MultiSoftChop(self.device_context, self.device_queue)
@@ -251,7 +251,10 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         self.epsilon1 = cl_array.to_device(device_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float64))
         self.epsilon2 = cl_array.to_device(device_queue, (np.random.rand(*self.input_shape) * 2).astype(np.float64))
 
-        self.b = cl_array.zeros_like(self.a1)
+        if self.include_bias:
+            self.b = cl_array.to_device(device_queue, np.random.rand(*self.input_shape).astype(np.float64))
+        else:
+            self.b = cl_array.zeros_like(self.a1)
 
         self.built = True
 
@@ -269,6 +272,9 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
     def predict(self, z, output_only=True, **kwargs):
         assert_instance_of_cl_array(z)
 
+        if self.include_bias:
+            z = Broadcast.broadcast_across_0_axis('+', z, self.b)
+
         out = MultiSoftChop.eval(z, self.a1, self.a2, self.epsilon1, self.epsilon2)
 
         if output_only:
@@ -277,6 +283,9 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
 
     @check_built
     def get_delta_backprop_(self, g_prime, new_delta, prev_z):
+        if self.include_bias:
+            prev_z = Broadcast.broadcast_across_0_axis('+', prev_z, self.b)
+
         dz = MultiSoftChop.dx(prev_z, self.a1, self.a2, self.epsilon1, self.epsilon2)
         summed_delta_device = reduce(lambda x, y: x + y, new_delta)
 
@@ -287,6 +296,9 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
 
     @check_built
     def get_parameter_gradients_(self, delta, prev_z, e=1e-7):
+        if self.include_bias:
+            prev_z = Broadcast.broadcast_across_0_axis('+', prev_z, self.b)
+
         args = (prev_z, self.a1, self.a2, self.epsilon1, self.epsilon2)
 
         dz = {'a1': MultiSoftChop.da1(*args),
@@ -294,12 +306,18 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
               'epsilon1': MultiSoftChop.de1(*args),
               'epsilon2': MultiSoftChop.de2(*args)}
 
+        if self.include_bias:
+            dz['bias'] = MultiSoftChop.dx(*args)
+
         N = np.int32(len(prev_z))
 
         parameter_gradients = {'a1': cl_array.empty_like(self.a1),
                                'a2': cl_array.empty_like(self.a2),
                                'epsilon1': cl_array.empty_like(self.epsilon1),
                                'epsilon2': cl_array.empty_like(self.epsilon2)}
+
+        if self.include_bias:
+            parameter_gradients['bias'] = cl_array.empty_like(self.b)
 
         summed_delta_device = reduce(lambda x, y: x + y, delta)
 
@@ -313,6 +331,9 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
 
             parameter_gradients['epsilon1'] += self.weight_decay * self.epsilon1
             parameter_gradients['epsilon2'] += self.weight_decay * self.epsilon2
+
+            if self.include_bias:
+                parameter_gradients['bias'] = self.weight_decay * self.b
 
         return parameter_gradients
 
