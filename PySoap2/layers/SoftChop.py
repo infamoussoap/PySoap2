@@ -170,12 +170,20 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
             Gradient of acceptance for negative x values
         b : np.array (of dimension k)
             Bias unit
+        weight_decay : float
+            L2 norm on a1, a2, epsilon1, epsilon2
 
         include_bias : bool
             To include a bias unit inside the softchop function
 
         built : bool
             Has the layer been built
+
+        Notes
+        -----
+        weight_decay for the SoftChop maximises (not minimises) the values of the softchop parameters. This is because,
+            - Larger a1/a2 values implies that more evidence is required to be non-zero
+            - Larger epsilon1/epsilon2 values implies that more evidence is required to be important
     """
 
     def __init__(self, include_bias=True, weight_decay=0.0):
@@ -342,13 +350,13 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
 
         if abs(self.weight_decay) > e:
             parameter_gradients = {'a1': np.einsum('i...,i...', delta, MultiSoftChop.da1(**kwargs))
-                                         + self.weight_decay * self.a1,
+                                         - self.weight_decay * self.a1,
                                    'a2': np.einsum('i...,i...', delta, MultiSoftChop.da2(**kwargs))
-                                         + self.weight_decay * self.a2,
+                                         - self.weight_decay * self.a2,
                                    'epsilon1': np.einsum('i...,i...', delta, MultiSoftChop.de1(**kwargs))
-                                               + self.weight_decay * self.epsilon1,
+                                               - self.weight_decay * self.epsilon1,
                                    'epsilon2': np.einsum('i...,i...', delta, MultiSoftChop.de2(**kwargs))
-                                               + self.weight_decay * self.epsilon2,
+                                               - self.weight_decay * self.epsilon2,
                                    'bias': np.einsum('i...,i...', delta, MultiSoftChop.dx(**kwargs))}
 
         else:

@@ -217,6 +217,14 @@ class SoftChopInterfaceToDevice:
 
 
 class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
+    """
+        Notes
+        -----
+        weight_decay for the SoftChop maximises (not minimises) the values of the softchop parameters. This is because,
+            - Larger a1/a2 values implies that more evidence is required to be non-zero
+            - Larger epsilon1/epsilon2 values implies that more evidence is required to be important
+    """
+
     def __init__(self, include_bias=True, weight_decay=0.0):
         NetworkNode.__init__(self)
         LayerBaseAttributes.__init__(self)
@@ -326,11 +334,11 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
                                                          N, parameter_gradients[key])
 
         if abs(self.weight_decay) > e:
-            parameter_gradients['a1'] += self.weight_decay * self.a1
-            parameter_gradients['a2'] += self.weight_decay * self.a2
+            parameter_gradients['a1'] -= self.weight_decay * self.a1
+            parameter_gradients['a2'] -= self.weight_decay * self.a2
 
-            parameter_gradients['epsilon1'] += self.weight_decay * self.epsilon1
-            parameter_gradients['epsilon2'] += self.weight_decay * self.epsilon2
+            parameter_gradients['epsilon1'] -= self.weight_decay * self.epsilon1
+            parameter_gradients['epsilon2'] -= self.weight_decay * self.epsilon2
 
             if self.include_bias:
                 parameter_gradients['bias'] = self.weight_decay * self.b
