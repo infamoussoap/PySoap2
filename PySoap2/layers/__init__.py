@@ -8,7 +8,7 @@ from .NetworkNode import SingleParentNetworkNode
 # Trainable Layers
 from .Input import Input
 from .Dense import Dense
-from .Convolutional import Conv_2D
+from .Convolutional import Conv2D
 from .ElementWise import ElementWise
 from .BatchNorm import BatchNorm
 from .SoftChop import SoftChop

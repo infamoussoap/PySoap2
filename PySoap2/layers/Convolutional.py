@@ -10,7 +10,7 @@ from PySoap2.layers.LayerBaseAttributes import LayerBaseAttributes
 from .LayerBuiltChecks import check_built
 
 
-class Conv_2D(NetworkNode, LayerBaseAttributes, Layer):
+class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
     """ 2D Convolutional layer
 
         Attributes
