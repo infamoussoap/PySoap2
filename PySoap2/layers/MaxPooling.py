@@ -73,7 +73,7 @@ class MaxPooling2D(NetworkNode, LayerBaseAttributes, Layer):
             reached the end of the filter spatial size. You can only do this by returning the windowed results
         """
 
-        windowed = MaxPool2D.im2window(images, filter_spartial_shape, stride)
+        windowed = MaxPooling2D.im2window(images, filter_spartial_shape, stride)
         shape = windowed.shape
         return windowed.reshape(shape[0], shape[1], shape[2], np.prod(shape[3:]))
 
@@ -99,7 +99,7 @@ class MaxPooling2D(NetworkNode, LayerBaseAttributes, Layer):
 
     @check_built
     def predict(self, z, output_only=True, pre_activation_of_input=None, training=False):
-        windowed_images = MaxPool2D.im2window(z, self.pool_spatial_shape, self.stride)
+        windowed_images = MaxPooling2D.im2window(z, self.pool_spatial_shape, self.stride)
         windowed_shape = windowed_images.shape
 
         flattened_spatial_dimension = (*windowed_shape[:3], windowed_shape[3] * windowed_shape[4], windowed_shape[5])
@@ -112,6 +112,7 @@ class MaxPooling2D(NetworkNode, LayerBaseAttributes, Layer):
         max_val = np.take_along_axis(windowed_images_with_flatten_spatial_dimension,
                                      np.expand_dims(max_indices, axis=-2), axis=-2).squeeze(axis=-2)
 
+        # Save the max index if training - needed for backprop
         if training:
             self.max_indices = max_indices
 
@@ -121,8 +122,24 @@ class MaxPooling2D(NetworkNode, LayerBaseAttributes, Layer):
 
     @check_built
     def get_delta_backprop_(self, g_prime, new_delta, prev_z):
-        delta = reduce(sum, new_delta)
-        raise NotImplementedError
+        delta = reduce(lambda x, y: x + y, new_delta)
+
+        N = len(g_prime)
+        raveled_input_indices = np.arange(N * np.prod(self.input_shape)).reshape((N, *self.input_shape))
+
+        windowed_indices = MaxPooling2D.im2window(raveled_input_indices, self.pool_spatial_shape, self.stride)
+        windowed_shape = windowed_indices.shape
+
+        flattened_spatial_dimension = (*windowed_shape[:3], windowed_shape[3] * windowed_shape[4], windowed_shape[5])
+        windowed_indices_with_flatten_spatial_dimension = windowed_indices.reshape(flattened_spatial_dimension)
+
+        max_arg_for_raveled_input = np.take_along_axis(windowed_indices_with_flatten_spatial_dimension,
+                                                       np.expand_dims(self.max_indices, axis=-2), axis=-2).squeeze(axis=-2)
+
+        dx = np.zeros((N, *self.input_shape), dtype=np.float64)
+        np.add.at(dx.ravel(), max_arg_for_raveled_input.ravel(), delta.ravel())
+
+        return dx
 
     @check_built
     def get_parameter_gradients_(self, delta, prev_z):
