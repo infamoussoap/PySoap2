@@ -115,7 +115,7 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
             reached the end of the filter spatial size. You can only do this by returning the windowed results
         """
 
-        windowed = Conv_2D.im2window(images, filter_spartial_shape, stride)
+        windowed = Conv2D.im2window(images, filter_spartial_shape, stride)
         shape = windowed.shape
         return windowed.reshape(shape[0], shape[1], shape[2], np.prod(shape[3:]))
 
@@ -150,7 +150,7 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
         shape = filter_.shape
         filter_spatial_shape = shape[:2]
 
-        col = Conv_2D.im2col(images, filter_spatial_shape, stride)
+        col = Conv2D.im2col(images, filter_spatial_shape, stride)
         flatten_filter = filter_.reshape((np.prod(shape[:-1]), shape[-1]), order='A')
 
         return col @ flatten_filter[None, :, :] + bias[None, None, None, :]
