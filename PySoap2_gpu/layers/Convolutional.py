@@ -122,10 +122,10 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
         NetworkNode.__init__(self)
         LayerBaseAttributes.__init__(self)
 
-        self.filter_num = filter_num
+        self.filter_num = np.int32(filter_num)
         self.filter_spatial_shape = filter_spatial_shape
 
-        self.stride = stride
+        self.stride = np.int32(stride)
 
         self.activation_function = activation_function
         self.activation_kwargs = {} if activation_kwargs is None else activation_kwargs
@@ -138,14 +138,72 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
         self.b = None
 
     def build(self, device_context, device_queue):
-        raise NotImplementedError
+        self.device_queue = device_queue
+        self.device_context = device_context
+
+        Conv2DInterfaceToDevice(self.device_context, self.device_queue)
+
+        input_shape = self.parents[0].output_shape
+
+        self.input_shape = input_shape
+        self.single_filter_shape = (*self.filter_spatial_shape, input_shape[2])
+
+        self.filter_shape = (*self.single_filter_shape, self.filter_num)
+
+        # These 2 lines follow the formula in the youtube lecture
+        # Giving us the output shape of this layer
+        n = int((input_shape[0] - self.filter_spatial_shape[0]) / self.stride + 1)
+        m = int((input_shape[1] - self.filter_spatial_shape[1]) / self.stride + 1)
+
+        self.output_spatial_shape = (n, m)
+        self.output_shape = (*self.output_spatial_shape, self.filter_num)
+
+        # Initialise the the filter with Glorot-Uniform, a uniform distribution over [-limit, limit],
+        # where limit = sqrt(6 / (fan_in + fan_out)) (fan_in is the number of input units in the weight
+        # tensor and fan_out is the number of output units).
+        limit = np.sqrt(6 / (np.prod(self.filter_shape) + 1))
+        filter_ = np.random.uniform(low=-limit, high=limit, size=self.filter_shape)
+        b = np.zeros(self.filter_num)
+
+        self.filter = cl_array.to_device(self.device_queue, filter_.astype(np.float64))
+        self.b = cl_array.to_device(self.device_queue, b.astype(np.float64))
+
+        self.built = True
 
     @check_built
     def predict(self, z, output_only=True, **kwargs):
-        raise NotImplementedError
+        assert_instance_of_cl_array(z)
+
+        n = len(z)
+        out = cl_array.zeros(self.device_queue, (n, *self.output_shape), dtype=np.float64)
+
+        filter_height, filter_width, _ = self.single_filter_shape
+        image_width, image_depth, _ = self.input_shape
+        output_width = np.int32(self.output_shape[1])
+        input_length, output_length = np.int32(np.prod(self.input_shape)), np.int32(np.prod(self.output_shape))
+
+        Conv2DInterfaceToDevice.predict(z, self.filter, self.b,
+                                        np.int32(filter_height), np.int32(filter_width), self.filter_num,
+                                        self.stride,
+                                        np.int32(image_width), np.int32(image_depth),
+                                        output_width,
+                                        self.input_length_device, self.output_length_device,
+                                        out)
+
+        if output_only:
+            return self.activation_function_(out)
+        return out, self.activation_function_(out)
 
     @check_built
     def get_delta_backprop_(self, g_prime, new_delta, prev_z):
+        assert_instance_of_cl_array(g_prime)
+        out = cl_array.empty_like(g_prime)
+
+        delta = reduce(lambda x, y: x + y, new_delta)
+
+        Conv2DInterfaceToDevice.delta_back_prop(delta, eye_conv, g_prime, self.input_length_device,
+                                                self.output_length_device, out)
+
         raise NotImplementedError
 
     @check_built
