@@ -3,3 +3,4 @@ unit_tests
 PySoap2_tests.ipynb
 PySoap2-Gpu Tests.ipynb
 .ipynb_checkpoints
+__pycache__/
