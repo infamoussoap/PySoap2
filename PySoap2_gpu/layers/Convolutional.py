@@ -180,7 +180,6 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
         filter_height, filter_width, _ = self.single_filter_shape
         image_width, image_depth, _ = self.input_shape
         output_width = np.int32(self.output_shape[1])
-        input_length, output_length = np.int32(np.prod(self.input_shape)), np.int32(np.prod(self.output_shape))
 
         Conv2DInterfaceToDevice.predict(z, self.filter, self.b,
                                         np.int32(filter_height), np.int32(filter_width), self.filter_num,
