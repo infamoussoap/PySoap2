@@ -34,6 +34,9 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
             The filter of this layer
         b : (filter_num, ) np.array
             The bias units
+        padding : str, optional
+            If "VALID", then no padding is performed
+            If "SAME", then padding is such that the output shape is the same as the input shape
 
         input_shape : 3 tuple of int
             The shape of a single input into this layer
@@ -207,10 +210,15 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
 
         self.filter_shape = (*self.single_filter_shape, self.filter_num)
 
-        # These 2 lines follow the formula in the youtube lecture
-        # Giving us the output shape of this layer
-        n = int((input_shape[0] - self.filter_spatial_shape[0]) / self.stride + 1)
-        m = int((input_shape[1] - self.filter_spatial_shape[1]) / self.stride + 1)
+        if self.padding == "VALID":
+            # These 2 lines follow the formula in the youtube lecture
+            # Giving us the output shape of this layer
+            n = int((input_shape[0] - self.filter_spatial_shape[0]) / self.stride + 1)
+            m = int((input_shape[1] - self.filter_spatial_shape[1]) / self.stride + 1)
+
+        else:  # padding == "SAME"
+            n = input_shape[0]
+            m = input_shape[1]
 
         self.output_spatial_shape = (n, m)
         self.output_shape = (*self.output_spatial_shape, self.filter_num)
@@ -251,7 +259,7 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
                 The second np.array will store the output after it has passed through the
                 activation function.
         """
-
+        z = self.pad_image(z)
         conv = self.perform_conv(z, self.filter, self.b, self.stride)
 
         if output_only:
@@ -291,12 +299,14 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
         # that hits a given pixel position
         input_length = int(np.prod(self.input_shape))
         eye = np.eye(input_length).reshape((input_length, *self.input_shape))
+        eye = self.pad_image(eye)
         eye_conv = self.perform_conv(eye, self.filter, np.zeros(self.filter_num), self.stride)
 
         # Reshape
         eye_conv = eye_conv.reshape((*self.input_shape, *self.output_spatial_shape, self.filter_num))
 
         # Self-explanatory once you look at the math
+        # g_prime = self.pad_image(g_prime)
         delta = reduce(lambda x, y: x + y, new_delta)
         out_delta = np.einsum("ijkl,abcjkl,iabc->iabc", delta, eye_conv, g_prime, optimize='greedy')
         return out_delta
@@ -320,7 +330,9 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
 
         """
         # This code is self-explanatory when you look at the math
+        prev_z = self.pad_image(prev_z)
         windowed = self.im2window(prev_z, self.filter_spatial_shape, self.stride)
+
         delta = reduce(sum, delta)
 
         parameter_gradients = {'filter': np.einsum("abcijk,abcl->ijkl", windowed, delta, optimize="greedy"),
@@ -371,4 +383,4 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
                           (0, 0))
 
         padded_images = np.pad(images, pad_dimensions, mode='constant')
-        raise padded_images
+        return padded_images
