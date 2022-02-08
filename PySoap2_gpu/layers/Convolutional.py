@@ -118,6 +118,7 @@ class Conv2DInterfaceToDevice:
 
 
 class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
+
     def __init__(self, filter_num, filter_spatial_shape, stride, activation_function, activation_kwargs=None):
         NetworkNode.__init__(self)
         LayerBaseAttributes.__init__(self)
@@ -172,22 +173,9 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
 
     @check_built
     def predict(self, z, output_only=True, **kwargs):
-        assert_instance_of_cl_array(z)
-
-        n = len(z)
-        out = cl_array.zeros(self.device_queue, (n, *self.output_shape), dtype=np.float64)
-
-        filter_height, filter_width, _ = self.single_filter_shape
-        image_width, image_depth, _ = self.input_shape
-        output_width = np.int32(self.output_shape[1])
-
-        Conv2DInterfaceToDevice.predict(z, self.filter, self.b,
-                                        np.int32(filter_height), np.int32(filter_width), self.filter_num,
-                                        self.stride,
-                                        np.int32(image_width), np.int32(image_depth),
-                                        output_width,
-                                        self.input_length_device, self.output_length_device,
-                                        out)
+        out = Conv2D.perform_conv(z, self.filter, self.b, self.stride,
+                                  self.input_shape, self.output_shape,
+                                  self.device_queue)
 
         if output_only:
             return self.activation_function_(out)
@@ -203,7 +191,7 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
         Conv2DInterfaceToDevice.delta_back_prop(delta, eye_conv, g_prime, self.input_length_device,
                                                 self.output_length_device, out)
 
-        raise NotImplementedError
+        return out
 
     @check_built
     def get_parameter_gradients_(self, delta, prev_z):
@@ -222,3 +210,27 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
     @check_built
     def summary_(self):
         return f'Conv2D {self.filter_num} x {(self.single_filter_shape,)}', f'Output Shape {(None, *self.output_shape)}'
+
+    @staticmethod
+    def perform_conv(images, filter_, bias, stride,
+                     input_shape, output_shape,
+                     device_queue):
+        assert_instance_of_cl_array(images)
+
+        n = len(images)
+        out = cl_array.zeros(device_queue, (n, output_shape), dtype=np.float64)
+
+        filter_num, filter_height, filter_width, _ = filter_.shape
+        image_width, image_depth, _ = input_shape
+        output_width = np.int32(output_shape[1])
+        input_length, output_length = int(np.prod(input_shape)), int(np.prod(output_shape))
+
+        Conv2DInterfaceToDevice.predict(images, filter_, bias,
+                                        np.int32(filter_height), np.int32(filter_width), filter_num,
+                                        stride,
+                                        np.int32(image_width), np.int32(image_depth),
+                                        output_width,
+                                        input_length, output_length,
+                                        out)
+
+        return out
