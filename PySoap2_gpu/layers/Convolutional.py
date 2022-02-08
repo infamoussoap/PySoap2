@@ -188,6 +188,12 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
 
         delta = reduce(lambda x, y: x + y, new_delta)
 
+        eye = np.eye(self.input_length_device).reshape((self.input_length_device, *self.input_shape))
+        eye_device = cl_array.to_device(self.device_queue, eye)
+        eye_conv = Conv2D.perform_conv(eye_device, self.filter, self.b, self.stride,
+                                       self.input_shape, self.output_shape,
+                                       self.device_queue)
+
         Conv2DInterfaceToDevice.delta_back_prop(delta, eye_conv, g_prime, self.input_length_device,
                                                 self.output_length_device, out)
 
@@ -195,11 +201,34 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
 
     @check_built
     def get_parameter_gradients_(self, delta, prev_z):
-        raise NotImplementedError
+        assert_instance_of_cl_array(prev_z)
+        delta = reduce(lambda x, y: x + y, delta)
+
+        filter_grads = cl_array.zeros(self.device_queue, self.filter.shape, dtype=np.float64)
+        bias_grads = cl_array.zeros(self.device_queue, self.b.shape, dtype=np.float64)
+
+        output_height, output_width = self.output_spatial_shape
+        _, image_width, image_depth = self.input_shape
+        _, filter_width, _ = self.single_filter_shape
+        N = len(prev_z)
+
+        Conv2DInterfaceToDevice.filter_gradient(prev_z, delta,
+                                                output_height, output_width, self.filter_num,
+                                                self.stride,
+                                                image_width, image_depth,
+                                                N, self.input_length_device,
+                                                filter_width,
+                                                filter_grads)
+
+        sum_length = np.int32(np.prod(delta.shape[:-1]))
+        Conv2DInterfaceToDevice.bias_gradient(delta, sum_length, self.filter_num, bias_grads)
+
+        return {'weight': filter_grads, 'bias': bias_grads}
 
     @check_built
     def update_parameters_(self, parameter_updates):
-        raise NotImplementedError
+        self.filter -= parameter_updates['weight']
+        self.b -= parameter_updates['bias']
 
     @check_built
     def get_weights(self, as_dict=False):
@@ -223,7 +252,7 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
         filter_num, filter_height, filter_width, _ = filter_.shape
         image_width, image_depth, _ = input_shape
         output_width = np.int32(output_shape[1])
-        input_length, output_length = int(np.prod(input_shape)), int(np.prod(output_shape))
+        input_length, output_length = np.int32(np.prod(input_shape)), np.int32(np.prod(output_shape))
 
         Conv2DInterfaceToDevice.predict(images, filter_, bias,
                                         np.int32(filter_height), np.int32(filter_width), filter_num,
