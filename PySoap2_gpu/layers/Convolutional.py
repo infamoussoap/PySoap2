@@ -56,18 +56,23 @@ class Conv2DInterfaceToDevice:
         program = Conv2DInterfaceToDevice.device_program
         queue = Conv2DInterfaceToDevice.device_queue
 
+        events = []
         for i in range(num_of_filters):
             current_filter = np.int32(i)
 
-            event = program.conv2d(queue, (len(z), output_height, output_width), None,
-                                   z.data, filter_.data, bias_.data,
-                                   filter_height, filter_width, num_of_filters,
-                                   stride, current_filter,
-                                   image_width, image_depth,
-                                   output_width,
-                                   input_length, output_length,
-                                   out.data)
-        queue.finish()
+            event = program.predict(queue, (len(z), output_height, output_width), None,
+                                    z.data, filter_.data, bias_.data,
+                                    filter_height, filter_width, num_of_filters,
+                                    stride, current_filter,
+                                    image_width, image_depth,
+                                    output_width,
+                                    input_length, output_length,
+                                    out.data)
+
+            events.append(event)
+
+        cl.wait_for_events(events)
+        # queue.finish()
 
     @staticmethod
     def delta_back_prop(delta, eye_conv, g_prime, input_length, output_length, out):
@@ -96,7 +101,7 @@ class Conv2DInterfaceToDevice:
         global_shape = (np.prod(out.shape),)
 
         event = program.filter_gradient(queue, global_shape, None,
-                                        prev_z.shape, delta.shape,
+                                        prev_z.data, delta.data,
                                         output_height, output_width, num_of_filters,
                                         stride,
                                         image_width, image_depth,
@@ -182,7 +187,7 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
         return out, self.activation_function_(out)
 
     @check_built
-    def get_delta_backprop_(self, g_prime, new_delta, prev_z):
+    def get_delta_backprop_(self, g_prime, new_delta, *args):
         assert_instance_of_cl_array(g_prime)
         out = cl_array.empty_like(g_prime)
 
@@ -213,21 +218,21 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
         N = len(prev_z)
 
         Conv2DInterfaceToDevice.filter_gradient(prev_z, delta,
-                                                output_height, output_width, self.filter_num,
-                                                self.stride,
-                                                image_width, image_depth,
-                                                N, self.input_length_device,
-                                                filter_width,
+                                                np.int32(output_height), np.int32(output_width), self.filter_num,
+                                                np.int32(self.stride),
+                                                np.int32(image_width), np.int32(image_depth),
+                                                np.int32(N), self.input_length_device,
+                                                np.int32(filter_width),
                                                 filter_grads)
 
         sum_length = np.int32(np.prod(delta.shape[:-1]))
         Conv2DInterfaceToDevice.bias_gradient(delta, sum_length, self.filter_num, bias_grads)
 
-        return {'weight': filter_grads, 'bias': bias_grads}
+        return {'filter': filter_grads, 'bias': bias_grads}
 
     @check_built
     def update_parameters_(self, parameter_updates):
-        self.filter -= parameter_updates['weight']
+        self.filter -= parameter_updates['filter']
         self.b -= parameter_updates['bias']
 
     @check_built
@@ -247,16 +252,16 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
         assert_instance_of_cl_array(images)
 
         n = len(images)
-        out = cl_array.zeros(device_queue, (n, output_shape), dtype=np.float64)
+        out = cl_array.zeros(device_queue, (n, *output_shape), dtype=np.float64)
 
-        filter_num, filter_height, filter_width, _ = filter_.shape
-        image_width, image_depth, _ = input_shape
+        filter_height, filter_width, _, filter_num = filter_.shape
+        _, image_width, image_depth = input_shape
         output_width = np.int32(output_shape[1])
         input_length, output_length = np.int32(np.prod(input_shape)), np.int32(np.prod(output_shape))
 
         Conv2DInterfaceToDevice.predict(images, filter_, bias,
-                                        np.int32(filter_height), np.int32(filter_width), filter_num,
-                                        stride,
+                                        np.int32(filter_height), np.int32(filter_width), np.int32(filter_num),
+                                        np.int32(stride),
                                         np.int32(image_width), np.int32(image_depth),
                                         output_width,
                                         input_length, output_length,
