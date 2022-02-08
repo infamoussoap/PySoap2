@@ -156,7 +156,7 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
         return col @ flatten_filter[None, :, :] + bias[None, None, None, :]
 
     def __init__(self, filter_num, filter_spatial_shape, stride, activation_function, *args, activation_kwargs=None,
-                 **kwargs):
+                 padding="VALID", **kwargs):
         """ Initialise the basic information of this conv_2d layer
 
             Parameters
@@ -171,6 +171,9 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
                 The activation function for this layer
             activation_kwargs : dict of str - :obj:, optional
                 The keyword arguments for the activation function if it has hyper-parameters
+            padding : str, optional
+                If "VALID", then no padding is performed
+                If "SAME", then padding is such that the output shape is the same as the input shape
         """
         NetworkNode.__init__(self)
         LayerBaseAttributes.__init__(self)
@@ -189,6 +192,11 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
 
         self.filter = None
         self.b = None
+
+        if padding in ["VALID", "SAME"]:
+            self.padding = padding
+        else:
+            raise ValueError(f"Padding {padding} is invalid. Try 'VALID' or 'SAME' padding.")
 
     def build(self):
         """ Initialise the filters and bias units, and compute the output shape """
@@ -343,3 +351,24 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
 
     def __str__(self):
         return f'Conv 2D {self.filter_num} x {self.filter_spatial_shape}'
+
+    def pad_image(self, images):
+        if self.padding == "VALID":
+            return images
+
+        height_pad_length = self.input_shape[0] - 1 - int((self.input_shape[0] - self.filter_shape[0]) / self.stride)
+        width_pad_length = self.input_shape[1] - 1 - int((self.input_shape[1] - self.filter_shape[1]) / self.stride)
+
+        upper_pad = height_pad_length // 2
+        lower_pad = height_pad_length - upper_pad
+
+        left_pad = width_pad_length // 2
+        right_pad = width_pad_length - left_pad
+
+        pad_dimensions = ((0, 0),
+                          (upper_pad, lower_pad),
+                          (left_pad, right_pad),
+                          (0, 0))
+
+        padded_images = np.pad(images, pad_dimensions, mode='constant')
+        raise padded_images
