@@ -13,6 +13,7 @@ from .ValueChecks import assert_instance_of_cl_array
 from .ValueChecks import check_built
 
 from PySoap2_gpu.Exceptions import check_for_valid_context
+from PySoap2_gpu.utils import ClArrayTricks
 
 
 class Conv2DInterfaceToDevice:
@@ -124,7 +125,8 @@ class Conv2DInterfaceToDevice:
 
 class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
 
-    def __init__(self, filter_num, filter_spatial_shape, stride, activation_function, activation_kwargs=None):
+    def __init__(self, filter_num, filter_spatial_shape, stride, activation_function,
+                 activation_kwargs=None, padding="VALID"):
         NetworkNode.__init__(self)
         LayerBaseAttributes.__init__(self)
 
@@ -143,11 +145,17 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
         self.filter = None
         self.b = None
 
+        if padding in ["VALID", "SAME"]:
+            self.padding = padding
+        else:
+            raise ValueError(f"Padding {padding} is invalid. Try 'VALID' or 'SAME' padding.")
+
     def build(self, device_context, device_queue):
         self.device_queue = device_queue
         self.device_context = device_context
 
         Conv2DInterfaceToDevice(self.device_context, self.device_queue)
+        ClArrayTricks(device_context, device_queue)
 
         input_shape = self.parents[0].output_shape
 
@@ -156,10 +164,14 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
 
         self.filter_shape = (*self.single_filter_shape, self.filter_num)
 
-        # These 2 lines follow the formula in the youtube lecture
-        # Giving us the output shape of this layer
-        n = int((input_shape[0] - self.filter_spatial_shape[0]) / self.stride + 1)
-        m = int((input_shape[1] - self.filter_spatial_shape[1]) / self.stride + 1)
+        if self.padding == "VALID":
+            # These 2 lines follow the formula in the youtube lecture
+            # Giving us the output shape of this layer
+            n = int((input_shape[0] - self.filter_spatial_shape[0]) / self.stride + 1)
+            m = int((input_shape[1] - self.filter_spatial_shape[1]) / self.stride + 1)
+        else:  # padding == "SAME"
+            n = input_shape[0]
+            m = input_shape[1]
 
         self.output_spatial_shape = (n, m)
         self.output_shape = (*self.output_spatial_shape, self.filter_num)
@@ -178,8 +190,10 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
 
     @check_built
     def predict(self, z, output_only=True, **kwargs):
+        z = self.pad_images(z)
+        input_shape = z.shape[1:]
         out = Conv2D.perform_conv(z, self.filter, self.b, self.stride,
-                                  self.input_shape, self.output_shape,
+                                  input_shape, self.output_shape,
                                   self.device_queue)
 
         if output_only:
@@ -194,12 +208,21 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
         delta = reduce(lambda x, y: x + y, new_delta)
 
         eye = np.eye(self.input_length_device).reshape((self.input_length_device, *self.input_shape))
-        eye_device = cl_array.to_device(self.device_queue, eye)
-        eye_conv = Conv2D.perform_conv(eye_device, self.filter, self.b, self.stride,
-                                       self.input_shape, self.output_shape,
+        eye_device = cl_array.to_device(self.device_queue, eye.astype(np.float64))
+        # eye = eye.reshape((self.input_length_device, *self.input_shape))
+
+        eye_padded = self.pad_images(eye_device)
+        input_shape = eye_padded.shape[1:]
+
+        b = cl_array.zeros_like(self.b)
+        eye_conv = Conv2D.perform_conv(eye_padded, self.filter, b, self.stride,
+                                       input_shape, self.output_shape,
                                        self.device_queue)
 
-        Conv2DInterfaceToDevice.delta_back_prop(delta, eye_conv, g_prime, self.input_length_device,
+        print("EYE CONV FINISHED")
+
+        padded_input_length = np.int32(np.prod(input_shape))
+        Conv2DInterfaceToDevice.delta_back_prop(delta, eye_conv, g_prime, padded_input_length,
                                                 self.output_length_device, out)
 
         return out
@@ -208,6 +231,8 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
     def get_parameter_gradients_(self, delta, prev_z):
         assert_instance_of_cl_array(prev_z)
         delta = reduce(lambda x, y: x + y, delta)
+
+        prev_z = self.pad_images(prev_z)
 
         filter_grads = cl_array.zeros(self.device_queue, self.filter.shape, dtype=np.float64)
         bias_grads = cl_array.zeros(self.device_queue, self.b.shape, dtype=np.float64)
@@ -266,5 +291,21 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
                                         output_width,
                                         input_length, output_length,
                                         out)
-
+        print("FINISHED PEFORM_CONV")
         return out
+
+    def pad_images(self, images):
+        if self.padding == "VALID":
+            return images
+
+        height_pad_length = self.input_shape[0] - 1 - int((self.input_shape[0] - self.filter_shape[0]) / self.stride)
+        width_pad_length = self.input_shape[1] - 1 - int((self.input_shape[1] - self.filter_shape[1]) / self.stride)
+
+        upper_pad = height_pad_length // 2
+        lower_pad = height_pad_length - upper_pad
+
+        left_pad = width_pad_length // 2
+        right_pad = width_pad_length - left_pad
+
+        padded_images = ClArrayTricks.pad_images(images, upper_pad, lower_pad, left_pad, right_pad)
+        return padded_images
