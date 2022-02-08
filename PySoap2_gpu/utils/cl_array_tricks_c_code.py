@@ -82,3 +82,26 @@ __kernel void var_across_0_axis(__global const double *x, __global const double 
     out[i] = total;
 }
 """
+
+pad_images_c_code = """
+__kernel void pad_images(__global const double *images, 
+                         const int image_height, const int image_width, const int image_channels,
+                         const int padded_image_height, const int padded_image_width,
+                         const int row_start_index, const int column_start_index,
+                         __global double *out)
+{
+    int N = get_global_id(0);
+
+    int n = N / (image_height * image_width * image_channels);
+    int i = N / (image_width * image_channels) % image_height;
+    int j = N / image_channels % image_width;
+    int k = N % image_channels;
+
+    int padded_image_index = n * padded_image_height * padded_image_width * image_channels 
+                             + (i + row_start_index) * padded_image_width * image_channels
+                             + (j + column_start_index) * image_channels
+                             + k;
+
+    out[padded_image_index] = images[N];
+}
+"""

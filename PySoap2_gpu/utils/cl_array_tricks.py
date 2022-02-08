@@ -9,6 +9,7 @@ from .cl_array_tricks_c_code import cl_array_max_source_code
 from .cl_array_tricks_c_code import cl_array_sum_across_axis_source_code
 from .cl_array_tricks_c_code import mean_across_axis_c_code
 from .cl_array_tricks_c_code import var_across_axis_c_code
+from .cl_array_tricks_c_code import pad_images_c_code
 
 from PySoap2_gpu.Exceptions import check_for_valid_context
 
@@ -45,6 +46,7 @@ class ClArrayTricks:
     cl_array_sum_program = None
     cl_array_mean_program = None
     cl_array_var_program = None
+    cl_array_pad_images_program = None
 
     device_context = None
     device_queue = None
@@ -73,6 +75,7 @@ class ClArrayTricks:
         ClArrayTricks.cl_array_sum_program = cl.Program(device_context, cl_array_sum_across_axis_source_code).build()
         ClArrayTricks.cl_array_mean_program = cl.Program(device_context, mean_across_axis_c_code).build()
         ClArrayTricks.cl_array_var_program = cl.Program(device_context, var_across_axis_c_code).build()
+        ClArrayTricks.cl_array_pad_images_program = cl.Program(device_context, pad_images_c_code).build()
 
         ClArrayTricks.initialized = True
 
@@ -185,3 +188,41 @@ class ClArrayTricks:
     def std_across_0_axis(x_val_device):
         check_for_valid_context(ClArrayTricks.device_context, x_val_device)
         return clmath.sqrt(ClArrayTricks.var_across_0_axis(x_val_device))
+
+    @staticmethod
+    def pad_images(images, upper_pad, lower_pad, left_pad, right_pad):
+        """ images assumed to be a series of 3d images, and padding occurs on the width and height dimensions
+
+            Parameters
+            ----------
+            images : (n, i, j, k) cl_array
+            upper_pad : int
+            lower_pad : int
+            left_pad : int
+            right_pad : int
+        """
+        check_for_valid_context(ClArrayTricks.device_context, images)
+
+        queue = ClArrayTricks.device_queue
+        pad_images_program = ClArrayTricks.cl_array_pad_images_program
+
+        N, *image_shape = images.shape
+        padded_image_shape = (image_shape[0] + upper_pad + lower_pad,
+                              image_shape[1] + left_pad + right_pad,
+                              image_shape[2])
+        padded_images = cl_array.zeros(queue, (N, *padded_image_shape), np.float64)
+
+        image_height, image_width, image_channels = [np.int32(x) for x in image_shape]
+        padded_image_height, padded_image_width = np.int32(padded_image_shape[0]), np.int32(padded_image_shape[1])
+        row_start_index, column_start_index = np.int32(upper_pad), np.int32(left_pad)
+
+        global_shape = (int(np.prod(images.shape)),)
+        event = pad_images_program.pad_images(queue, global_shape, None,
+                                              images.data,
+                                              image_height, image_width, image_channels,
+                                              padded_image_height, padded_image_width,
+                                              row_start_index, column_start_index,
+                                              padded_images.data)
+        event.wait()
+
+        return padded_images
