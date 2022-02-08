@@ -12,6 +12,7 @@ from .Input import Input
 from .Dense import Dense
 from .SoftChop import SoftChop
 from .BatchNorm import BatchNorm
+from .Convolutional import Conv2D
 
 # Reshape through layers
 from .Flatten import Flatten
