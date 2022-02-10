@@ -340,4 +340,4 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
         else:
             raise ValueError(f"Padding {padding} is invalid.")
 
-        return images[:, upper_pad: -lower_pad, left_pad: -right_pad, :]
+        return ClArrayTricks.remove_pad(images, upper_pad, lower_pad, left_pad, right_pad)
