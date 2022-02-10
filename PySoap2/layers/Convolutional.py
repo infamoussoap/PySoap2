@@ -259,7 +259,7 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
                 The second np.array will store the output after it has passed through the
                 activation function.
         """
-        z = self.pad_image(z)
+        z = self.pad_image(z, self.padding)
         conv = self.perform_conv(z, self.filter, self.b, self.stride)
 
         if output_only:
@@ -299,7 +299,7 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
         # that hits a given pixel position
         input_length = int(np.prod(self.input_shape))
         eye = np.eye(input_length).reshape((input_length, *self.input_shape))
-        eye = self.pad_image(eye)
+        eye = self.pad_image(eye, self.padding)
         eye_conv = self.perform_conv(eye, self.filter, np.zeros(self.filter_num), self.stride)
 
         # Reshape
@@ -330,7 +330,7 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
 
         """
         # This code is self-explanatory when you look at the math
-        prev_z = self.pad_image(prev_z)
+        prev_z = self.pad_image(prev_z, self.padding)
         windowed = self.im2window(prev_z, self.filter_spatial_shape, self.stride)
 
         delta = reduce(sum, delta)
@@ -364,8 +364,8 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
     def __str__(self):
         return f'Conv 2D {self.filter_num} x {self.filter_spatial_shape}'
 
-    def pad_image(self, images):
-        if self.padding == "VALID":
+    def pad_image(self, images, padding):
+        if padding == "VALID":
             return images
 
         height_pad_length = self.input_shape[0] - 1 - int((self.input_shape[0] - self.filter_shape[0]) / self.stride)
