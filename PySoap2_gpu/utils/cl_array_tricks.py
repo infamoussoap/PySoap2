@@ -5,11 +5,7 @@ from pyopencl import clmath
 from pyopencl.elementwise import ElementwiseKernel
 import pyopencl.array as cl_array
 
-from .cl_array_tricks_c_code import cl_array_max_source_code
-from .cl_array_tricks_c_code import cl_array_sum_across_axis_source_code
-from .cl_array_tricks_c_code import mean_across_axis_c_code
-from .cl_array_tricks_c_code import var_across_axis_c_code
-from .cl_array_tricks_c_code import pad_images_c_code
+from .cl_array_tricks_c_code import *
 
 from PySoap2_gpu.Exceptions import check_for_valid_context
 
@@ -47,6 +43,8 @@ class ClArrayTricks:
     cl_array_mean_program = None
     cl_array_var_program = None
     cl_array_pad_images_program = None
+    flip_across_0_1_axis_program = None
+    transpose_last_two_axis_program = None
 
     device_context = None
     device_queue = None
@@ -76,6 +74,8 @@ class ClArrayTricks:
         ClArrayTricks.cl_array_mean_program = cl.Program(device_context, mean_across_axis_c_code).build()
         ClArrayTricks.cl_array_var_program = cl.Program(device_context, var_across_axis_c_code).build()
         ClArrayTricks.cl_array_pad_images_program = cl.Program(device_context, pad_images_c_code).build()
+        ClArrayTricks.flip_across_0_1_axis_program = cl.Program(device_context, flip_across_0_1_axis_c_code).build()
+        ClArrayTricks.transpose_last_two_axis_program = cl.Program(device_context, transpose_last_two_axis_c_code).build()
 
         ClArrayTricks.initialized = True
 
@@ -226,3 +226,35 @@ class ClArrayTricks:
         event.wait()
 
         return padded_images
+
+    @staticmethod
+    def flip_across_0_1_axis(x):
+        check_for_valid_context(ClArrayTricks.device_context, x)
+
+        queue = ClArrayTricks.device_queue
+        program = ClArrayTricks.flip_across_0_1_axis_program
+
+        out = cl_array.zeros_like(x)
+        global_shape = (np.int32(x.shape[0]), np.int32(x.shape[1]), np.int32(np.prod(x.shape[2:])))
+        event = program.flip_across_0_1_axis(queue, global_shape, None,
+                                             x.data, *global_shape, out.data)
+        event.wait()
+
+        return out
+
+    @staticmethod
+    def transpose_last_two_axis(x):
+        check_for_valid_context(ClArrayTricks.device_context, x)
+
+        queue = ClArrayTricks.device_queue
+        program = ClArrayTricks.transpose_last_two_axis_program
+
+        output_shape = (*x.shape[:-2], x.shape[-1], x.shape[-2])
+        out = cl_array.zeros(queue, output_shape, np.float64)
+
+        global_shape = (int(np.prod(x.shape[:-2])), x.shape[-2], x.shape[-1])
+        event = program.transpose_last_two_axis(queue, global_shape, None,
+                                               x.data, np.int32(x.shape[-2]), np.int32(x.shape[-1]), out.data)
+        event.wait()
+
+        return out

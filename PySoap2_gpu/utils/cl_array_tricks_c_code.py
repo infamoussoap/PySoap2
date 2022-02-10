@@ -105,3 +105,36 @@ __kernel void pad_images(__global const double *images,
     out[padded_image_index] = images[N];
 }
 """
+
+flip_across_0_1_axis_c_code = """
+__kernel void flip_across_0_1_axis(__global double *x, 
+                                   const int row_length, const int col_length, const int channel_length,
+                                   __global double *out)
+{
+    int i = get_global_id(0);
+    int j = get_global_id(1);
+    int k = get_global_id(2);
+
+    int input_index = i * col_length * channel_length + j * channel_length + k;
+    int target_index = (row_length - i - 1) * col_length * channel_length 
+                       + (col_length - j - 1) * channel_length + k;
+
+    out[target_index] = x[input_index];
+}                                   
+"""
+
+transpose_last_two_axis_c_code = """
+__kernel void transpose_last_two_axis(__global const double *x, 
+                                      const int col_length, const int channel_length,
+                                      __global double *out)
+{
+    int i = get_global_id(0);
+    int j = get_global_id(1);
+    int k = get_global_id(2);
+
+    int input_index = i * col_length * channel_length + j * channel_length + k;
+    int target_index = i * channel_length * col_length + k * col_length + j;
+
+    out[target_index] = x[input_index];
+}                                   
+"""
