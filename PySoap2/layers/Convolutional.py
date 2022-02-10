@@ -368,14 +368,26 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
         if padding == "VALID":
             return images
 
-        height_pad_length = self.input_shape[0] - 1 - int((self.input_shape[0] - self.filter_shape[0]) / self.stride)
-        width_pad_length = self.input_shape[1] - 1 - int((self.input_shape[1] - self.filter_shape[1]) / self.stride)
+        elif padding == "SAME":
+            height_pad_length = self.input_shape[0] - 1 - int((self.input_shape[0] - self.filter_shape[0]) / self.stride)
+            width_pad_length = self.input_shape[1] - 1 - int((self.input_shape[1] - self.filter_shape[1]) / self.stride)
 
-        upper_pad = height_pad_length // 2
-        lower_pad = height_pad_length - upper_pad
+            upper_pad = height_pad_length // 2
+            lower_pad = height_pad_length - upper_pad
 
-        left_pad = width_pad_length // 2
-        right_pad = width_pad_length - left_pad
+            left_pad = width_pad_length // 2
+            right_pad = width_pad_length - left_pad
+        elif padding == "FULL":
+            filter_row, filter_col = self.filter_spatial_shape
+
+            upper_pad = filter_row - 1
+            lower_pad = filter_row - 1
+
+            left_pad = filter_col - 1
+            right_pad = filter_col - 1
+
+        else:
+            raise ValueError(f"Padding {padding} is invalid.")
 
         pad_dimensions = ((0, 0),
                           (upper_pad, lower_pad),
