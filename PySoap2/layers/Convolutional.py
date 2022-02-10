@@ -285,31 +285,25 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
             We want to return delta^{k-1} because the `sequential` class does not have access to the
             filters, W. But it does know the values of g'_{k-1} and delta^k, due to forward propagation
             and the backwards nature of the back propagation algorithm.
+
+            Refactor Notes
+            --------------
+            All credit to Pavithra Solai: https://pavisj.medium.com/convolutions-and-backpropagations-46026a8f5d2c
+            Where she says that the you can find the gradient by simply taking the convolution of the flipped filter
         """
-        # einsum requires g_prime to be a (N, *input_shape) np.array, but when the previous activation function
-        # is linear, g_prime will be 1 and will need to be converted to a np.array
-        if isinstance(g_prime, int):
-            N = len(new_delta[0])
-            g_prime = np.ones((N, *self.input_shape))
-
-        # I don't even know how to explain this code
-        # But it makes sense when you look at the math
-
-        # Essentially these 2 lines returns the elements of the filter
-        # that hits a given pixel position
-        input_length = int(np.prod(self.input_shape))
-        eye = np.eye(input_length).reshape((input_length, *self.input_shape))
-        eye = self.pad_image(eye, self.padding)
-        eye_conv = self.perform_conv(eye, self.filter, np.zeros(self.filter_num), self.stride)
-
-        # Reshape
-        eye_conv = eye_conv.reshape((*self.input_shape, *self.output_spatial_shape, self.filter_num))
-
-        # Self-explanatory once you look at the math
-        # g_prime = self.pad_image(g_prime)
         delta = reduce(lambda x, y: x + y, new_delta)
-        out_delta = np.einsum("ijkl,abcjkl,iabc->iabc", delta, eye_conv, g_prime, optimize='greedy')
-        return out_delta
+        padded_delta = self.pad_image(delta, "FULL")
+
+        flipped_filter = np.flip(self.filter, axis=(0, 1))
+        flipped_filter = np.transpose(flipped_filter, (0, 1, 3, 2))
+        b = np.zeros(flipped_filter.shape[-1])
+
+        # If the image was padded then the below will compute the derivative with the new padded zeros
+        # So we just need to remove the zeros
+        ds_dz = self.perform_conv(padded_delta, flipped_filter, b, self.stride)
+        ds_dz = self.remove_pad(ds_dz, self.padding)
+
+        return ds_dz * g_prime
 
     @check_built
     def get_parameter_gradients_(self, delta, prev_z):
@@ -396,3 +390,36 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
 
         padded_images = np.pad(images, pad_dimensions, mode='constant')
         return padded_images
+
+    def remove_pad(self, images, padding):
+        if padding == "VALID":
+            return images
+
+        elif padding == "SAME":
+            height_pad_length = self.input_shape[0] - 1 - int(
+                (self.input_shape[0] - self.filter_shape[0]) / self.stride)
+            width_pad_length = self.input_shape[1] - 1 - int((self.input_shape[1] - self.filter_shape[1]) / self.stride)
+
+            upper_pad = height_pad_length // 2
+            lower_pad = height_pad_length - upper_pad
+
+            left_pad = width_pad_length // 2
+            right_pad = width_pad_length - left_pad
+        elif padding == "FULL":
+            filter_row, filter_col = self.filter_spatial_shape
+
+            upper_pad = filter_row - 1
+            lower_pad = filter_row - 1
+
+            left_pad = filter_col - 1
+            right_pad = filter_col - 1
+
+        else:
+            raise ValueError(f"Padding {padding} is invalid.")
+
+        pad_dimensions = ((0, 0),
+                          (upper_pad, lower_pad),
+                          (left_pad, right_pad),
+                          (0, 0))
+
+        return images[:, upper_pad: -lower_pad, left_pad: -right_pad, :]
