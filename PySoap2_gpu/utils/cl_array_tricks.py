@@ -43,6 +43,7 @@ class ClArrayTricks:
     mean_program = None
     var_program = None
     pad_images_program = None
+    remove_pad_program = None
     flip_across_0_1_axis_program = None
     transpose_last_two_axis_program = None
 
@@ -74,6 +75,7 @@ class ClArrayTricks:
         ClArrayTricks.mean_program = cl.Program(device_context, mean_across_axis_c_code).build()
         ClArrayTricks.var_program = cl.Program(device_context, var_across_axis_c_code).build()
         ClArrayTricks.pad_images_program = cl.Program(device_context, pad_images_c_code).build()
+        ClArrayTricks.remove_pad_program = cl.Program(device_context, remove_pad_c_code).build()
         ClArrayTricks.flip_across_0_1_axis_program = cl.Program(device_context, flip_across_0_1_axis_c_code).build()
         ClArrayTricks.transpose_last_two_axis_program = cl.Program(device_context, transpose_last_two_axis_c_code).build()
 
@@ -228,6 +230,46 @@ class ClArrayTricks:
         return padded_images
 
     @staticmethod
+    def remove_pad(images, upper_pad, lower_pad, left_pad, right_pad):
+        """ images assumed to be a series of 3d images, and padding occurs on the width and height dimensions
+
+            Parameters
+            ----------
+            images : (n, i, j, k) cl_array
+            upper_pad : int
+            lower_pad : int
+            left_pad : int
+            right_pad : int
+        """
+        check_for_valid_context(ClArrayTricks.device_context, images)
+
+        queue = ClArrayTricks.device_queue
+        program = ClArrayTricks.remove_pad_program
+
+        N, *image_shape = images.shape
+        out_shape = (image_shape[0] - upper_pad - lower_pad,
+                     image_shape[1] - left_pad - right_pad,
+                     image_shape[2])
+        out = cl_array.zeros(queue, (N, *out_shape), np.float64)
+
+        out_height, out_width, out_channels = [np.int32(x) for x in out_shape]
+
+        image_height, image_width = np.int32(image_shape[0]), np.int32(image_shape[1])
+
+        row_start_index, column_start_index = np.int32(upper_pad), np.int32(left_pad)
+
+        global_shape = (int(np.prod(out.shape)),)
+        event = program.remove_pad(queue, global_shape, None,
+                                   images.data,
+                                   out_height, out_width, out_channels,
+                                   image_height, image_width,
+                                   row_start_index, column_start_index,
+                                   out.data)
+        event.wait()
+
+        return out
+
+    @staticmethod
     def flip_across_0_1_axis(x):
         check_for_valid_context(ClArrayTricks.device_context, x)
 
@@ -254,7 +296,7 @@ class ClArrayTricks:
 
         global_shape = (int(np.prod(x.shape[:-2])), x.shape[-2], x.shape[-1])
         event = program.transpose_last_two_axis(queue, global_shape, None,
-                                               x.data, np.int32(x.shape[-2]), np.int32(x.shape[-1]), out.data)
+                                                x.data, np.int32(x.shape[-2]), np.int32(x.shape[-1]), out.data)
         event.wait()
 
         return out

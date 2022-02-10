@@ -106,6 +106,29 @@ __kernel void pad_images(__global const double *images,
 }
 """
 
+remove_pad_c_code = """
+__kernel void remove_pad(__global const double *images, 
+                         const int out_height, const int out_width, const int out_channels,
+                         const int image_height, const int image_width,
+                         const int row_start_index, const int column_start_index,
+                         __global double *out)
+{
+    int N = get_global_id(0);
+
+    int n = N / (out_height * out_width * out_channels);
+    int i = N / (out_width * out_channels) % out_height;
+    int j = N / out_channels % out_width;
+    int k = N % out_channels;
+
+    int images_index = n * image_height * image_width * out_channels 
+                       + (i + row_start_index) * image_width * out_channels
+                       + (j + column_start_index) * out_channels
+                       + k;
+
+    out[N] = images[images_index];
+}
+"""
+
 flip_across_0_1_axis_c_code = """
 __kernel void flip_across_0_1_axis(__global double *x, 
                                    const int row_length, const int col_length, const int channel_length,
