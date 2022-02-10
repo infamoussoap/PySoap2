@@ -190,11 +190,8 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
 
     @check_built
     def predict(self, z, output_only=True, **kwargs):
-        z = self.pad_images(z)
-        input_shape = z.shape[1:]
-        out = Conv2D.perform_conv(z, self.filter, self.b, self.stride,
-                                  input_shape, self.output_shape,
-                                  self.device_queue)
+        z = self.pad_images(z, self.padding)
+        out = Conv2D.perform_conv(z, self.filter, self.b, self.stride, self.device_queue)
 
         if output_only:
             return self.activation_function_(out)
@@ -203,36 +200,29 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
     @check_built
     def get_delta_backprop_(self, g_prime, new_delta, *args):
         assert_instance_of_cl_array(g_prime)
-        out = cl_array.empty_like(g_prime)
 
         delta = reduce(lambda x, y: x + y, new_delta)
+        padded_delta = self.pad_images(delta, "FULL")
 
-        eye = np.eye(self.input_length_device).reshape((self.input_length_device, *self.input_shape))
-        eye_device = cl_array.to_device(self.device_queue, eye.astype(np.float64))
-        # eye = eye.reshape((self.input_length_device, *self.input_shape))
+        flipped_filter = ClArrayTricks.flip_across_0_1_axis(self.filter)
+        flipped_filter = ClArrayTricks.transpose_last_two_axis(flipped_filter)
+        b = cl_array.zeros(self.device_queue, flipped_filter.shape[-1], np.float64)
 
-        eye_padded = self.pad_images(eye_device)
-        input_shape = eye_padded.shape[1:]
+        temp1 = np.flip(self.filter.get(), axis=(0, 1)).transpose((0, 1, 3, 2))
+        temp2 = flipped_filter.get()
+        np.testing.assert_almost_equal(temp1, temp2)
 
-        b = cl_array.zeros_like(self.b)
-        eye_conv = Conv2D.perform_conv(eye_padded, self.filter, b, self.stride,
-                                       input_shape, self.output_shape,
-                                       self.device_queue)
+        ds_dz = self.perform_conv(padded_delta, flipped_filter, b, self.stride, self.device_queue)
+        ds_dz = self.remove_pad(ds_dz, self.padding)
 
-        print("EYE CONV FINISHED")
-
-        padded_input_length = np.int32(np.prod(input_shape))
-        Conv2DInterfaceToDevice.delta_back_prop(delta, eye_conv, g_prime, padded_input_length,
-                                                self.output_length_device, out)
-
-        return out
+        return ds_dz * g_prime
 
     @check_built
     def get_parameter_gradients_(self, delta, prev_z):
         assert_instance_of_cl_array(prev_z)
         delta = reduce(lambda x, y: x + y, delta)
 
-        prev_z = self.pad_images(prev_z)
+        prev_z = self.pad_images(prev_z, self.padding)
 
         filter_grads = cl_array.zeros(self.device_queue, self.filter.shape, dtype=np.float64)
         bias_grads = cl_array.zeros(self.device_queue, self.b.shape, dtype=np.float64)
@@ -271,13 +261,15 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
         return f'Conv2D {self.filter_num} x {(self.single_filter_shape,)}', f'Output Shape {(None, *self.output_shape)}'
 
     @staticmethod
-    def perform_conv(images, filter_, bias, stride,
-                     input_shape, output_shape,
-                     device_queue):
+    def perform_conv(images, filter_, bias, stride, device_queue):
         assert_instance_of_cl_array(images)
 
-        n = len(images)
-        out = cl_array.zeros(device_queue, (n, *output_shape), dtype=np.float64)
+        input_shape = images.shape[1:]
+        n = int((input_shape[0] - filter_.shape[0]) / stride + 1)
+        m = int((input_shape[1] - filter_.shape[1]) / stride + 1)
+        output_shape = (n, m, filter_.shape[3])
+
+        out = cl_array.zeros(device_queue, (len(images), *output_shape), dtype=np.float64)
 
         filter_height, filter_width, _, filter_num = filter_.shape
         _, image_width, image_depth = input_shape
@@ -291,21 +283,61 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
                                         output_width,
                                         input_length, output_length,
                                         out)
-        print("FINISHED PEFORM_CONV")
         return out
 
-    def pad_images(self, images):
-        if self.padding == "VALID":
+    def pad_images(self, images, padding):
+        if padding == "VALID":
             return images
 
-        height_pad_length = self.input_shape[0] - 1 - int((self.input_shape[0] - self.filter_shape[0]) / self.stride)
-        width_pad_length = self.input_shape[1] - 1 - int((self.input_shape[1] - self.filter_shape[1]) / self.stride)
+        elif padding == "SAME":
+            height_pad_length = self.input_shape[0] - 1 - int(
+                (self.input_shape[0] - self.filter_shape[0]) / self.stride)
+            width_pad_length = self.input_shape[1] - 1 - int((self.input_shape[1] - self.filter_shape[1]) / self.stride)
 
-        upper_pad = height_pad_length // 2
-        lower_pad = height_pad_length - upper_pad
+            upper_pad = height_pad_length // 2
+            lower_pad = height_pad_length - upper_pad
 
-        left_pad = width_pad_length // 2
-        right_pad = width_pad_length - left_pad
+            left_pad = width_pad_length // 2
+            right_pad = width_pad_length - left_pad
+        elif padding == "FULL":
+            filter_row, filter_col = self.filter_spatial_shape
+
+            upper_pad = filter_row - 1
+            lower_pad = filter_row - 1
+
+            left_pad = filter_col - 1
+            right_pad = filter_col - 1
+
+        else:
+            raise ValueError(f"Padding {padding} is invalid.")
 
         padded_images = ClArrayTricks.pad_images(images, upper_pad, lower_pad, left_pad, right_pad)
         return padded_images
+
+    def remove_pad(self, images, padding):
+        if padding == "VALID":
+            return images
+
+        elif padding == "SAME":
+            height_pad_length = self.input_shape[0] - 1 - int(
+                (self.input_shape[0] - self.filter_shape[0]) / self.stride)
+            width_pad_length = self.input_shape[1] - 1 - int((self.input_shape[1] - self.filter_shape[1]) / self.stride)
+
+            upper_pad = height_pad_length // 2
+            lower_pad = height_pad_length - upper_pad
+
+            left_pad = width_pad_length // 2
+            right_pad = width_pad_length - left_pad
+        elif padding == "FULL":
+            filter_row, filter_col = self.filter_spatial_shape
+
+            upper_pad = filter_row - 1
+            lower_pad = filter_row - 1
+
+            left_pad = filter_col - 1
+            right_pad = filter_col - 1
+
+        else:
+            raise ValueError(f"Padding {padding} is invalid.")
+
+        return images[:, upper_pad: -lower_pad, left_pad: -right_pad, :]
