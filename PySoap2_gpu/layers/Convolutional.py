@@ -228,15 +228,16 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
         bias_grads = cl_array.zeros(self.device_queue, self.b.shape, dtype=np.float64)
 
         output_height, output_width = self.output_spatial_shape
-        _, image_width, image_depth = self.input_shape
+        _, image_width, image_depth = prev_z.shape[1:]
         _, filter_width, _ = self.single_filter_shape
         N = len(prev_z)
+        input_length = np.int32(np.prod(prev_z.shape[1:]))
 
         Conv2DInterfaceToDevice.filter_gradient(prev_z, delta,
                                                 np.int32(output_height), np.int32(output_width), self.filter_num,
                                                 np.int32(self.stride),
                                                 np.int32(image_width), np.int32(image_depth),
-                                                np.int32(N), self.input_length_device,
+                                                np.int32(N), input_length,
                                                 np.int32(filter_width),
                                                 filter_grads)
 
