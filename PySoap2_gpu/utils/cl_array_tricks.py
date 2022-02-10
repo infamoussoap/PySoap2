@@ -38,11 +38,11 @@ class ClArrayTricks:
 
     clip_cl_array_by_min_value_in_place = None
     clip_cl_array_by_max_value_in_place = None
-    cl_array_max_program = None
-    cl_array_sum_program = None
-    cl_array_mean_program = None
-    cl_array_var_program = None
-    cl_array_pad_images_program = None
+    max_program = None
+    sum_program = None
+    mean_program = None
+    var_program = None
+    pad_images_program = None
     flip_across_0_1_axis_program = None
     transpose_last_two_axis_program = None
 
@@ -69,11 +69,11 @@ class ClArrayTricks:
                                                                               "x[i] : threshold",
                                                                               "clip_in_place_elementwise")
 
-        ClArrayTricks.cl_array_max_program = cl.Program(device_context, cl_array_max_source_code).build()
-        ClArrayTricks.cl_array_sum_program = cl.Program(device_context, cl_array_sum_across_axis_source_code).build()
-        ClArrayTricks.cl_array_mean_program = cl.Program(device_context, mean_across_axis_c_code).build()
-        ClArrayTricks.cl_array_var_program = cl.Program(device_context, var_across_axis_c_code).build()
-        ClArrayTricks.cl_array_pad_images_program = cl.Program(device_context, pad_images_c_code).build()
+        ClArrayTricks.max_program = cl.Program(device_context, cl_array_max_source_code).build()
+        ClArrayTricks.sum_program = cl.Program(device_context, cl_array_sum_across_axis_source_code).build()
+        ClArrayTricks.mean_program = cl.Program(device_context, mean_across_axis_c_code).build()
+        ClArrayTricks.var_program = cl.Program(device_context, var_across_axis_c_code).build()
+        ClArrayTricks.pad_images_program = cl.Program(device_context, pad_images_c_code).build()
         ClArrayTricks.flip_across_0_1_axis_program = cl.Program(device_context, flip_across_0_1_axis_c_code).build()
         ClArrayTricks.transpose_last_two_axis_program = cl.Program(device_context, transpose_last_two_axis_c_code).build()
 
@@ -96,9 +96,9 @@ class ClArrayTricks:
         last_axis_length = np.int32(x_gpu.shape[-1])
         out_gpu = cl_array.empty(ClArrayTricks.device_queue, x_gpu.shape[:-1], dtype=np.float64)
 
-        event = ClArrayTricks.cl_array_max_program.max_across_last_axis(ClArrayTricks.device_queue,
-                                                                        (np.prod(out_gpu.shape),), None,
-                                                                        x_gpu.data, last_axis_length, out_gpu.data)
+        event = ClArrayTricks.max_program.max_across_last_axis(ClArrayTricks.device_queue,
+                                                               (np.prod(out_gpu.shape),), None,
+                                                               x_gpu.data, last_axis_length, out_gpu.data)
         event.wait()
 
         return out_gpu
@@ -110,10 +110,10 @@ class ClArrayTricks:
         last_axis_length = np.int32(x_gpu.shape[-1])
         out_gpu = cl_array.empty(ClArrayTricks.device_queue, x_gpu.shape[:-1], dtype=np.int32)
 
-        event = ClArrayTricks.cl_array_max_program.arg_max_across_last_axis(ClArrayTricks.device_queue,
-                                                                            (np.prod(out_gpu.shape),), None,
-                                                                            x_gpu.data, last_axis_length,
-                                                                            out_gpu.data)
+        event = ClArrayTricks.max_program.arg_max_across_last_axis(ClArrayTricks.device_queue,
+                                                                   (np.prod(out_gpu.shape),), None,
+                                                                   x_gpu.data, last_axis_length,
+                                                                   out_gpu.data)
         event.wait()
 
         return out_gpu
@@ -134,8 +134,8 @@ class ClArrayTricks:
 
         out = cl_array.empty(ClArrayTricks.device_queue, input_shape, dtype=np.float64)
 
-        event = ClArrayTricks.cl_array_sum_program.sum_across_0_axis(ClArrayTricks.device_queue, (input_length,), None,
-                                                                     array.data, input_length, N, out.data)
+        event = ClArrayTricks.sum_program.sum_across_0_axis(ClArrayTricks.device_queue, (input_length,), None,
+                                                            array.data, input_length, N, out.data)
         event.wait()
 
         return out
@@ -145,7 +145,7 @@ class ClArrayTricks:
         check_for_valid_context(ClArrayTricks.device_context, x_val_device)
 
         queue = ClArrayTricks.device_queue
-        mean_program = ClArrayTricks.cl_array_mean_program
+        mean_program = ClArrayTricks.mean_program
 
         N, *input_shape = x_val_device.shape
 
@@ -166,7 +166,7 @@ class ClArrayTricks:
         check_for_valid_context(ClArrayTricks.device_context, x_val_device)
 
         queue = ClArrayTricks.device_queue
-        var_program = ClArrayTricks.cl_array_var_program
+        var_program = ClArrayTricks.var_program
 
         N, *input_shape = x_val_device.shape
 
@@ -204,7 +204,7 @@ class ClArrayTricks:
         check_for_valid_context(ClArrayTricks.device_context, images)
 
         queue = ClArrayTricks.device_queue
-        pad_images_program = ClArrayTricks.cl_array_pad_images_program
+        pad_images_program = ClArrayTricks.pad_images_program
 
         N, *image_shape = images.shape
         padded_image_shape = (image_shape[0] + upper_pad + lower_pad,
