@@ -40,3 +40,4 @@ from .Add import Add
 
 # Dropout
 from .Dropout import Dropout
+from .MaxPooling import MaxPooling2D
