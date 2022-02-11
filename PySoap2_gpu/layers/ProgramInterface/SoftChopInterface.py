@@ -16,10 +16,10 @@ class MultiSoftChopInterface:
         Arguments to all methods are assumed to be stored on the device
     """
 
-    device_context = None
-    device_queue = None
+    context = None
+    queue = None
 
-    device_program = None
+    program = None
 
     initialized = False
 
@@ -27,16 +27,16 @@ class MultiSoftChopInterface:
         if MultiSoftChopInterface.initialized:
             return
 
-        MultiSoftChopInterface.device_context = device_context
-        MultiSoftChopInterface.device_queue = device_queue
+        MultiSoftChopInterface.context = device_context
+        MultiSoftChopInterface.queue = device_queue
 
-        MultiSoftChopInterface.device_program = cl.Program(device_context, multi_softchop_source_code).build()
+        MultiSoftChopInterface.program = cl.Program(device_context, multi_softchop_source_code).build()
 
         MultiSoftChopInterface.initialized = True
 
     @staticmethod
     def eval(x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):
-        check_for_valid_context(MultiSoftChopInterface.device_context, x_device, a1_device, a2_device,
+        check_for_valid_context(MultiSoftChopInterface.context, x_device, a1_device, a2_device,
                                 epsilon1_device, epsilon2_device)
 
         out_device = cl_array.empty_like(x_device)
@@ -44,20 +44,20 @@ class MultiSoftChopInterface:
         input_length = np.array(np.prod(a1_device.shape)).astype(np.int32)
         N = np.array(len(x_device)).astype(np.int32)
 
-        input_length_device = cl_array.to_device(MultiSoftChopInterface.device_queue, input_length)
+        input_length_device = cl_array.to_device(MultiSoftChopInterface.queue, input_length)
 
         args = [x_device, a1_device, a2_device, epsilon1_device, epsilon2_device, input_length_device, out_device]
         args_data = [arg.data for arg in args]
 
-        event = MultiSoftChopInterface.device_program.softchop_eval(MultiSoftChopInterface.device_queue, (N, input_length), None,
-                                                                    *args_data)
+        event = MultiSoftChopInterface.program.softchop_eval(MultiSoftChopInterface.queue, (N, input_length), None,
+                                                             *args_data)
         event.wait()
 
         return out_device
 
     @staticmethod
     def dx(x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):
-        check_for_valid_context(MultiSoftChopInterface.device_context, x_device, a1_device, a2_device,
+        check_for_valid_context(MultiSoftChopInterface.context, x_device, a1_device, a2_device,
                                 epsilon1_device, epsilon2_device)
 
         out_device = cl_array.empty_like(x_device)
@@ -65,20 +65,20 @@ class MultiSoftChopInterface:
         input_length = np.array(np.prod(a1_device.shape)).astype(np.int32)
         N = np.array(len(x_device)).astype(np.int32)
 
-        input_length_device = cl_array.to_device(MultiSoftChopInterface.device_queue, input_length)
+        input_length_device = cl_array.to_device(MultiSoftChopInterface.queue, input_length)
 
         args = [x_device, a1_device, a2_device, epsilon1_device, epsilon2_device, input_length_device, out_device]
         args_data = [arg.data for arg in args]
 
-        event = MultiSoftChopInterface.device_program.softchop_dx(MultiSoftChopInterface.device_queue, (N, input_length), None,
-                                                                  *args_data)
+        event = MultiSoftChopInterface.program.softchop_dx(MultiSoftChopInterface.queue, (N, input_length), None,
+                                                           *args_data)
         event.wait()
 
         return out_device
 
     @staticmethod
     def da1(x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):
-        check_for_valid_context(MultiSoftChopInterface.device_context, x_device, a1_device, a2_device,
+        check_for_valid_context(MultiSoftChopInterface.context, x_device, a1_device, a2_device,
                                 epsilon1_device, epsilon2_device)
 
         out_device = cl_array.empty_like(x_device)
@@ -86,20 +86,20 @@ class MultiSoftChopInterface:
         input_length = np.array(np.prod(a1_device.shape)).astype(np.int32)
         N = np.array(len(x_device)).astype(np.int32)
 
-        input_length_device = cl_array.to_device(MultiSoftChopInterface.device_queue, input_length)
+        input_length_device = cl_array.to_device(MultiSoftChopInterface.queue, input_length)
 
         args = [x_device, a1_device, a2_device, epsilon1_device, epsilon2_device, input_length_device, out_device]
         args_data = [arg.data for arg in args]
 
-        event = MultiSoftChopInterface.device_program.softchop_da1(MultiSoftChopInterface.device_queue, (N, input_length), None,
-                                                                   *args_data)
+        event = MultiSoftChopInterface.program.softchop_da1(MultiSoftChopInterface.queue, (N, input_length), None,
+                                                            *args_data)
         event.wait()
 
         return out_device
 
     @staticmethod
     def da2(x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):
-        check_for_valid_context(MultiSoftChopInterface.device_context, x_device, a1_device, a2_device,
+        check_for_valid_context(MultiSoftChopInterface.context, x_device, a1_device, a2_device,
                                 epsilon1_device, epsilon2_device)
 
         out_device = cl_array.empty_like(x_device)
@@ -107,20 +107,20 @@ class MultiSoftChopInterface:
         input_length = np.array(np.prod(a1_device.shape)).astype(np.int32)
         N = np.array(len(x_device)).astype(np.int32)
 
-        input_length_device = cl_array.to_device(MultiSoftChopInterface.device_queue, input_length)
+        input_length_device = cl_array.to_device(MultiSoftChopInterface.queue, input_length)
 
         args = [x_device, a1_device, a2_device, epsilon1_device, epsilon2_device, input_length_device, out_device]
         args_data = [arg.data for arg in args]
 
-        event = MultiSoftChopInterface.device_program.softchop_da2(MultiSoftChopInterface.device_queue, (N, input_length), None,
-                                                                   *args_data)
+        event = MultiSoftChopInterface.program.softchop_da2(MultiSoftChopInterface.queue, (N, input_length), None,
+                                                            *args_data)
         event.wait()
 
         return out_device
 
     @staticmethod
     def de1(x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):
-        check_for_valid_context(MultiSoftChopInterface.device_context, x_device, a1_device, a2_device,
+        check_for_valid_context(MultiSoftChopInterface.context, x_device, a1_device, a2_device,
                                 epsilon1_device, epsilon2_device)
 
         out_device = cl_array.empty_like(x_device)
@@ -128,20 +128,20 @@ class MultiSoftChopInterface:
         input_length = np.array(np.prod(a1_device.shape)).astype(np.int32)
         N = np.array(len(x_device)).astype(np.int32)
 
-        input_length_device = cl_array.to_device(MultiSoftChopInterface.device_queue, input_length)
+        input_length_device = cl_array.to_device(MultiSoftChopInterface.queue, input_length)
 
         args = [x_device, a1_device, a2_device, epsilon1_device, epsilon2_device, input_length_device, out_device]
         args_data = [arg.data for arg in args]
 
-        event = MultiSoftChopInterface.device_program.softchop_de1(MultiSoftChopInterface.device_queue, (N, input_length), None,
-                                                                   *args_data)
+        event = MultiSoftChopInterface.program.softchop_de1(MultiSoftChopInterface.queue, (N, input_length), None,
+                                                            *args_data)
         event.wait()
 
         return out_device
 
     @staticmethod
     def de2(x_device, a1_device, a2_device, epsilon1_device, epsilon2_device):
-        check_for_valid_context(MultiSoftChopInterface.device_context, x_device, a1_device, a2_device,
+        check_for_valid_context(MultiSoftChopInterface.context, x_device, a1_device, a2_device,
                                 epsilon1_device, epsilon2_device)
 
         out_device = cl_array.empty_like(x_device)
@@ -149,13 +149,13 @@ class MultiSoftChopInterface:
         input_length = np.array(np.prod(a1_device.shape)).astype(np.int32)
         N = np.array(len(x_device)).astype(np.int32)
 
-        input_length_device = cl_array.to_device(MultiSoftChopInterface.device_queue, input_length)
+        input_length_device = cl_array.to_device(MultiSoftChopInterface.queue, input_length)
 
         args = [x_device, a1_device, a2_device, epsilon1_device, epsilon2_device, input_length_device, out_device]
         args_data = [arg.data for arg in args]
 
-        event = MultiSoftChopInterface.device_program.softchop_de2(MultiSoftChopInterface.device_queue, (N, input_length), None,
-                                                                   *args_data)
+        event = MultiSoftChopInterface.program.softchop_de2(MultiSoftChopInterface.queue, (N, input_length), None,
+                                                            *args_data)
         event.wait()
 
         return out_device
