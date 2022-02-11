@@ -43,10 +43,10 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
             raise ValueError(f"Padding {padding} is invalid. Try 'VALID' or 'SAME' padding.")
 
     def build(self, device_context, device_queue):
-        self.context = device_queue
-        self.queue = device_context
+        self.context = device_context
+        self.queue = device_queue
 
-        Conv2DInterface(self.queue, self.context)
+        Conv2DInterface(self.context, self.queue)
         ClArrayTricks(device_context, device_queue)
 
         input_shape = self.parents[0].output_shape
@@ -75,8 +75,8 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
         filter_ = np.random.uniform(low=-limit, high=limit, size=self.filter_shape)
         b = np.zeros(self.filter_num)
 
-        self.filter = cl_array.to_device(self.context, filter_.astype(np.float64))
-        self.b = cl_array.to_device(self.context, b.astype(np.float64))
+        self.filter = cl_array.to_device(self.queue, filter_.astype(np.float64))
+        self.b = cl_array.to_device(self.queue, b.astype(np.float64))
 
         self.built = True
 
@@ -98,7 +98,7 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
 
         flipped_filter = ClArrayTricks.flip_across_0_1_axis(self.filter)
         flipped_filter = ClArrayTricks.transpose_last_two_axis(flipped_filter)
-        b = cl_array.zeros(self.context, flipped_filter.shape[-1], np.float64)
+        b = cl_array.zeros(self.queue, flipped_filter.shape[-1], np.float64)
 
         temp1 = np.flip(self.filter.get(), axis=(0, 1)).transpose((0, 1, 3, 2))
         temp2 = flipped_filter.get()
@@ -116,8 +116,8 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
 
         prev_z = self.pad_images(prev_z, self.padding)
 
-        filter_grads = cl_array.zeros(self.context, self.filter.shape, dtype=np.float64)
-        bias_grads = cl_array.zeros(self.context, self.b.shape, dtype=np.float64)
+        filter_grads = cl_array.zeros(self.queue, self.filter.shape, dtype=np.float64)
+        bias_grads = cl_array.zeros(self.queue, self.b.shape, dtype=np.float64)
 
         output_height, output_width = self.output_spatial_shape
         _, image_width, image_depth = prev_z.shape[1:]
