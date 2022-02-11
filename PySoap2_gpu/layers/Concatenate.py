@@ -45,11 +45,8 @@ class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
          """
         delta = new_delta[0]
 
-        N = len(delta)
-        out = cl_array.empty(self.queue, (N, *self.input_shape), dtype=np.float64)
+        out = SplitInterface.get_input_at_mask(delta, self.mask_positions_device, self.input_shape)
 
-        SplitInterface.get_input_at_mask(delta, self.mask_positions_device, self.output_length_device,
-                                         self.input_length_device, out)
         return out
 
     @check_built
