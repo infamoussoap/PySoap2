@@ -15,8 +15,8 @@ class LayerBaseAttributes:
             Assumed to be linear activation
         built : bool
             Set to False
-        device_context : pyopencl.Context
-        device_queue : pyopencl.CommandQueue
+        context : pyopencl.Context
+        queue : pyopencl.CommandQueue
     """
     def __init__(self):
         self.input_shape = ()
@@ -24,15 +24,15 @@ class LayerBaseAttributes:
 
         self.activation_function = 'linear'
 
-        self.device_context = None
-        self.device_queue = None
+        self.context = None
+        self.queue = None
 
         self.built = False
 
     @property
     def activation_function_(self):
         if not ActivationFunction.initialized:
-            ActivationFunction(self.device_context, self.device_queue)
+            ActivationFunction(self.context, self.queue)
         return ActivationFunction.get_activation_function(self.activation_function)
 
     @property

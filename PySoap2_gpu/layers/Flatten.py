@@ -18,8 +18,8 @@ class Flatten(NetworkNode, LayerBaseAttributes, Layer):
 
     def build(self, device_context, device_queue):
         """ Built/initialised the layer """
-        self.device_context = device_context
-        self.device_queue = device_queue
+        self.context = device_context
+        self.queue = device_queue
 
         input_shape = self.parents[0].output_shape
 

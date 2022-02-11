@@ -7,8 +7,8 @@ from PySoap2_gpu.Exceptions import check_for_valid_context
 
 
 class PolynomialTransformationInterface:
-    device_context = None
-    device_queue = None
+    context = None
+    queue = None
 
     device_program_for_1d = None
     device_program_for_2d = None
@@ -19,8 +19,8 @@ class PolynomialTransformationInterface:
         if PolynomialTransformationInterface.initialize:
             return
 
-        PolynomialTransformationInterface.device_context = context
-        PolynomialTransformationInterface.device_queue = queue
+        PolynomialTransformationInterface.context = context
+        PolynomialTransformationInterface.queue = queue
 
         PolynomialTransformationInterface.device_program_for_2d = cl.Program(context,
                                                                              polynomial_2d_transform_c_code).build()
@@ -32,11 +32,11 @@ class PolynomialTransformationInterface:
     @staticmethod
     def polynomial_transform_1d(P1, images, M1, input_length, out):
         """ images assumed to be (N, M1) cl_array.Array """
-        check_for_valid_context(PolynomialTransformationInterface.device_context,
+        check_for_valid_context(PolynomialTransformationInterface.context,
                                 P1, images, out)
 
         program = PolynomialTransformationInterface.device_program_for_1d
-        queue = PolynomialTransformationInterface.device_queue
+        queue = PolynomialTransformationInterface.queue
 
         event = program.polynomial_transform_1d(queue, out.shape, None,
                                                 P1.data, images.data, M1,
@@ -46,11 +46,11 @@ class PolynomialTransformationInterface:
     @staticmethod
     def polynomial_transform_1d_multi(P1, images, M1, M2, input_length, out):
         """ images assumed to be (N, M1, M2) cl_array.Array """
-        check_for_valid_context(PolynomialTransformationInterface.device_context,
+        check_for_valid_context(PolynomialTransformationInterface.context,
                                 P1, images, out)
 
         program = PolynomialTransformationInterface.device_program_for_1d
-        queue = PolynomialTransformationInterface.device_queue
+        queue = PolynomialTransformationInterface.queue
 
         event = program.polynomial_transform_1d_multi(queue, images.shape, None,
                                                       P1.data, images.data, M1,
@@ -59,7 +59,7 @@ class PolynomialTransformationInterface:
 
     @staticmethod
     def polynomial_transform_2d(P1, P2, images, M1, M2, M3, input_length, out):
-        check_for_valid_context(PolynomialTransformationInterface.device_context,
+        check_for_valid_context(PolynomialTransformationInterface.context,
                                 P1, P2, images, out)
 
         if len(images.shape) == 3:
@@ -74,7 +74,7 @@ class PolynomialTransformationInterface:
     def _polynomial_transform_2d(P1, P2, images, M1, M2, M3, input_length, out):
         """ images assumed to be (N, M1, M2) cl_array.Array """
         program = PolynomialTransformationInterface.device_program_for_2d
-        queue = PolynomialTransformationInterface.device_queue
+        queue = PolynomialTransformationInterface.queue
 
         event = program.polynomial_transform_2d(queue, out.shape, None,
                                                 P1.data, P2.data, images.data, M1,
@@ -85,7 +85,7 @@ class PolynomialTransformationInterface:
     def _polynomial_transform_2d_multi(P1, P2, images, M1, M2, M3, input_length, out):
         """ images assumed to be (N, M1, M2, M3) cl_array.Array """
         program = PolynomialTransformationInterface.device_program_for_2d
-        queue = PolynomialTransformationInterface.device_queue
+        queue = PolynomialTransformationInterface.queue
 
         # Global shape can only be up to 3-d
         # Combining the last 2 axis as 1 solves this problem

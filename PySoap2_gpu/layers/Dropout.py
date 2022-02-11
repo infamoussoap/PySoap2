@@ -15,15 +15,15 @@ from .ValueChecks import check_built
 from PySoap2_gpu.Exceptions import check_for_valid_context
 
 
-class DropoutInterfaceToDevice:
-    device_context = None
-    device_queue = None
+class DropoutInterface:
+    context = None
+    queue = None
 
-    device_program = None
+    program = None
 
     initialized = False
 
-    def __init__(self, device_context, device_queue):
+    def __init__(self, context, queue):
         """ Compile the c-program
 
             Notes
@@ -32,24 +32,24 @@ class DropoutInterfaceToDevice:
             will be bound to the class (not instances of the class).
             It will no longer be possible to re-initialize this class again.
         """
-        if DropoutInterfaceToDevice.initialized:
+        if DropoutInterface.initialized:
             return
 
-        DropoutInterfaceToDevice.device_context = device_context
-        DropoutInterfaceToDevice.device_queue = device_queue
+        DropoutInterface.context = context
+        DropoutInterface.queue = queue
 
-        DropoutInterfaceToDevice.device_program = cl.Program(device_context, dropout_source_code).build()
+        DropoutInterface.program = cl.Program(context, dropout_source_code).build()
 
-        DropoutInterfaceToDevice.initialized = True
+        DropoutInterface.initialized = True
 
     @staticmethod
     def dropout(z, mask, output_length, out):
-        check_for_valid_context(DropoutInterfaceToDevice.device_context, z, mask, out)
+        check_for_valid_context(DropoutInterface.context, z, mask, out)
 
         device_global_shape = (len(z), output_length)
-        event = DropoutInterfaceToDevice.device_program.dropout(DropoutInterfaceToDevice.device_queue,
-                                                                device_global_shape, None,
-                                                                z.data, mask.data, output_length, out.data)
+        event = DropoutInterface.program.dropout(DropoutInterface.queue,
+                                                 device_global_shape, None,
+                                                 z.data, mask.data, output_length, out.data)
         event.wait()
 
 
@@ -63,11 +63,11 @@ class Dropout(NetworkNode, LayerBaseAttributes, Layer):
         self.mask = None
 
     def build(self, device_context, device_queue):
-        self.device_context = device_context
-        self.device_queue = device_queue
+        self.context = device_context
+        self.queue = device_queue
 
-        if not DropoutInterfaceToDevice.initialized:
-            DropoutInterfaceToDevice(device_context, device_queue)
+        if not DropoutInterface.initialized:
+            DropoutInterface(device_context, device_queue)
 
         parent = self.parents[0]
         self.input_shape = parent.output_shape
@@ -82,7 +82,7 @@ class Dropout(NetworkNode, LayerBaseAttributes, Layer):
                 return z
             return pre_activation_of_input, z
 
-        self.mask = cl_array.to_device(self.device_queue, np.random.rand(*self.input_shape) > self.rate)
+        self.mask = cl_array.to_device(self.queue, np.random.rand(*self.input_shape) > self.rate)
 
         # The inverted dropout method, where scaling is performed during training, so the
         # forward pass, during testing, does not need to be scaled.
@@ -97,7 +97,7 @@ class Dropout(NetworkNode, LayerBaseAttributes, Layer):
     def _dropout(z, mask, output_length):
         """ z, mask assumed to be cl_arrays """
         out_device = cl_array.empty_like(z)
-        DropoutInterfaceToDevice.dropout(z, mask, output_length, out_device)
+        DropoutInterface.dropout(z, mask, output_length, out_device)
         return out_device
 
     @check_built

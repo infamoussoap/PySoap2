@@ -19,8 +19,8 @@ class Add(AddCPU, NetworkNode, LayerBaseAttributes, Layer):
 
     def build(self, device_context, device_queue):
         """ Initialises the weight and bias units """
-        self.device_context = device_context
-        self.device_queue = device_queue
+        self.context = device_context
+        self.queue = device_queue
 
         super().build()
 
@@ -28,5 +28,5 @@ class Add(AddCPU, NetworkNode, LayerBaseAttributes, Layer):
     def activation_function_(self):
         """ Need to overload parents activation function to use the gpu-programs """
         if not ActivationFunction.initialized:
-            ActivationFunction(self.device_context, self.device_queue)
+            ActivationFunction(self.context, self.queue)
         return ActivationFunction.get_activation_function(self.activation_function)

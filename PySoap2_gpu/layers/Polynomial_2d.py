@@ -32,8 +32,8 @@ class Polynomial_2d(NetworkNode, LayerBaseAttributes, Layer):
 
     def build(self, device_context, device_queue):
         """ Initialises the weight and bias units """
-        self.device_context = device_context
-        self.device_queue = device_queue
+        self.context = device_context
+        self.queue = device_queue
 
         PolynomialTransformationInterface(device_context, device_queue)
 

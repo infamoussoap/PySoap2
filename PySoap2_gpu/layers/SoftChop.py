@@ -172,47 +172,47 @@ class MultiSoftChop:
         return out_device
 
 
-class SoftChopInterfaceToDevice:
-    device_context = None
-    device_queue = None
+class SoftChopInterface:
+    context = None
+    queue = None
 
-    device_program = None
+    program = None
 
     initialized = False
 
     def __init__(self, device_context, device_queue):
-        if SoftChopInterfaceToDevice.initialized:
+        if SoftChopInterface.initialized:
             return
 
-        SoftChopInterfaceToDevice.device_context = device_context
-        SoftChopInterfaceToDevice.device_queue = device_queue
+        SoftChopInterface.context = device_context
+        SoftChopInterface.queue = device_queue
 
-        SoftChopInterfaceToDevice.device_program = cl.Program(device_context, softchop_source_code).build()
+        SoftChopInterface.program = cl.Program(device_context, softchop_source_code).build()
 
-        SoftChopInterfaceToDevice.initialized = True
+        SoftChopInterface.initialized = True
 
     @staticmethod
     def delta_back_prop(g_prime, new_delta, dz, out):
-        check_for_valid_context(SoftChopInterfaceToDevice.device_context,
+        check_for_valid_context(SoftChopInterface.context,
                                 g_prime, new_delta, dz, out)
 
         device_global_shape = (int(np.prod(g_prime.shape)),)
-        event = SoftChopInterfaceToDevice.device_program.delta_back_prop(SoftChopInterfaceToDevice.device_queue,
-                                                                         device_global_shape, None,
-                                                                         g_prime.data, new_delta.data, dz.data,
-                                                                         out.data)
+        event = SoftChopInterface.program.delta_back_prop(SoftChopInterface.queue,
+                                                          device_global_shape, None,
+                                                          g_prime.data, new_delta.data, dz.data,
+                                                          out.data)
         event.wait()
 
     @staticmethod
     def parameter_gradient(delta, parameter, input_length, N, out):
-        check_for_valid_context(SoftChopInterfaceToDevice.device_context,
+        check_for_valid_context(SoftChopInterface.context,
                                 delta, parameter, out)
 
         device_global_shape = (input_length,)
-        event = SoftChopInterfaceToDevice.device_program.parameter_gradient(SoftChopInterfaceToDevice.device_queue,
-                                                                            device_global_shape, None,
-                                                                            delta.data, parameter.data,
-                                                                            input_length, N, out.data)
+        event = SoftChopInterface.program.parameter_gradient(SoftChopInterface.queue,
+                                                             device_global_shape, None,
+                                                             delta.data, parameter.data,
+                                                             input_length, N, out.data)
         event.wait()
 
 
@@ -239,14 +239,14 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         self.b = None  # Bias unit
 
     def build(self, device_context, device_queue):
-        self.device_queue = device_queue
-        self.device_context = device_context
+        self.queue = device_queue
+        self.context = device_context
 
         ClArrayTricks(device_context, device_queue)
         Broadcast(device_context, device_queue)
 
-        SoftChopInterfaceToDevice(self.device_context, self.device_queue)
-        MultiSoftChop(self.device_context, self.device_queue)
+        SoftChopInterface(self.context, self.queue)
+        MultiSoftChop(self.context, self.queue)
 
         input_shape = self.parents[0].output_shape
 
@@ -298,7 +298,7 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         summed_delta_device = reduce(lambda x, y: x + y, new_delta)
 
         out_gpu = cl_array.empty_like(prev_z)
-        SoftChopInterfaceToDevice.delta_back_prop(g_prime, summed_delta_device, dz, out_gpu)
+        SoftChopInterface.delta_back_prop(g_prime, summed_delta_device, dz, out_gpu)
 
         return out_gpu
 
@@ -330,8 +330,8 @@ class SoftChop(NetworkNode, LayerBaseAttributes, Layer):
         summed_delta_device = reduce(lambda x, y: x + y, delta)
 
         for key in parameter_gradients.keys():
-            SoftChopInterfaceToDevice.parameter_gradient(summed_delta_device, dz[key], self.input_length_device,
-                                                         N, parameter_gradients[key])
+            SoftChopInterface.parameter_gradient(summed_delta_device, dz[key], self.input_length_device,
+                                                 N, parameter_gradients[key])
 
         if abs(self.weight_decay) > e:
             parameter_gradients['a1'] -= self.weight_decay * self.a1

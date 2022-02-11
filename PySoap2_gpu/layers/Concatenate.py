@@ -7,7 +7,7 @@ from PySoap2_gpu.layers import Layer
 from PySoap2_gpu.layers import NetworkNode
 from PySoap2_gpu.layers.LayerBaseAttributes import LayerBaseAttributes
 
-from .Split import SplitInterfaceToDevice
+from .Split import SplitInterface
 from .ValueChecks import check_built
 
 
@@ -19,11 +19,11 @@ class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
         self.mask_positions_device = None  # To be determined by concat child
 
     def build(self, device_context, device_queue):
-        self.device_context = device_context
-        self.device_queue = device_queue
+        self.context = device_context
+        self.queue = device_queue
 
-        if not SplitInterfaceToDevice.initialized:
-            SplitInterfaceToDevice(device_context, device_queue)
+        if not SplitInterface.initialized:
+            SplitInterface(device_context, device_queue)
 
         input_shape = self.parents[0].output_shape
 
@@ -46,10 +46,10 @@ class ConcatenateParent(NetworkNode, LayerBaseAttributes, Layer):
         delta = new_delta[0]
 
         N = len(delta)
-        out = cl_array.empty(self.device_queue, (N, *self.input_shape), dtype=np.float64)
+        out = cl_array.empty(self.queue, (N, *self.input_shape), dtype=np.float64)
 
-        SplitInterfaceToDevice.get_input_at_mask(delta, self.mask_positions_device, self.output_length_device,
-                                                 self.input_length_device, out)
+        SplitInterface.get_input_at_mask(delta, self.mask_positions_device, self.output_length_device,
+                                         self.input_length_device, out)
         return out
 
     @check_built
@@ -137,8 +137,8 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
             ValueError
                 If the concatenation is not valid
         """
-        self.device_context = device_context
-        self.device_queue = device_queue
+        self.context = device_context
+        self.queue = device_queue
 
         input_shape_of_concat_parents = [parent.input_shape for parent in self.parents]
 
@@ -160,7 +160,7 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
                         for (j, shape) in enumerate(input_shape_of_concat_parents)]
             mask = np.concatenate(new_mask, axis=self.axis).astype(bool)
             mask_positions = (positions[mask]).astype(np.int32)
-            self.parents[i].mask_positions_device = cl_array.to_device(self.device_queue, mask_positions)
+            self.parents[i].mask_positions_device = cl_array.to_device(self.queue, mask_positions)
 
         self.built = True
 
@@ -176,7 +176,7 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
         """ z is assumed to be a list of cl_arrays """
         mask_positions_device = [parent.mask_positions_device for parent in self.parents]
 
-        return self.concatenate_with_mask_positions(self.device_queue, z, mask_positions_device, self.output_shape)
+        return self.concatenate_with_mask_positions(self.queue, z, mask_positions_device, self.output_shape)
 
     @staticmethod
     def concatenate_with_mask_positions(device_queue, z_device, mask_positions_device, output_shape):
@@ -188,9 +188,9 @@ class Concatenate(NetworkNode, LayerBaseAttributes, Layer):
             input_shape = array.shape[1:]
             input_length_device = np.int32(np.prod(input_shape))
 
-            SplitInterfaceToDevice.set_input_at_mask_as_output(input_, mask_positions,
-                                                               output_length_device,
-                                                               input_length_device, array)
+            SplitInterface.set_input_at_mask_as_output(input_, mask_positions,
+                                                       output_length_device,
+                                                       input_length_device, array)
         return input_
 
     @check_built
@@ -260,7 +260,7 @@ def set_list_of_inputs_at_masks_as_outputs(device_queue, inputs_, mask_positions
         input_shape = array.shape[1:]
         input_length_device = np.int32(np.prod(input_shape))
 
-        SplitInterfaceToDevice.set_input_at_mask_as_output(input_, mask_positions,
-                                                           output_length_device,
-                                                           input_length_device, array)
+        SplitInterface.set_input_at_mask_as_output(input_, mask_positions,
+                                                   output_length_device,
+                                                   input_length_device, array)
     return input_

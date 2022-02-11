@@ -15,48 +15,49 @@ from .ValueChecks import check_built
 from PySoap2_gpu.Exceptions import check_for_valid_context
 
 
-class SplitInterfaceToDevice:
-    device_context = None
-    device_queue = None
-    device_program = None
+class SplitInterface:
+    context = None
+    queue = None
+
+    program = None
 
     initialized = False
 
     def __init__(self, device_context, device_queue):
-        if SplitInterfaceToDevice.initialized:
+        if SplitInterface.initialized:
             return
 
-        SplitInterfaceToDevice.device_context = device_context
-        SplitInterfaceToDevice.device_queue = device_queue
+        SplitInterface.context = device_context
+        SplitInterface.queue = device_queue
 
-        SplitInterfaceToDevice.device_program = cl.Program(device_context, split_source_code).build()
+        SplitInterface.program = cl.Program(device_context, split_source_code).build()
 
-        SplitInterfaceToDevice.initialized = True
+        SplitInterface.initialized = True
 
     @staticmethod
     def get_input_at_mask(input_, mask_positions, input_length, output_length, output_):
-        check_for_valid_context(SplitInterfaceToDevice.device_context, input_, mask_positions, output_)
+        check_for_valid_context(SplitInterface.context, input_, mask_positions, output_)
 
         device_global_shape = output_.shape
-        event = SplitInterfaceToDevice.device_program.get_input_at_mask(SplitInterfaceToDevice.device_queue,
-                                                                        device_global_shape, None,
-                                                                        input_.data, mask_positions.data,
-                                                                        input_length,
-                                                                        output_length, output_.data)
+        event = SplitInterface.program.get_input_at_mask(SplitInterface.queue,
+                                                         device_global_shape, None,
+                                                         input_.data, mask_positions.data,
+                                                         input_length,
+                                                         output_length, output_.data)
         event.wait()
 
     @staticmethod
     def set_input_at_mask_as_output(input_, mask_positions, input_length, output_length, output_):
-        check_for_valid_context(SplitInterfaceToDevice.device_context, input_, mask_positions, output_)
+        check_for_valid_context(SplitInterface.context, input_, mask_positions, output_)
 
         N, *input_shape = output_.shape
         device_global_shape = (N, int(np.prod(input_shape)))
 
-        event = SplitInterfaceToDevice.device_program.set_input_at_mask_as_output(SplitInterfaceToDevice.device_queue,
-                                                                                  device_global_shape, None,
-                                                                                  input_.data, mask_positions.data,
-                                                                                  input_length,
-                                                                                  output_length, output_.data)
+        event = SplitInterface.program.set_input_at_mask_as_output(SplitInterface.queue,
+                                                                   device_global_shape, None,
+                                                                   input_.data, mask_positions.data,
+                                                                   input_length,
+                                                                   output_length, output_.data)
         event.wait()
 
 
@@ -69,11 +70,11 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
         self.mask_positions_device = None
 
     def build(self, device_context, device_queue):
-        self.device_context = device_context
-        self.device_queue = device_queue
+        self.context = device_context
+        self.queue = device_queue
 
-        if not SplitInterfaceToDevice.initialized:
-            SplitInterfaceToDevice(device_context, device_queue)
+        if not SplitInterface.initialized:
+            SplitInterface(device_context, device_queue)
 
         input_shape = self.parents[0].output_shape
 
@@ -88,18 +89,18 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
     @check_built
     def predict(self, z, output_only=True, pre_activation_of_input=None, **kwargs):
         N = len(z)
-        z_at_mask = cl_array.empty(self.device_queue, (N, *self.output_shape), dtype=np.float32)
+        z_at_mask = cl_array.empty(self.queue, (N, *self.output_shape), dtype=np.float32)
 
-        SplitInterfaceToDevice.get_input_at_mask(z, self.mask_positions_device, self.input_length_device,
-                                                 self.output_length_device, z_at_mask)
+        SplitInterface.get_input_at_mask(z, self.mask_positions_device, self.input_length_device,
+                                         self.output_length_device, z_at_mask)
 
         if output_only:
             return z_at_mask
 
-        pre_activation_of_input_at_mask = cl_array.empty(self.device_queue, (N, *self.output_shape), dtype=np.float32)
-        SplitInterfaceToDevice.get_input_at_mask(pre_activation_of_input, self.mask_positions_device,
-                                                 self.input_length_device, self.output_length_device,
-                                                 pre_activation_of_input_at_mask)
+        pre_activation_of_input_at_mask = cl_array.empty(self.queue, (N, *self.output_shape), dtype=np.float32)
+        SplitInterface.get_input_at_mask(pre_activation_of_input, self.mask_positions_device,
+                                         self.input_length_device, self.output_length_device,
+                                         pre_activation_of_input_at_mask)
 
         return pre_activation_of_input_at_mask, z_at_mask
 
@@ -165,11 +166,11 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
             The output_shape is the same as the input_shape because the input must
             be based onto the children for it to be split
         """
-        self.device_context = device_context
-        self.device_queue = device_queue
+        self.context = device_context
+        self.queue = device_queue
 
-        if not SplitInterfaceToDevice.initialized:
-            SplitInterfaceToDevice(device_context, device_queue)
+        if not SplitInterface.initialized:
+            SplitInterface(device_context, device_queue)
 
         input_shape = self.parents[0].output_shape
 
@@ -191,12 +192,12 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
     def get_delta_backprop_(self, g_prime, new_delta, prev_z):
         N = len(new_delta[0])
 
-        out_delta = cl_array.empty(self.device_queue, (N, *self.input_shape), dtype=np.float32)
+        out_delta = cl_array.empty(self.queue, (N, *self.input_shape), dtype=np.float32)
 
         for i, child in enumerate(self.children):
-            SplitInterfaceToDevice.set_input_at_mask_as_output(out_delta, child.mask_positions_device,
-                                                               child.input_length_device, child.output_length_device,
-                                                               new_delta[i])
+            SplitInterface.set_input_at_mask_as_output(out_delta, child.mask_positions_device,
+                                                       child.input_length_device, child.output_length_device,
+                                                       new_delta[i])
 
         return out_delta
 

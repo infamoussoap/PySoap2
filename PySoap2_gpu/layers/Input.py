@@ -33,8 +33,8 @@ class Input(NetworkNode, LayerBaseAttributes, Layer):
             This method is only written so as to make the `Layer` uniform in
             implementation
         """
-        self.device_context = device_context
-        self.device_queue = device_queue
+        self.context = device_context
+        self.queue = device_queue
 
     @check_built
     def predict(self, z, *args, output_only=True, **kwargs):

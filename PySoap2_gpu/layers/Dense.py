@@ -15,7 +15,7 @@ from .ValueChecks import check_built
 from PySoap2_gpu.Exceptions import check_for_valid_context
 
 
-class DenseInterfaceToDevice:
+class DenseInterface:
     """ The interface between the compiled pyopencl-c code with python
 
         Notes
@@ -23,14 +23,14 @@ class DenseInterfaceToDevice:
         Arguments to all methods are assumed to be stored on the device
     """
 
-    device_context = None
-    device_queue = None
+    context = None
+    queue = None
 
-    device_program = None
+    program = None
 
     initialized = False
 
-    def __init__(self, device_context, device_queue):
+    def __init__(self, context, queue):
         """ Compile the c-program
 
             Notes
@@ -39,57 +39,57 @@ class DenseInterfaceToDevice:
             will be bound to the class (not instances of the class).
             It will no longer be possible to re-initialize this class again.
         """
-        if DenseInterfaceToDevice.initialized:
+        if DenseInterface.initialized:
             return
 
-        DenseInterfaceToDevice.device_context = device_context
-        DenseInterfaceToDevice.device_queue = device_queue
+        DenseInterface.context = context
+        DenseInterface.queue = queue
 
-        DenseInterfaceToDevice.device_program = cl.Program(device_context, dense_source_code).build()
+        DenseInterface.program = cl.Program(context, dense_source_code).build()
 
-        DenseInterfaceToDevice.initialized = True
+        DenseInterface.initialized = True
 
     @staticmethod
     def predict(z, W, b, input_length, output_length, out):
-        check_for_valid_context(DenseInterfaceToDevice.device_context, z, W, b, out)
+        check_for_valid_context(DenseInterface.context, z, W, b, out)
 
         device_global_shape = out.shape
-        event = DenseInterfaceToDevice.device_program.predict(DenseInterfaceToDevice.device_queue, device_global_shape,
-                                                              None,
-                                                              z.data, W.data, b.data, input_length,
-                                                              output_length, out.data)
+        event = DenseInterface.program.predict(DenseInterface.queue, device_global_shape,
+                                               None,
+                                               z.data, W.data, b.data, input_length,
+                                               output_length, out.data)
         event.wait()
 
     @staticmethod
     def delta_back_prop(g_prime, new_delta, W, input_length, output_length, out):
-        check_for_valid_context(DenseInterfaceToDevice.device_context, g_prime, new_delta, W, out)
+        check_for_valid_context(DenseInterface.context, g_prime, new_delta, W, out)
 
         device_global_shape = g_prime.shape
-        event = DenseInterfaceToDevice.device_program.delta_back_prop(DenseInterfaceToDevice.device_queue,
-                                                                      device_global_shape, None,
-                                                                      g_prime.data, new_delta.data, W.data,
-                                                                      input_length, output_length, out.data)
+        event = DenseInterface.program.delta_back_prop(DenseInterface.queue,
+                                                       device_global_shape, None,
+                                                       g_prime.data, new_delta.data, W.data,
+                                                       input_length, output_length, out.data)
         event.wait()
 
     @staticmethod
     def weight_gradient(delta, prev_z, input_length, output_length, N, out):
-        check_for_valid_context(DenseInterfaceToDevice.device_context, delta, prev_z, out)
+        check_for_valid_context(DenseInterface.context, delta, prev_z, out)
 
         device_global_shape = (output_length, input_length)  # Same shape as the weight matrix
-        event = DenseInterfaceToDevice.device_program.weight_gradient(DenseInterfaceToDevice.device_queue,
-                                                                      device_global_shape, None,
-                                                                      delta.data, prev_z.data, input_length,
-                                                                      output_length, N, out.data)
+        event = DenseInterface.program.weight_gradient(DenseInterface.queue,
+                                                       device_global_shape, None,
+                                                       delta.data, prev_z.data, input_length,
+                                                       output_length, N, out.data)
         event.wait()
 
     @staticmethod
     def bias_gradient(delta, output_length, N, out):
-        check_for_valid_context(DenseInterfaceToDevice.device_context, delta, out)
+        check_for_valid_context(DenseInterface.context, delta, out)
 
         device_global_shape = (output_length,)
-        event = DenseInterfaceToDevice.device_program.bias_gradient(DenseInterfaceToDevice.device_queue,
-                                                                    device_global_shape, None, delta.data,
-                                                                    output_length, N, out.data)
+        event = DenseInterface.program.bias_gradient(DenseInterface.queue,
+                                                     device_global_shape, None, delta.data,
+                                                     output_length, N, out.data)
         event.wait()
 
 
@@ -117,10 +117,10 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
     def build(self, device_context, device_queue):
         """ Initialises the weight and bias units """
 
-        self.device_context = device_context
-        self.device_queue = device_queue
+        self.context = device_context
+        self.queue = device_queue
 
-        DenseInterfaceToDevice(self.device_context, self.device_queue)
+        DenseInterface(self.context, self.queue)
 
         input_shape = self.parents[0].output_shape
 
@@ -138,8 +138,8 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
         W = np.random.uniform(low=-limit, high=limit, size=(*self.output_shape, *input_shape)).astype(np.float64)
         b = np.zeros(self.output_shape).astype(np.float64)
 
-        self.W = cl_array.to_device(self.device_queue, W)
-        self.b = cl_array.to_device(self.device_queue, b)
+        self.W = cl_array.to_device(self.queue, W)
+        self.b = cl_array.to_device(self.queue, b)
 
         self.built = True
 
@@ -149,10 +149,10 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
 
         n = len(z_device)
 
-        out_device = cl_array.empty(self.device_queue, (n, *self.output_shape), dtype=np.float64)
+        out_device = cl_array.empty(self.queue, (n, *self.output_shape), dtype=np.float64)
 
-        DenseInterfaceToDevice.predict(z_device, self.W, self.b, self.input_length_device,
-                                       self.output_length_device, out_device)
+        DenseInterface.predict(z_device, self.W, self.b, self.input_length_device,
+                               self.output_length_device, out_device)
 
         if output_only:
             return self.activation_function_(out_device)
@@ -162,12 +162,12 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
     def get_delta_backprop_(self, g_prime_device, new_delta, *args):
         assert_instance_of_cl_array(g_prime_device)
 
-        out_device = cl_array.empty(self.device_queue, g_prime_device.shape, dtype=np.float64)
+        out_device = cl_array.empty(self.queue, g_prime_device.shape, dtype=np.float64)
 
         summed_delta_device = reduce(lambda x, y: x + y, new_delta)
 
-        DenseInterfaceToDevice.delta_back_prop(g_prime_device, summed_delta_device, self.W,
-                                               self.input_length_device, self.output_length_device, out_device)
+        DenseInterface.delta_back_prop(g_prime_device, summed_delta_device, self.W,
+                                       self.input_length_device, self.output_length_device, out_device)
 
         return out_device
 
@@ -179,12 +179,12 @@ class Dense(NetworkNode, LayerBaseAttributes, Layer):
 
         N = np.int32(len(z_device))
 
-        W_grad_device = cl_array.empty(self.device_queue, self.W.shape, dtype=np.float64)
-        DenseInterfaceToDevice.weight_gradient(summed_delta_device, z_device, self.input_length_device,
-                                               self.output_length_device, N, W_grad_device)
+        W_grad_device = cl_array.empty(self.queue, self.W.shape, dtype=np.float64)
+        DenseInterface.weight_gradient(summed_delta_device, z_device, self.input_length_device,
+                                       self.output_length_device, N, W_grad_device)
 
-        b_grad_device = cl_array.empty(self.device_queue, self.b.shape, dtype=np.float64)
-        DenseInterfaceToDevice.bias_gradient(summed_delta_device, self.output_length_device, N, b_grad_device)
+        b_grad_device = cl_array.empty(self.queue, self.b.shape, dtype=np.float64)
+        DenseInterface.bias_gradient(summed_delta_device, self.output_length_device, N, b_grad_device)
 
         if abs(self.weight_decay) > e:
             parameter_gradients = {'weight': W_grad_device + self.weight_decay * self.W,

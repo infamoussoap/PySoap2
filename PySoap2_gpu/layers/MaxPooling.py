@@ -107,8 +107,8 @@ class MaxPooling2D(NetworkNode, LayerBaseAttributes, Layer):
         self.max_indices = None
 
     def build(self, device_context, device_queue):
-        self.device_context = device_context
-        self.device_queue = device_queue
+        self.context = device_context
+        self.queue = device_queue
 
         if not MaxPoolingInterface.initialized:
             MaxPoolingInterface(device_context, device_queue)
@@ -138,7 +138,7 @@ class MaxPooling2D(NetworkNode, LayerBaseAttributes, Layer):
         delta = reduce(lambda x, y: x + y, new_delta)
 
         N = len(g_prime)
-        dx = cl_array.zeros(self.device_queue, (N, *self.input_shape), np.float64)
+        dx = cl_array.zeros(self.queue, (N, *self.input_shape), np.float64)
         MaxPoolingInterface.add_at(dx, self.max_indices, delta)
 
         return dx
