@@ -1,4 +1,7 @@
+import numpy as np
+
 import pyopencl as cl
+import pyopencl.array as cl_array
 
 from PySoap2_gpu.layers.c_code.dropout_c_code import dropout_source_code
 from PySoap2_gpu.Exceptions import check_for_valid_context
@@ -32,11 +35,15 @@ class DropoutInterface:
         DropoutInterface.initialized = True
 
     @staticmethod
-    def dropout(z, mask, output_length, out):
-        check_for_valid_context(DropoutInterface.context, z, mask, out)
+    def dropout(z, mask):
+        check_for_valid_context(DropoutInterface.context, z, mask)
+
+        out = cl_array.zeros_like(z)
+        output_length = np.int32(np.prod(z.shape[1:]))
 
         device_global_shape = (len(z), output_length)
         event = DropoutInterface.program.dropout(DropoutInterface.queue,
                                                  device_global_shape, None,
                                                  z.data, mask.data, output_length, out.data)
         event.wait()
+        return out

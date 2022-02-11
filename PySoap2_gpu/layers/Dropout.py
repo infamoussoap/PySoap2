@@ -47,22 +47,15 @@ class Dropout(NetworkNode, LayerBaseAttributes, Layer):
         # forward pass, during testing, does not need to be scaled.
         # see https://cs231n.github.io/neural-networks-2/
 
-        z_inverted_dropout = self._dropout(z, self.mask, self.output_length_device) / (1 - self.rate)
+        z_inverted_dropout = DropoutInterface.dropout(z, self.mask) / (1 - self.rate)
         if output_only:
             return z_inverted_dropout
         return z_inverted_dropout, z_inverted_dropout
 
-    @staticmethod
-    def _dropout(z, mask, output_length):
-        """ z, mask assumed to be cl_arrays """
-        out_device = cl_array.empty_like(z)
-        DropoutInterface.dropout(z, mask, output_length, out_device)
-        return out_device
-
     @check_built
     def get_delta_backprop_(self, g_prime, new_delta, prev_z):
         delta = reduce(lambda x, y: x + y, new_delta)
-        return self._dropout(delta, self.mask, self.output_length_device)
+        return DropoutInterface.dropout(delta, self.mask)
 
     @check_built
     def get_parameter_gradients_(self, delta, prev_z):
