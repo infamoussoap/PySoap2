@@ -73,19 +73,6 @@ class Conv2DInterface:
         return out
 
     @staticmethod
-    def delta_back_prop(delta, eye_conv, g_prime, input_length, output_length, out):
-        program = Conv2DInterface.program
-        queue = Conv2DInterface.queue
-
-        global_shape = (np.prod(out.shape),)
-
-        event = program.delta_back_prop(queue, global_shape, None,
-                                        delta.data, eye_conv.data, g_prime.data, input_length, output_length, out.data)
-
-        event.wait()
-        return out
-
-    @staticmethod
     def filter_gradient(prev_z, delta,
                         output_height, output_width, num_of_filters,
                         stride,
