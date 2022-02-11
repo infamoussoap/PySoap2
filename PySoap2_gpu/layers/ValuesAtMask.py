@@ -8,7 +8,7 @@ from PySoap2_gpu.layers import Layer
 from PySoap2_gpu.layers import NetworkNode
 from PySoap2_gpu.layers.LayerBaseAttributes import LayerBaseAttributes
 
-from .Split import SplitInterface
+from PySoap2_gpu.layers.ProgramInterface.SplitInterface import SplitInterface
 
 from .ValueChecks import check_built
 
