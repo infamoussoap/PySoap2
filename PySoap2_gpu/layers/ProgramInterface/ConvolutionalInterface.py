@@ -73,15 +73,21 @@ class Conv2DInterface:
         return out
 
     @staticmethod
-    def filter_gradient(prev_z, delta,
-                        output_height, output_width, num_of_filters,
-                        stride,
-                        image_width, image_depth,
-                        N, input_length,
-                        filter_width,
-                        out):
+    def filter_gradient(prev_z, delta, stride, filter_shape):
         program = Conv2DInterface.program
         queue = Conv2DInterface.queue
+
+        out = cl_array.zeros(queue, filter_shape, np.float64)
+
+        input_shape = [np.int32(x) for x in prev_z.shape[1:]]
+        output_shape = [np.int32(x) for x in delta.shape[1:]]
+
+        N = np.int32(prev_z.shape[0])
+        _, image_width, image_depth = input_shape
+        output_height, output_width, num_of_filters = output_shape
+        input_length = np.int32(np.prod(input_shape))
+        filter_width = np.int32(filter_shape[1])
+        stride = np.int32(stride)
 
         global_shape = (np.prod(out.shape),)
 
@@ -94,14 +100,21 @@ class Conv2DInterface:
                                         filter_width,
                                         out.data)
         event.wait()
+        return out
 
     @staticmethod
-    def bias_gradient(delta, sum_length, num_of_filters, out):
+    def bias_gradient(delta):
         program = Conv2DInterface.program
         queue = Conv2DInterface.queue
 
-        global_shape = out.shape
+        filter_num = np.int32(delta.shape[3])
+        sum_length = np.int32(np.prod(delta.shape[:-1]))
 
+        out = cl_array.zeros(queue, (filter_num,), np.float64)
+
+        global_shape = out.shape
         event = program.bias_gradient(queue, global_shape, None,
-                                      delta.data, sum_length, num_of_filters, out.data)
+                                      delta.data, sum_length, filter_num, out.data)
         event.wait()
+
+        return out
