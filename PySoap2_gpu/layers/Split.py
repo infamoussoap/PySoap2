@@ -39,19 +39,14 @@ class SplitChild(NetworkNode, LayerBaseAttributes, Layer):
 
     @check_built
     def predict(self, z, output_only=True, pre_activation_of_input=None, **kwargs):
-        N = len(z)
-        z_at_mask = cl_array.empty(self.queue, (N, *self.output_shape), dtype=np.float32)
-
-        SplitInterface.get_input_at_mask(z, self.mask_positions_device, self.input_length_device,
-                                         self.output_length_device, z_at_mask)
+        z_at_mask = SplitInterface.get_input_at_mask(z, self.mask_positions_device, self.output_shape)
 
         if output_only:
             return z_at_mask
 
-        pre_activation_of_input_at_mask = cl_array.empty(self.queue, (N, *self.output_shape), dtype=np.float32)
-        SplitInterface.get_input_at_mask(pre_activation_of_input, self.mask_positions_device,
-                                         self.input_length_device, self.output_length_device,
-                                         pre_activation_of_input_at_mask)
+        pre_activation_of_input_at_mask = SplitInterface.get_input_at_mask(pre_activation_of_input,
+                                                                           self.mask_positions_device,
+                                                                           self.output_shape)
 
         return pre_activation_of_input_at_mask, z_at_mask
 
@@ -88,6 +83,7 @@ class SplitLeftChild(SplitChild):
         But these classes are created to make it clear which is the left and right node when
         looking at the repr of the instances
     """
+
     def __init__(self, mask):
         super().__init__(mask)
 
@@ -97,6 +93,7 @@ class SplitRightChild(SplitChild):
         But these classes are created to make it clear which is the left and right node when
         looking at the repr of the instances
     """
+
     def __init__(self, mask):
         super().__init__(mask)
 
@@ -143,7 +140,7 @@ class Split(NetworkNode, LayerBaseAttributes, Layer):
     def get_delta_backprop_(self, g_prime, new_delta, prev_z):
         N = len(new_delta[0])
 
-        out_delta = cl_array.empty(self.queue, (N, *self.input_shape), dtype=np.float32)
+        out_delta = cl_array.empty(self.queue, (N, *self.input_shape), dtype=np.float64)
 
         for i, child in enumerate(self.children):
             SplitInterface.set_input_at_mask_as_output(out_delta, child.mask_positions_device,
