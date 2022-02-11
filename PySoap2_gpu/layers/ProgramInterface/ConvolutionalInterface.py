@@ -34,18 +34,24 @@ class Conv2DInterface:
         Conv2DInterface.initialized = True
 
     @staticmethod
-    def predict(z, filter_, bias_,
-                filter_height, filter_width, num_of_filters,
-                stride,
-                image_width, image_depth,
-                output_width,
-                input_length, output_length,
-                out):
-
-        output_height = int(output_length / (output_width * num_of_filters))
-
+    def predict(z, filter_, bias_, stride):
         program = Conv2DInterface.program
         queue = Conv2DInterface.queue
+
+        input_shape = [np.int32(x) for x in z.shape[1:]]
+
+        n = np.int32((input_shape[0] - filter_.shape[0]) / stride + 1)
+        m = np.int32((input_shape[1] - filter_.shape[1]) / stride + 1)
+        output_shape = (n, m, np.int32(filter_.shape[3]))
+        out = cl_array.zeros(queue, (len(z), *output_shape), np.float64)
+
+        filter_shape = [np.int32(x) for x in filter_.shape]
+
+        filter_height, filter_width, _, num_of_filters = filter_shape
+        _, image_width, image_depth = input_shape
+        output_height, output_width, _ = output_shape
+        input_length = np.int32(np.prod(input_shape))
+        output_length = np.int32(np.prod(output_shape))
 
         events = []
         for i in range(num_of_filters):
@@ -63,7 +69,8 @@ class Conv2DInterface:
             events.append(event)
 
         cl.wait_for_events(events)
-        # queue.finish()
+
+        return out
 
     @staticmethod
     def delta_back_prop(delta, eye_conv, g_prime, input_length, output_length, out):

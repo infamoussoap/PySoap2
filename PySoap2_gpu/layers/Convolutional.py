@@ -83,7 +83,7 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
     @check_built
     def predict(self, z, output_only=True, **kwargs):
         z = self.pad_images(z, self.padding)
-        out = Conv2D.perform_conv(z, self.filter, self.b, self.stride, self.context)
+        out = Conv2DInterface.predict(z, self.filter, self.b, self.stride)
 
         if output_only:
             return self.activation_function_(out)
@@ -104,7 +104,7 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
         temp2 = flipped_filter.get()
         np.testing.assert_almost_equal(temp1, temp2)
 
-        ds_dz = self.perform_conv(padded_delta, flipped_filter, b, self.stride, self.context)
+        ds_dz = Conv2DInterface.predict(padded_delta, flipped_filter, b, self.stride)
         ds_dz = self.remove_pad(ds_dz, self.padding)
 
         return ds_dz * g_prime
@@ -152,31 +152,6 @@ class Conv2D(NetworkNode, LayerBaseAttributes, Layer):
     @check_built
     def summary_(self):
         return f'Conv2D {self.filter_num} x {(self.single_filter_shape,)}', f'Output Shape {(None, *self.output_shape)}'
-
-    @staticmethod
-    def perform_conv(images, filter_, bias, stride, device_queue):
-        assert_instance_of_cl_array(images)
-
-        input_shape = images.shape[1:]
-        n = int((input_shape[0] - filter_.shape[0]) / stride + 1)
-        m = int((input_shape[1] - filter_.shape[1]) / stride + 1)
-        output_shape = (n, m, filter_.shape[3])
-
-        out = cl_array.zeros(device_queue, (len(images), *output_shape), dtype=np.float64)
-
-        filter_height, filter_width, _, filter_num = filter_.shape
-        _, image_width, image_depth = input_shape
-        output_width = np.int32(output_shape[1])
-        input_length, output_length = np.int32(np.prod(input_shape)), np.int32(np.prod(output_shape))
-
-        Conv2DInterface.predict(images, filter_, bias,
-                                np.int32(filter_height), np.int32(filter_width), np.int32(filter_num),
-                                np.int32(stride),
-                                np.int32(image_width), np.int32(image_depth),
-                                output_width,
-                                input_length, output_length,
-                                out)
-        return out
 
     def pad_images(self, images, padding):
         if padding == "VALID":
