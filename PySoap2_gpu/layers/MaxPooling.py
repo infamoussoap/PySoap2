@@ -16,15 +16,15 @@ from .ValueChecks import check_built
 from PySoap2_gpu.Exceptions import check_for_valid_context
 
 
-class MaxPoolingInterfaceToDevice:
-    device_context = None
-    device_queue = None
+class MaxPoolingInterface:
+    context = None
+    queue = None
 
-    device_program = None
+    program = None
 
     initialized = False
 
-    def __init__(self, device_context, device_queue):
+    def __init__(self, context, queue):
         """ Compile the c-program
 
             Notes
@@ -33,20 +33,20 @@ class MaxPoolingInterfaceToDevice:
             will be bound to the class (not instances of the class).
             It will no longer be possible to re-initialize this class again.
         """
-        if MaxPoolingInterfaceToDevice.initialized:
+        if MaxPoolingInterface.initialized:
             return
 
-        MaxPoolingInterfaceToDevice.device_context = device_context
-        MaxPoolingInterfaceToDevice.device_queue = device_queue
+        MaxPoolingInterface.context = context
+        MaxPoolingInterface.queue = queue
 
-        MaxPoolingInterfaceToDevice.device_program = cl.Program(device_context, maxpool_source_code).build()
+        MaxPoolingInterface.program = cl.Program(context, maxpool_source_code).build()
 
-        MaxPoolingInterfaceToDevice.initialized = True
+        MaxPoolingInterface.initialized = True
 
     @staticmethod
     def maxpool_2d(z, window_shape, stride):
-        queue = MaxPoolingInterfaceToDevice.device_queue
-        program = MaxPoolingInterfaceToDevice.device_program
+        queue = MaxPoolingInterface.queue
+        program = MaxPoolingInterface.program
 
         image_shape = z.shape[1:]
         n = np.int32((image_shape[0] - window_shape[0]) / stride + 1)
@@ -81,8 +81,8 @@ class MaxPoolingInterfaceToDevice:
 
     @staticmethod
     def add_at(z, index, vals):
-        queue = MaxPoolingInterfaceToDevice.device_queue
-        program = MaxPoolingInterfaceToDevice.device_program
+        queue = MaxPoolingInterface.queue
+        program = MaxPoolingInterface.program
 
         global_shape = (int(np.prod(vals.shape)),)
         event = program.add_at(queue, global_shape, None,
@@ -110,8 +110,8 @@ class MaxPooling2D(NetworkNode, LayerBaseAttributes, Layer):
         self.device_context = device_context
         self.device_queue = device_queue
 
-        if not MaxPoolingInterfaceToDevice.initialized:
-            MaxPoolingInterfaceToDevice(device_context, device_queue)
+        if not MaxPoolingInterface.initialized:
+            MaxPoolingInterface(device_context, device_queue)
 
         parent = self.parents[0]
         self.input_shape = parent.output_shape
@@ -124,7 +124,7 @@ class MaxPooling2D(NetworkNode, LayerBaseAttributes, Layer):
 
     @check_built
     def predict(self, z, output_only=True, pre_activation_of_input=None, training=False):
-        max_val, max_arg = MaxPoolingInterfaceToDevice.maxpool_2d(z, self.window_shape, self.stride)
+        max_val, max_arg = MaxPoolingInterface.maxpool_2d(z, self.window_shape, self.stride)
 
         if training:
             self.max_indices = max_arg
@@ -139,7 +139,7 @@ class MaxPooling2D(NetworkNode, LayerBaseAttributes, Layer):
 
         N = len(g_prime)
         dx = cl_array.zeros(self.device_queue, (N, *self.input_shape), np.float64)
-        MaxPoolingInterfaceToDevice.add_at(dx, self.max_indices, delta)
+        MaxPoolingInterface.add_at(dx, self.max_indices, delta)
 
         return dx
 
